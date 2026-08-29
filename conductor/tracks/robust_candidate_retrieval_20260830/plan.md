@@ -19,8 +19,8 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Full System Integration & Regression Verification
-- [ ] Task: Run full test suite and verify 100% pass rate
-    - [ ] Execute `uv run pytest --tb=short -q` across all 310+ tests
-- [ ] Task: Verify end-to-end initialization on KuaiRand-Pure.md
+- [x] Task: Run full test suite and verify 100% pass rate
+    - [x] Execute `uv run pytest --tb=short -q` across all 310+ tests (346 passed)
+- [~] Task: Verify end-to-end initialization on KuaiRand-Pure.md
     - [ ] Run dry-run and mock test verifying candidate evaluation and baseline score generation
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

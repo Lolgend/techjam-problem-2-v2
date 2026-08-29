@@ -22,9 +22,9 @@
     - [x] Add subsampling removal and full-data training status in `FinalArtifactProducer`
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 3: Full System Integration & Regression Verification
+## Phase 3: Full System Integration & Regression Verification [checkpoint: e3217d6]
 - [x] Task: Execute full test suite and verify 100% pass rate
     - [x] Run `uv run pytest --tb=short -q` across all 310+ tests (319 passed)
 - [x] Task: Verify dry-run output formatting on KuaiRand-Pure.md
     - [x] Run `uv run problem-2-v2 run --task KuaiRand-Pure.md --data src/KuaiRand-Pure-dataset/data --dry-run`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

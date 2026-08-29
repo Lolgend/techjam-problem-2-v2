@@ -2,7 +2,7 @@
 
 ---
 
-- [~] **Track: Fix Markdown Fence Stripping in Debugger & Guardrails**
+- [x] **Track: Fix Markdown Fence Stripping in Debugger & Guardrails**
   *Link: [./tracks/markdown_fence_stripping_fix_20260830/index.md](./tracks/markdown_fence_stripping_fix_20260830/index.md)*
 - [ ] **Track: Fix Subprocess Sandbox Path Resolution in SubprocessRunner**
   *Link: [./tracks/sandbox_path_resolution_fix_20260830/index.md](./tracks/sandbox_path_resolution_fix_20260830/index.md)*

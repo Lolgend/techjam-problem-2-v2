@@ -1,9 +1,10 @@
 """Unit tests for the ``problem-2-v2`` command-line interface.
 
 Covers the ``run`` subcommand flags, ``--dry-run`` validation, the
-``version`` subcommand, and invalid argument handling.
+``version`` subcommand, invalid argument handling, and API-key env wiring.
 """
 
+import os
 from pathlib import Path
 
 import pytest
@@ -243,3 +244,135 @@ class TestCLI:
         assert os.environ.get("TAVILY_API_KEY") == "tvly-test-key"
         os.environ.pop("ANTHROPIC_API_KEY", None)
         os.environ.pop("TAVILY_API_KEY", None)
+
+    @pytest.mark.parametrize(
+        ("model", "expected_key"),
+        [
+            ("deepseek:deepseek-chat", "DEEPSEEK_API_KEY"),
+            ("google:gemini-2.0-flash", "GEMINI_API_KEY"),
+            ("openrouter:openai/gpt-4o", "OPENROUTER_API_KEY"),
+            ("groq:llama-3", "GROQ_API_KEY"),
+            ("mistral:mistral-large", "MISTRAL_API_KEY"),
+            ("openai:gpt-4o", "OPENAI_API_KEY"),
+        ],
+    )
+    def test_api_key_mapping_sets_correct_env(
+        self, tmp_path: Path, capsys, monkeypatch, model: str, expected_key: str
+    ) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+
+        def fake_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=None,
+                baseline_score=0.5,
+                final_score=0.8,
+                score_delta=0.3,
+                duration_seconds=1.0,
+                success=True,
+            )
+
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", fake_run)
+        for key in (
+            "DEEPSEEK_API_KEY",
+            "OPENAI_API_KEY",
+            "GEMINI_API_KEY",
+            "GOOGLE_API_KEY",
+            "OPENROUTER_API_KEY",
+            "GROQ_API_KEY",
+            "MISTRAL_API_KEY",
+        ):
+            monkeypatch.delenv(key, raising=False)
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--model",
+                model,
+                "--api-key",
+                "sk-test",
+                "--search-provider",
+                "mock",
+            ]
+        )
+        assert code == 0
+        assert os.environ.get(expected_key) == "sk-test"
+
+    def test_base_url_sets_env(self, tmp_path: Path, capsys, monkeypatch) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+
+        def fake_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=None,
+                baseline_score=0.5,
+                final_score=0.8,
+                score_delta=0.3,
+                duration_seconds=1.0,
+                success=True,
+            )
+
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", fake_run)
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.delenv("DEEPSEEK_BASE_URL", raising=False)
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--base-url",
+                "https://api.deepseek.com",
+                "--search-provider",
+                "mock",
+            ]
+        )
+        assert code == 0
+        assert os.environ.get("OPENAI_BASE_URL") == "https://api.deepseek.com"
+        assert os.environ.get("DEEPSEEK_BASE_URL") == "https://api.deepseek.com"
+
+    def test_google_search_api_key_sets_env(self, tmp_path: Path, capsys, monkeypatch) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+
+        def fake_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=None,
+                baseline_score=0.5,
+                final_score=0.8,
+                score_delta=0.3,
+                duration_seconds=1.0,
+                success=True,
+            )
+
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", fake_run)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        monkeypatch.setenv("GOOGLE_CSE_ID", "test-cx")
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "google",
+                "--search-api-key",
+                "g-key",
+            ]
+        )
+        assert code == 0
+        assert os.environ.get("GOOGLE_API_KEY") == "g-key"

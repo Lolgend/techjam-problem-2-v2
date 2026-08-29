@@ -207,6 +207,26 @@ class TestParallelSolutionGenerator:
         artifacts = asyncio_run(run())
         assert len(artifacts) == 2
 
+    def test_duplicate_seeds_are_rejected(self, tmp_path: Path) -> None:
+        factory = build_branch_factory(tmp_path, {0: 0.51})
+        generator = ParallelSolutionGenerator(branch_builder=factory, num_branches=2)
+
+        async def run() -> list[PipelineArtifact]:
+            return await generator.generate(_MD, dataset_dir="/data", run_id="par5", seeds=[0, 0])
+
+        with pytest.raises(ValueError, match="distinct"):
+            asyncio_run(run())
+
+    def test_branch_artifacts_keep_lineage_diff(self, tmp_path: Path) -> None:
+        factory = build_branch_factory(tmp_path, {0: 0.51, 1: 0.52})
+        generator = ParallelSolutionGenerator(branch_builder=factory, num_branches=2)
+
+        async def run() -> list[PipelineArtifact]:
+            return await generator.generate(_MD, dataset_dir="/data", run_id="par6", seeds=[0, 1])
+
+        artifacts = asyncio_run(run())
+        assert all(artifact.applied_diff is not None for artifact in artifacts)
+
 
 def asyncio_run(coro):
     import asyncio

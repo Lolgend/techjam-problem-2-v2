@@ -64,6 +64,8 @@ class ParallelSolutionGenerator:
         """
         if seeds is None:
             seeds = list(range(self.num_branches))
+        if len(set(seeds)) != len(seeds):
+            raise ValueError("Seeds must be distinct per branch.")
 
         async def run_branch(seed: int, index: int) -> PipelineArtifact | None:
             with logfire.span("parallel.branch", index=index, seed=seed):
@@ -87,9 +89,7 @@ class ParallelSolutionGenerator:
                         branch_run_id,
                     )
                 except Exception as exc:
-                    logfire.warn(
-                        "parallel.branch_setup_failed", index=index, seed=seed, error=str(exc)
-                    )
+                    logfire.warn("parallel.branch_failed", index=index, seed=seed, error=str(exc))
                     return None
                 return self._to_artifact(refine_result, index, seed)
 
@@ -100,7 +100,12 @@ class ParallelSolutionGenerator:
 
     @staticmethod
     def _to_artifact(refine_result: RefinementResult, index: int, seed: int) -> PipelineArtifact:
-        """Convert a refinement result into a branch artifact."""
+        """Convert a refinement result into a branch artifact.
+
+        The branch identity (``branch_<i>_seed_<s>``) is preserved so it
+        can serve as a unique candidate id in ensembling, while the
+        lineage diff from the refinement tail is carried over.
+        """
         lineage = refine_result.lineage
         parent = lineage[-1] if lineage else None
         return PipelineArtifact(
@@ -108,6 +113,6 @@ class ParallelSolutionGenerator:
             full_code=refine_result.final_code,
             validation_score=refine_result.final_score,
             parent_version=parent.version if parent else None,
-            applied_diff=None,
+            applied_diff=parent.applied_diff if parent else None,
             iteration_stage=f"branch_{index}_seed_{seed}",
         )

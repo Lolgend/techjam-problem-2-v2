@@ -34,23 +34,23 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Search Retrieval, Refinement & Guardrail Schemas
-- [ ] Task: Write failing tests for Search, Ablation, Refinement, and Guardrail schemas
-    - [ ] Create `tests/contracts/test_search_refinement.py`
-    - [ ] Test `ModelCard` and `RetrievedCandidates` validation and code extraction
-    - [ ] Test `AblationVariant`, `AblationReport`, `TargetCodeBlock.replace_in`, and `RefinementPlan`
-    - [ ] Create `tests/contracts/test_guardrails.py`
-    - [ ] Test `DataLeakageStatus` prompt response parser ('Yes Data Leakage' / 'No Data Leakage')
-    - [ ] Test `DataUsageStatus` and `EnsembleStrategy`
-- [ ] Task: Implement Search & Candidate schemas in `src/problem_2_v2/contracts/search.py`
-    - [ ] Implement `ModelCard` and `RetrievedCandidates`
-- [ ] Task: Implement Refinement & Ablation schemas in `src/problem_2_v2/contracts/refinement.py`
-    - [ ] Implement `AblationVariant`, `AblationResultItem`, `AblationReport`
-    - [ ] Implement `TargetCodeBlock` with AST-safe `replace_in` helper
-    - [ ] Implement `RefinementPlan`
-- [ ] Task: Implement Guardrail schemas in `src/problem_2_v2/contracts/guardrails.py`
-    - [ ] Implement `DataLeakageStatus` with paper-exact prompt string normalization
-    - [ ] Implement `DataUsageStatus` and `EnsembleStrategy`
-    - [ ] Verify all tests pass
+- [x] Task: Write failing tests for Search, Ablation, Refinement, and Guardrail schemas (22e651c)
+    - [x] Create `tests/contracts/test_search_refinement.py`
+    - [x] Test `ModelCard` and `RetrievedCandidates` validation and code extraction
+    - [x] Test `AblationVariant`, `AblationReport`, `TargetCodeBlock.replace_in`, and `RefinementPlan`
+    - [x] Create `tests/contracts/test_guardrails.py`
+    - [x] Test `DataLeakageStatus` prompt response parser ('Yes Data Leakage' / 'No Data Leakage')
+    - [x] Test `DataUsageStatus` and `EnsembleStrategy`
+- [x] Task: Implement Search & Candidate schemas in `src/problem_2_v2/contracts/search.py` (3927a13)
+    - [x] Implement `ModelCard` and `RetrievedCandidates`
+- [x] Task: Implement Refinement & Ablation schemas in `src/problem_2_v2/contracts/refinement.py` (3927a13)
+    - [x] Implement `AblationVariant`, `AblationResultItem`, `AblationReport`
+    - [x] Implement `TargetCodeBlock` with AST-safe `replace_in` helper
+    - [x] Implement `RefinementPlan`
+- [x] Task: Implement Guardrail schemas in `src/problem_2_v2/contracts/guardrails.py` (3927a13)
+    - [x] Implement `DataLeakageStatus` with paper-exact prompt string normalization
+    - [x] Implement `DataUsageStatus` and `EnsembleStrategy`
+    - [x] Verify all tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Unified Contract API, Quality Gate & Package Exports

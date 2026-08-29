@@ -16,7 +16,7 @@
     - [x] Re-export `ExecutionGuardrailPipeline`, `ExecutionConfig`, and `FinalArtifactProducer` (FinalArtifactProducer export added in Phase 2, c9c7034)
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Final Artifact Producer ($\mathcal{A}_{\text{finalizer}}$)
+## Phase 2: Final Artifact Producer ($\mathcal{A}_{\text{finalizer}}$) [checkpoint: ea0c7e8]
 - [x] Task: Write failing tests for FinalArtifactProducer
     - [x] Create `tests/execution/test_finalizer.py` testing subsampling removal, model serialization injection, `metrics.json` export, and `./final/` output structure
     - [x] Test AST validation of rewritten production script
@@ -26,7 +26,7 @@
     - [x] Define `FinalArtifact` Pydantic model (script, output_dir, model_paths, metrics, submission_path)
     - [x] Integrate with `SubprocessRunner` (production timeout) and `DebuggerAgent`
     - [x] Verify finalizer tests pass (ea0c7e8)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Pipeline Integration Refactor
 - [ ] Task: Write failing tests for refactored RefinementPipeline and EnsemblePipeline integration

@@ -8,8 +8,9 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
+from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.ingestion.extractor import TaskExtractor
-from problem_2_v2.initialization.evaluator import CandidateEvaluatorAgent
+from problem_2_v2.initialization.evaluator import CandidateEvaluation, CandidateEvaluatorAgent
 from problem_2_v2.initialization.merger import ModelMergerAgent
 from problem_2_v2.initialization.pipeline import InitializationPipeline, InitializationResult
 from problem_2_v2.runner.debugger import DebuggerAgent
@@ -102,3 +103,115 @@ class TestInitializationPipeline:
         ):
             result = pipeline.run(_MD, dataset_dir="/data", run_id="e2e2")
         assert "NDCG@10" in result.candidates.query_used
+
+
+def _pipeline_with(
+    tmp_path: Path,
+    *,
+    use_baseline: bool = False,
+    baseline_path: str | None = None,
+) -> InitializationPipeline:
+    runner = SubprocessRunner(
+        runs_dir=str(tmp_path / "runs"),
+        timeout_seconds=5,
+        python_executable=sys.executable,
+    )
+    debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+    return InitializationPipeline(
+        extractor=TaskExtractor(use_llm=False),
+        retriever=RetrieverAgent(
+            provider=MockSearchProvider(
+                results={
+                    "ranking": [
+                        SearchResult(title="t", url="https://e.com", snippet="s"),
+                    ]
+                }
+            ),
+            model="test",
+            num_candidates=2,
+        ),
+        evaluator=CandidateEvaluatorAgent(debugger=debugger, model="test"),
+        merger=ModelMergerAgent(debugger=debugger, model="test"),
+        use_baseline=use_baseline,
+        baseline_path=baseline_path,
+    )
+
+
+class TestBaselineSeeding:
+    """Test official baseline starter code injection."""
+
+    def test_baseline_card_injected_when_enabled(self, tmp_path: Path) -> None:
+        baseline_file = tmp_path / "baseline.py"
+        baseline_file.write_text("def baseline_main():\n    pass\n", encoding="utf-8")
+        pipeline = _pipeline_with(tmp_path, use_baseline=True, baseline_path=str(baseline_file))
+        with (
+            pipeline.retriever.agent.override(model=TestModel(custom_output_args=_CARD_ARGS)),
+            pipeline.evaluator.agent.override(model=TestModel(custom_output_text=_FINAL_SCORE)),
+            pipeline.merger.agent.override(model=FunctionModel(function=_merger_model)),
+        ):
+            result = pipeline.run(_MD, dataset_dir="/data", run_id="base")
+        assert result.candidates.candidates[0].model_name == "Official Baseline"
+        assert "baseline_main" in result.candidates.candidates[0].example_code
+        assert len(result.evaluations) == 3
+
+    def test_baseline_off_by_default(self, tmp_path: Path) -> None:
+        pipeline = _pipeline_with(tmp_path)
+        with (
+            pipeline.retriever.agent.override(model=TestModel(custom_output_args=_CARD_ARGS)),
+            pipeline.evaluator.agent.override(model=TestModel(custom_output_text=_FINAL_SCORE)),
+            pipeline.merger.agent.override(model=FunctionModel(function=_merger_model)),
+        ):
+            result = pipeline.run(_MD, dataset_dir="/data", run_id="base2")
+        assert all(c.model_name != "Official Baseline" for c in result.candidates.candidates)
+
+    def test_baseline_detected_from_workspace(self, tmp_path: Path, monkeypatch) -> None:
+        (tmp_path / "baseline.py").write_text(
+            "def workspace_baseline():\n    pass\n", encoding="utf-8"
+        )
+        monkeypatch.chdir(tmp_path)
+        pipeline = _pipeline_with(tmp_path, use_baseline=True)
+        with (
+            pipeline.retriever.agent.override(model=TestModel(custom_output_args=_CARD_ARGS)),
+            pipeline.evaluator.agent.override(model=TestModel(custom_output_text=_FINAL_SCORE)),
+            pipeline.merger.agent.override(model=FunctionModel(function=_merger_model)),
+        ):
+            result = pipeline.run(_MD, dataset_dir="/data", run_id="base3")
+        assert result.candidates.candidates[0].model_name == "Official Baseline"
+        assert "workspace_baseline" in result.candidates.candidates[0].example_code
+
+
+class TestMergerFallback:
+    """Test the merger preserves the best individual on failed merges."""
+
+    def test_merger_preserves_best_nonempty_individual(self, tmp_path: Path) -> None:
+        runner = SubprocessRunner(
+            runs_dir=str(tmp_path / "runs"),
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+        merger = ModelMergerAgent(debugger=debugger, model="test")
+        spec = TaskSpecification.from_markdown(
+            "**Task Type:** RECOMMENDER_RANKING\n"
+            "**Metric Direction:** MAXIMIZE\n"
+            "**Dataset Files:** train.csv\n",
+            dataset_dir="/data",
+        )
+        empty_eval = CandidateEvaluation(
+            model_name="Broken",
+            code="",
+            result=None,
+            debug_rounds=0,
+            score=None,
+        )
+        good_eval = CandidateEvaluation(
+            model_name="Good",
+            code="print('Final Validation Performance: 0.55')",
+            result=None,
+            debug_rounds=0,
+            score=0.55,
+        )
+        with merger.agent.override(model=TestModel(custom_output_text="not python (:")):
+            outcome = merger.merge(spec, [empty_eval, good_eval], run_id="m")
+        assert outcome.final_code == good_eval.code
+        assert outcome.final_score == pytest.approx(0.55)

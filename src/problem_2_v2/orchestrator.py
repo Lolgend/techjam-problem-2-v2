@@ -336,6 +336,7 @@ class MLEStarPipeline:
             ),
             evaluator=CandidateEvaluatorAgent(debugger=debugger, model=self.config.model),
             merger=ModelMergerAgent(debugger=debugger, model=self.config.model),
+            use_baseline=True,
         )
         refine = RefinementPipeline(
             ablation=AblationAgent(model=self.config.model),

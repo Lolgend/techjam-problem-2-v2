@@ -147,7 +147,9 @@ class ModelMergerAgent:
         if not ranked:
             return MergeOutcome(final_code="", final_score=None)
 
-        best: CandidateEvaluation = ranked[0]
+        best = next((evaluation for evaluation in ranked if evaluation.code.strip()), None)
+        if best is None:
+            return MergeOutcome(final_code="", final_score=None)
         current_code = best.code
         best_score = best.score
         lineage: list[PipelineArtifact] = []

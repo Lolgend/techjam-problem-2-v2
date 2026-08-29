@@ -8,11 +8,13 @@ the MLE-STAR paper.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
 from problem_2_v2.console import announce, format_score
-from problem_2_v2.contracts.search import RetrievedCandidates
+from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.ingestion.extractor import TaskExtractor
 from problem_2_v2.initialization.evaluator import CandidateEvaluation, CandidateEvaluatorAgent
@@ -56,6 +58,10 @@ class InitializationPipeline:
         retriever: Search-guided candidate retriever.
         evaluator: Candidate code generation and evaluation agent.
         merger: Greedy sequential model merger.
+        use_baseline: Whether to seed the official baseline starter script
+            as the first candidate.
+        baseline_path: Optional explicit path to the baseline starter script;
+            otherwise standard workspace locations are searched.
     """
 
     def __init__(
@@ -64,6 +70,8 @@ class InitializationPipeline:
         retriever: RetrieverAgent,
         evaluator: CandidateEvaluatorAgent,
         merger: ModelMergerAgent,
+        use_baseline: bool = False,
+        baseline_path: str | None = None,
     ) -> None:
         """Create the initialization pipeline.
 
@@ -72,11 +80,18 @@ class InitializationPipeline:
             retriever: Candidate retriever agent.
             evaluator: Candidate evaluation agent.
             merger: Sequential model merger agent.
+            use_baseline: Seed the official baseline starter script as the
+                first candidate card when one is found.
+            baseline_path: Optional explicit baseline starter script path;
+                otherwise ``src/baseline/baseline.py``, ``baseline.py``, and
+                the dataset directory are searched in order.
         """
         self.extractor = extractor
         self.retriever = retriever
         self.evaluator = evaluator
         self.merger = merger
+        self.use_baseline = use_baseline
+        self.baseline_path = baseline_path
 
     def run(self, md_text: str, dataset_dir: str, run_id: str) -> InitializationResult:
         """Run the full initialization workflow.
@@ -98,6 +113,16 @@ class InitializationPipeline:
             )
             with logfire.span("initialization.retrieve"):
                 candidates = self.retriever.retrieve(spec)
+            if self.use_baseline:
+                baseline_code = self._load_baseline(spec)
+                if baseline_code:
+                    cards = [self._baseline_card(baseline_code)] + list(candidates.candidates)
+                    candidates = RetrievedCandidates(
+                        candidates=cards,
+                        query_used=candidates.query_used,
+                        total_found=len(cards),
+                    )
+                    announce("[Baseline] Official baseline starter script seeded as Candidate 1.")
             with logfire.span(
                 "initialization.evaluate",
                 num_candidates=len(candidates.candidates),
@@ -106,10 +131,21 @@ class InitializationPipeline:
                     spec, candidates.candidates, run_id=run_id
                 )
             for index, evaluation in enumerate(evaluations):
-                announce(
-                    f"[Candidate {index + 1}/{len(evaluations)}] {evaluation.model_name} -> "
-                    f"Validation Score: {format_score(evaluation.score)}"
-                )
+                if evaluation.score is None:
+                    reason = (
+                        evaluation.result.stderr[-200:]
+                        if evaluation.result is not None and evaluation.result.stderr
+                        else "no validation score produced"
+                    )
+                    announce(
+                        f"[Candidate {index + 1}/{len(evaluations)}] {evaluation.model_name} "
+                        f"-> Failed: {reason.strip()}"
+                    )
+                else:
+                    announce(
+                        f"[Candidate {index + 1}/{len(evaluations)}] {evaluation.model_name} -> "
+                        f"Validation Score: {format_score(evaluation.score)}"
+                    )
             ranked = self.evaluator.ranking(evaluations, spec.metric_direction)
             with logfire.span("initialization.merge", num_candidates=len(ranked)):
                 outcome = self.merger.merge(spec, ranked, run_id=run_id)
@@ -122,4 +158,35 @@ class InitializationPipeline:
             candidates=candidates,
             evaluations=evaluations,
             outcome=outcome,
+        )
+
+    def _load_baseline(self, spec: TaskSpecification) -> str | None:
+        """Return the official baseline starter script, or ``None``.
+
+        Searches an explicit ``baseline_path``, then ``src/baseline/baseline.py``,
+        ``baseline.py``, and ``<dataset_dir>/baseline.py`` in the workspace.
+        """
+        locations: list[str] = []
+        if self.baseline_path is not None:
+            locations.append(self.baseline_path)
+        locations.extend(
+            [
+                "src/baseline/baseline.py",
+                "baseline.py",
+                str(Path(spec.dataset_dir) / "baseline.py"),
+            ]
+        )
+        for location in locations:
+            path = Path(location)
+            if path.is_file():
+                return path.read_text(encoding="utf-8", errors="replace")
+        return None
+
+    @staticmethod
+    def _baseline_card(code: str) -> ModelCard:
+        """Build an official-baseline model card from a starter script."""
+        return ModelCard(
+            model_name="Official Baseline",
+            rationale="Official baseline starter script evaluated as a candidate.",
+            example_code=code,
         )

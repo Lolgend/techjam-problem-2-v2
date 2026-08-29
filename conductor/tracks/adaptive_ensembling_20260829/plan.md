@@ -28,14 +28,14 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Iterative Ensemble Pipeline & End-to-End Orchestrator
-- [ ] Task: Write failing tests for EnsemblePipeline
-    - [ ] Create `tests/ensembling/test_pipeline.py` testing $R$ optimization rounds, score delta tracking, winner selection ($s^*_{\text{ens}}$), and JSONL iteration logging
-- [ ] Task: Implement `EnsemblePipeline` in `src/problem_2_v2/ensembling/pipeline.py`
-    - [ ] Implement Algorithm 3 iterative loop coordinating Planner -> Ensembler -> Sandbox Runner -> Score Evaluation
-    - [ ] Select optimal solution $s^*_{\text{ens}} = \arg\max h(s)$ with fallback to best individual candidate
-    - [ ] Stream structured iteration logs (`runs/<run_id>/iteration_logs.jsonl`) and generate final `PipelineArtifact`
-    - [ ] Verify ensemble pipeline tests pass
-- [ ] Task: Write failing end-to-end integration test
-    - [ ] Create `tests/ensembling/test_e2e_ensembling.py` testing full workflow from $L$ candidates through $R$ ensembling rounds to final submission
-    - [ ] Verify end-to-end test passes
+- [x] Task: Write failing tests for EnsemblePipeline (af231a6)
+    - [x] Create `tests/ensembling/test_pipeline.py` testing $R$ optimization rounds, score delta tracking, winner selection ($s^*_{\text{ens}}$), and JSONL iteration logging
+- [x] Task: Implement `EnsemblePipeline` in `src/problem_2_v2/ensembling/pipeline.py` (e2a29ed)
+    - [x] Implement Algorithm 3 iterative loop coordinating Planner -> Ensembler -> Sandbox Runner -> Score Evaluation
+    - [x] Select optimal solution $s^*_{\text{ens}} = \arg\max h(s)$ with fallback to best individual candidate
+    - [x] Stream structured iteration logs (`runs/<run_id>/iteration_logs.jsonl`) and generate final `PipelineArtifact`
+    - [x] Verify ensemble pipeline tests pass
+- [x] Task: Write failing end-to-end integration test (af231a6)
+    - [x] Create `tests/ensembling/test_e2e_ensembling.py` testing full workflow from $L$ candidates through $R$ ensembling rounds to final submission
+    - [x] Verify end-to-end test passes
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

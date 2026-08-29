@@ -7,9 +7,9 @@
     - [x] Ensure `prepare_sandbox` and `run_code` resolve `sandbox` and `script_path` to absolute paths via `.resolve()`
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Full System Integration & Regression Verification
+## Phase 2: Full System Integration & Regression Verification [checkpoint: 40ca758]
 - [x] Task: Run full test suite and verify 100% pass rate
     - [x] Execute `uv run pytest --tb=short -q` across all 310+ tests (348 passed)
 - [~] Task: Verify candidate execution in real sandbox with relative `runs` directory
-    - [ ] Run test execution verifying candidate training script execution
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+    - [x] Run test execution verifying candidate training script execution
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

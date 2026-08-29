@@ -16,6 +16,7 @@ import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
 from problem_2_v2.config import MLEStarConfig
+from problem_2_v2.console import announce
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.ensembling.ensembler import EnsemblerAgent
 from problem_2_v2.ensembling.parallel import BranchBuilder, ParallelSolutionGenerator
@@ -211,22 +212,37 @@ class MLEStarPipeline:
             md_text, spec = self._ingest(task_md_path, dataset_dir)
             baseline = spec.baseline_score
 
+            seeds = (
+                self.config.seeds
+                if self.config.seeds is not None
+                else list(range(self.config.num_branches))
+            )
+            announce(f"[Stage 1/4] Launching {len(seeds)} Parallel Seed Branches...")
             with logfire.span("mlestar.parallel_branches", run_id=run_id):
-                seeds = (
-                    self.config.seeds
-                    if self.config.seeds is not None
-                    else list(range(self.config.num_branches))
-                )
                 artifacts = await self.parallel.generate(
                     md_text, dataset_dir, run_id=run_id, seeds=seeds
                 )
+            announce(
+                f"[Stage 2/4] Aggregating Candidate Artifacts ({len(artifacts)} successful)..."
+            )
 
             ensemble_result: EnsembleResult | None = None
             if artifacts:
+                announce(
+                    f"[Stage 3/4] Adaptive Ensembling ({self.config.ensemble_rounds} rounds)..."
+                )
                 with logfire.span("mlestar.ensembling", run_id=run_id):
                     ensemble_result = await asyncio.to_thread(
                         self.ensemble_pipeline.run, spec, artifacts, run_id
                     )
+            else:
+                import sys
+
+                print(
+                    "[MLE-STAR] Warning: No candidate solutions were produced "
+                    "across parallel branches.",
+                    file=sys.stderr,
+                )
 
             final_artifact: FinalArtifact | None = None
             best_code = (
@@ -235,6 +251,10 @@ class MLEStarPipeline:
                 else (artifacts[0].full_code if artifacts else None)
             )
             if best_code:
+                announce(
+                    "[Stage 4/4] Production Finalization "
+                    "(Full Dataset Training & Model Serialization)..."
+                )
                 with logfire.span("mlestar.finalization", run_id=run_id):
                     final_artifact = await asyncio.to_thread(
                         self.finalizer.produce, best_code, spec, f"{run_id}/final"

@@ -200,3 +200,46 @@ class TestCLI:
         assert code == 0
         assert captured["task"] == str(task_file)
         assert "Delta" in out
+
+    def test_run_sets_api_key_env_var(self, tmp_path: Path, capsys, monkeypatch) -> None:
+        import os
+
+        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+
+        def fake_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=None,
+                baseline_score=0.5,
+                final_score=0.8,
+                score_delta=0.3,
+                duration_seconds=1.0,
+                success=True,
+            )
+
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", fake_run)
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--model",
+                "anthropic:claude-3-7-sonnet",
+                "--api-key",
+                "sk-ant-test-key",
+                "--search-provider",
+                "tavily",
+                "--search-api-key",
+                "tvly-test-key",
+            ]
+        )
+        assert code == 0
+        assert os.environ.get("ANTHROPIC_API_KEY") == "sk-ant-test-key"
+        assert os.environ.get("TAVILY_API_KEY") == "tvly-test-key"
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        os.environ.pop("TAVILY_API_KEY", None)

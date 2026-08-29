@@ -10,7 +10,9 @@ KuaiRand-Pure 官方评测脚本 —— 口径全部写死在这里，不要改�
 nDCG gain    : (2^rel - 1), 二元标签下等价于 identity
 数据划分     : train 20220408-20220421 / valid 20220422-20220428 / test 20220429-20220508
 """
+
 import math, collections
+
 
 def auc(labels, scores):
     """Mann-Whitney U，含并列修正，等价于 sklearn.metrics.roc_auc_score。"""
@@ -32,13 +34,15 @@ def auc(labels, scores):
     srank = sum(r for r, (_, l) in zip(ranks, pairs) if l == 1)
     return (srank - npos * (npos + 1) / 2.0) / (npos * nneg)
 
+
 def ndcg_at_k(labels, k):
     """labels 已按预测分降序排列。"""
     disc = [math.log2(i + 2) for i in range(k)]
-    dcg = sum(((2 ** t) - 1) / disc[i] for i, t in enumerate(labels[:k]))
+    dcg = sum(((2**t) - 1) / disc[i] for i, t in enumerate(labels[:k]))
     ideal = sorted(labels, reverse=True)[:k]
-    idcg = sum(((2 ** t) - 1) / disc[i] for i, t in enumerate(ideal))
+    idcg = sum(((2**t) - 1) / disc[i] for i, t in enumerate(ideal))
     return 0.0 if idcg == 0 else dcg / idcg
+
 
 def evaluate(user_ids, labels, scores, k=5):
     """返回 {'GAUC':…, 'nDCG@5':…, 'primary':…}。primary = 两者平均，用于排名。"""
@@ -57,5 +61,10 @@ def evaluate(user_ids, labels, scores, k=5):
         nd.append(ndcg_at_k(labs, k))
     gauc = gnum / gden if gden else 0.5
     ndcg = sum(nd) / len(nd) if nd else 0.0
-    return {'GAUC': gauc, f'nDCG@{k}': ndcg, 'primary': (gauc + ndcg) / 2.0,
-            'users': len(byu), 'rows': len(labels)}
+    return {
+        "GAUC": gauc,
+        f"nDCG@{k}": ndcg,
+        "primary": (gauc + ndcg) / 2.0,
+        "users": len(byu),
+        "rows": len(labels),
+    }

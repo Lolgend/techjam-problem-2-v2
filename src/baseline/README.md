@@ -147,7 +147,8 @@ python3 submit.py --score --split valid submission.csv    # 校验并打分（�
 
 ```python
 from evaluate import evaluate
-print(evaluate(user_ids, labels, scores))   # scores 可以来自任何模型
+
+print(evaluate(user_ids, labels, scores))  # scores 可以来自任何模型
 ```
 
 - `user_ids`：评测集每一行的 user_id

@@ -135,7 +135,8 @@ The following possibilities are listed in our estimated order of potential (**th
 
 ```python
 from evaluate import evaluate
-print(evaluate(user_ids, labels, scores))   # scores can come from any model
+
+print(evaluate(user_ids, labels, scores))  # scores can come from any model
 ```
 
 - `user_ids`: the user ID for each row in the evaluation split

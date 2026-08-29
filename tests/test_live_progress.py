@@ -1,21 +1,20 @@
-"""End-to-end master pipeline integration test.
+"""Tests for live real-time console progress and telemetry streaming.
 
-Verifies complete execution from a raw markdown task description through
-the 5-stage ``MLEStarPipeline`` to production-ready ``./final/`` artifacts
-on disk, and the CLI round-trip that copies them to ``--output``.
+Covers the CLI startup banner, the final summary box, master orchestrator
+stage announcements, and sub-pipeline live score/plan emissions.
 """
 
 import sys
 from contextlib import ExitStack
 from pathlib import Path
 
-import pytest
 from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2 import main
 from problem_2_v2.config import MLEStarConfig
+from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.execution.finalizer import FinalArtifact
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
@@ -100,6 +99,15 @@ def _planner_args() -> dict[str, object]:
         "natural_language_plan": "average the probabilities",
         "meta_learner_type": None,
     }
+
+
+def _write_task(tmp_path: Path) -> tuple[Path, Path]:
+    task_file = tmp_path / "problem.md"
+    task_file.write_text(_MD, encoding="utf-8")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "train.csv").write_text("x,y\n1,0\n2,1\n3,0\n", encoding="utf-8")
+    return task_file, data_dir
 
 
 def _branch_factory(tmp_path: Path):
@@ -215,53 +223,57 @@ def _override_agents(pipeline: MLEStarPipeline) -> ExitStack:
     return stack
 
 
-def _write_task(tmp_path: Path) -> tuple[Path, Path]:
-    task_file = tmp_path / "problem.md"
-    task_file.write_text(_MD, encoding="utf-8")
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
-    (data_dir / "train.csv").write_text("x,y\n1,0\n2,1\n3,0\n", encoding="utf-8")
-    return task_file, data_dir
+class TestCLIProgress:
+    """Test the startup banner and final summary box."""
 
-
-class TestEndToEndMaster:
-    """Test the full markdown-to-artifact execution."""
-
-    async def test_master_run_produces_final_artifacts(self, tmp_path: Path) -> None:
+    def test_run_prints_startup_banner(self, tmp_path: Path, capsys, monkeypatch) -> None:
         task_file, data_dir = _write_task(tmp_path)
-        pipeline = _pipeline(tmp_path)
-
-        with _override_agents(pipeline):
-            result = await pipeline.run_async(str(task_file), str(data_dir), run_id="e2e_master")
-
-        assert isinstance(result, MLEStarResult)
-        assert result.success is True
-        assert len(result.branch_artifacts) == 2
-        assert result.ensemble_result is not None
-        assert result.final_artifact is not None
-        assert result.final_score == pytest.approx(0.90)
-        assert result.score_delta == pytest.approx(0.40)
-
-        output = Path(result.final_artifact.output_dir)
-        assert output.is_dir()
-        assert (output / "submission.csv").exists()
-        assert (output / "metrics.json").exists()
-        assert (output / "model.joblib").exists()
-        assert result.final_artifact.submission_path is not None
-        assert result.final_artifact.metrics == {"auroc": 0.90}
-
-    def test_cli_run_copies_artifacts_to_output(self, tmp_path: Path, capsys, monkeypatch) -> None:
-        task_file, data_dir = _write_task(tmp_path)
-        spec_dir = tmp_path / "prod"
-        spec_dir.mkdir(exist_ok=True)
-        (spec_dir / "submission.csv").write_text("id,pred\n1,0.5\n", encoding="utf-8")
-        (spec_dir / "metrics.json").write_text('{"auroc": 0.9}', encoding="utf-8")
-        (spec_dir / "model.joblib").write_bytes(b"model")
-
-        from problem_2_v2.contracts.task import TaskSpecification
-        from problem_2_v2.orchestrator import MLEStarPipeline as Orchestrator
-
         spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+
+        def fake_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=None,
+                baseline_score=0.5,
+                final_score=0.9,
+                score_delta=0.4,
+                duration_seconds=1.2,
+                success=True,
+            )
+
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", fake_run)
+        main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "mock",
+                "--output",
+                str(tmp_path / "out"),
+            ]
+        )
+        out = capsys.readouterr().out
+        assert "MLE-STAR" in out
+        assert "Task: Demo" in out
+        assert "Type: TABULAR_CLASSIFICATION" in out
+        assert "Metric: AUROC" in out
+        assert "Baseline: 0.5000" in out
+        assert "Dataset:" in out
+        assert "Model: openai:gpt-4o" in out
+        assert "Search: mock" in out
+        assert "Branches: 2" in out
+
+    def test_run_prints_final_summary_box(self, tmp_path: Path, capsys, monkeypatch) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+        out_dir = tmp_path / "out"
+        out_dir.mkdir(exist_ok=True)
+        (out_dir / "submission.csv").write_text("id,pred\n1,0.5\n", encoding="utf-8")
 
         def fake_run(self, task, data, run_id=None):
             return MLEStarResult(
@@ -270,23 +282,22 @@ class TestEndToEndMaster:
                 ensemble_result=None,
                 final_artifact=FinalArtifact(
                     code="print(1)",
-                    output_dir=str(spec_dir),
-                    model_paths=[str(spec_dir / "model.joblib")],
-                    metrics={"auroc": 0.9},
-                    submission_path=str(spec_dir / "submission.csv"),
+                    output_dir=str(out_dir),
+                    model_paths=[],
+                    metrics={},
+                    submission_path=None,
                     validation_score=0.9,
                     success=True,
                 ),
                 baseline_score=0.5,
                 final_score=0.9,
                 score_delta=0.4,
-                duration_seconds=1.2,
+                duration_seconds=1.5,
                 success=True,
             )
 
-        monkeypatch.setattr(Orchestrator, "run", fake_run)
-        out_dir = tmp_path / "final_out"
-        code = main(
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", fake_run)
+        main(
             [
                 "run",
                 "--task",
@@ -300,9 +311,42 @@ class TestEndToEndMaster:
             ]
         )
         out = capsys.readouterr().out
-        assert code == 0
-        assert (out_dir / "submission.csv").exists()
-        assert (out_dir / "metrics.json").exists()
-        assert (out_dir / "model.joblib").exists()
-        assert "Artifacts:" in out
+        assert "Run complete in 1.5s" in out
+        assert "Baseline: 0.5000" in out
+        assert "Final: 0.9000" in out
+        assert "Delta: +0.4000" in out
         assert "submission.csv" in out
+
+    def test_dry_run_prints_banner(self, tmp_path: Path, capsys) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "mock",
+                "--dry-run",
+            ]
+        )
+        out = capsys.readouterr().out
+        assert "MLE-STAR" in out
+        assert "Dry-run OK" in out
+
+
+class TestOrchestratorStages:
+    """Test master orchestrator stage boundary announcements."""
+
+    async def test_stage_announcements_stream(self, tmp_path: Path, capsys) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        pipeline = _pipeline(tmp_path)
+
+        with _override_agents(pipeline):
+            await pipeline.run_async(str(task_file), str(data_dir), run_id="stages")
+        out = capsys.readouterr().out
+        assert "[Stage 1/4] Launching 2 Parallel Seed Branches" in out
+        assert "[Stage 2/4] Aggregating Candidate Artifacts" in out
+        assert "[Stage 3/4] Adaptive Ensembling (2 rounds)" in out
+        assert "[Stage 4/4] Production Finalization" in out

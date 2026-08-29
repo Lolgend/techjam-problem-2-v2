@@ -278,13 +278,16 @@ class TestMLEStarPipeline:
         )
         assert pipeline._provider.provider_name == "mock"
 
-    def test_build_provider_tavily_requires_key(self, tmp_path: Path) -> None:
+    def test_build_provider_tavily_requires_key(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.delenv("TAVILY_API_KEY", raising=False)
         with pytest.raises(ValueError):
             MLEStarPipeline(
                 config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="tavily")
             )
 
-    def test_build_provider_google_requires_key(self, tmp_path: Path) -> None:
+    def test_build_provider_google_requires_key(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        monkeypatch.delenv("GOOGLE_CSE_ID", raising=False)
         with pytest.raises(ValueError):
             MLEStarPipeline(
                 config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="google")

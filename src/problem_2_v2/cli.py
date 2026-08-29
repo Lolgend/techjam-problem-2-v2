@@ -13,9 +13,12 @@ from importlib import metadata
 from pathlib import Path
 
 from problem_2_v2.config import MLEStarConfig
-from problem_2_v2.orchestrator import MLEStarPipeline
+from problem_2_v2.console import announce, format_delta, format_score
+from problem_2_v2.contracts.task import TaskSpecification
+from problem_2_v2.orchestrator import MLEStarPipeline, MLEStarResult
 
 _PROVIDERS = ("duckduckgo", "tavily", "google", "mock")
+_BANNER_WIDTH = 78
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -58,6 +61,25 @@ def build_parser() -> argparse.ArgumentParser:
         "--seeds", default=None, help="Comma-separated random seeds per branch."
     )
     run_parser.add_argument(
+        "--api-key",
+        "-k",
+        default=None,
+        help=(
+            "LLM API key (automatically populates OPENAI_API_KEY, "
+            "DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY based on --model)."
+        ),
+    )
+    run_parser.add_argument(
+        "--base-url",
+        default=None,
+        help="Custom API base URL (e.g. https://api.deepseek.com or https://openrouter.ai/api/v1).",
+    )
+    run_parser.add_argument(
+        "--search-api-key",
+        default=None,
+        help="Search API key (e.g. for Tavily or Google Custom Search).",
+    )
+    run_parser.add_argument(
         "--dry-run", action="store_true", help="Validate inputs without running the pipeline."
     )
 
@@ -74,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         ``0`` on success, ``1`` on a failed run.
     """
+    import os
+
+    os.environ.setdefault("LOGFIRE_IGNORE_NO_CONFIG", "1")
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -96,6 +121,39 @@ def _version_command() -> int:
 
 def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     """Execute the ``run`` subcommand (dry-run or full pipeline)."""
+    import os
+
+    if args.base_url:
+        os.environ["OPENAI_BASE_URL"] = args.base_url
+        os.environ["DEEPSEEK_BASE_URL"] = args.base_url
+
+    if args.api_key:
+        model_str = args.model.lower()
+        if model_str.startswith("deepseek:") or "deepseek" in model_str:
+            os.environ["DEEPSEEK_API_KEY"] = args.api_key
+            os.environ["OPENAI_API_KEY"] = args.api_key
+        elif model_str.startswith("anthropic:") or "claude" in model_str:
+            os.environ["ANTHROPIC_API_KEY"] = args.api_key
+        elif model_str.startswith("google") or "gemini" in model_str:
+            os.environ["GEMINI_API_KEY"] = args.api_key
+            os.environ["GOOGLE_API_KEY"] = args.api_key
+        elif model_str.startswith("openrouter:") or "openrouter" in model_str:
+            os.environ["OPENROUTER_API_KEY"] = args.api_key
+            os.environ["OPENAI_API_KEY"] = args.api_key
+        elif model_str.startswith("groq:"):
+            os.environ["GROQ_API_KEY"] = args.api_key
+        elif model_str.startswith("mistral:"):
+            os.environ["MISTRAL_API_KEY"] = args.api_key
+        else:
+            os.environ["OPENAI_API_KEY"] = args.api_key
+
+    if args.search_api_key:
+        provider = args.search_provider.lower()
+        if provider == "tavily":
+            os.environ["TAVILY_API_KEY"] = args.search_api_key
+        elif provider == "google":
+            os.environ["GOOGLE_API_KEY"] = args.search_api_key
+
     seeds = _parse_seeds(args.seeds)
     if seeds is not None and len(seeds) != args.branches:
         parser.error(f"--seeds ({len(seeds)}) must match --branches ({args.branches}).")
@@ -110,8 +168,16 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
     )
     pipeline = MLEStarPipeline(config=config)
 
+    try:
+        spec = pipeline.validate(args.task, args.data)
+    except (FileNotFoundError, NotADirectoryError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    _print_banner(spec, config)
+
     if args.dry_run:
-        return _dry_run(pipeline, args)
+        print(f"Dry-run OK: task '{spec.task_name}', baseline {spec.baseline_score:.4f}")
+        return 0
 
     try:
         result = pipeline.run(args.task, args.data)
@@ -121,25 +187,50 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         print(f"Run failed: {exc}", file=sys.stderr)
         return 1
 
-    final_str = f"{result.final_score:.4f}" if result.final_score is not None else "n/a"
-    delta_str = f"{result.score_delta:.4f}" if result.score_delta is not None else "n/a"
-    print(f"Run completed in {result.duration_seconds:.1f}s")
-    print(f"Baseline: {result.baseline_score:.4f}  Final: {final_str}  Delta: {delta_str}")
     if result.final_artifact is not None:
         _copy_final_output(result.final_artifact.output_dir, args.output)
-        print(f"Artifacts written to {args.output}")
+    _print_summary(result, args.output)
     return 0 if result.success else 1
 
 
-def _dry_run(pipeline: MLEStarPipeline, args: argparse.Namespace) -> int:
-    """Validate task and dataset parsing without executing the pipeline."""
-    try:
-        spec = pipeline.validate(args.task, args.data)
-    except (FileNotFoundError, NotADirectoryError) as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-    print(f"Dry-run OK: task '{spec.task_name}', baseline {spec.baseline_score:.4f}")
-    return 0
+def _print_banner(spec: TaskSpecification, config: MLEStarConfig) -> None:
+    """Render the startup banner with task and configuration details."""
+    announce("=" * _BANNER_WIDTH)
+    announce("MLE-STAR: Autonomous Machine Learning Engineering Agent")
+    announce(
+        f"Task: {spec.task_name} | Type: {spec.task_type.value} | "
+        f"Metric: {spec.metric_name} (Baseline: {spec.baseline_score:.4f})"
+    )
+    announce(f"Dataset: {spec.dataset_dir}")
+    announce(
+        f"Model: {config.model} | Search: {config.search_provider} | "
+        f"Branches: {config.num_branches} | T: {config.outer_loops} K: {config.inner_loops} | "
+        f"Ensembles: {config.ensemble_rounds}"
+    )
+    announce("=" * _BANNER_WIDTH)
+
+
+def _print_summary(result: MLEStarResult, output_dir: str) -> None:
+    """Render the final summary box with duration, scores, and artifacts."""
+    announce("=" * _BANNER_WIDTH)
+    announce(f"Run complete in {result.duration_seconds:.1f}s")
+    announce(
+        f"Baseline: {result.baseline_score:.4f} | "
+        f"Final: {format_score(result.final_score)} | Delta: {format_delta(result.score_delta)}"
+    )
+    artifact_dir = Path(output_dir)
+    files = (
+        sorted(p.name for p in artifact_dir.iterdir() if p.is_file())
+        if artifact_dir.is_dir()
+        else []
+    )
+    if files:
+        announce("Artifacts:")
+        for name in files:
+            announce(f"  - {artifact_dir / name}")
+    else:
+        announce("Artifacts: (none)")
+    announce("=" * _BANNER_WIDTH)
 
 
 def _parse_seeds(raw: str | None) -> list[int] | None:
@@ -157,5 +248,9 @@ def _copy_final_output(source: str, destination: str) -> None:
     dst = Path(destination)
     dst.mkdir(parents=True, exist_ok=True)
     for item in src.iterdir():
-        if item.is_file():
-            shutil.copy2(item, dst / item.name)
+        if not item.is_file():
+            continue
+        target = dst / item.name
+        if target.exists() and target.resolve() == item.resolve():
+            continue
+        shutil.copy2(item, target)

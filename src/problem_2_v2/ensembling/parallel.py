@@ -72,6 +72,11 @@ class ParallelSolutionGenerator:
                 try:
                     init_pipeline, refine_pipeline = self.branch_builder(seed)
                 except Exception as exc:
+                    import sys
+
+                    print(
+                        f"[Branch {index} Error] Setup failed (seed={seed}): {exc}", file=sys.stderr
+                    )
                     logfire.warn(
                         "parallel.branch_setup_failed", index=index, seed=seed, error=str(exc)
                     )
@@ -89,6 +94,12 @@ class ParallelSolutionGenerator:
                         branch_run_id,
                     )
                 except Exception as exc:
+                    import sys
+
+                    print(
+                        f"[Branch {index} Error] Execution failed (seed={seed}): {exc}",
+                        file=sys.stderr,
+                    )
                     logfire.warn("parallel.branch_failed", index=index, seed=seed, error=str(exc))
                     return None
                 return self._to_artifact(refine_result, index, seed)

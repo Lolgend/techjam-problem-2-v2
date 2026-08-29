@@ -62,6 +62,6 @@ Given a problem description in Markdown format (specifying task objectives, data
 
 ## User Interface & Integration
 - **Master Orchestrator:** `MLEStarPipeline` coordinates the 5-stage workflow (task ingestion, parallel branches, adaptive ensembling, final artifact production, baseline comparison) from a single `run()` / `run_async()` entry point, configured via `MLEStarConfig`.
-- **CLI Interface:** `problem-2-v2 run --task <problem.md> --data <dir> --output <dir> [--model ... --search-provider ... --branches ... --dry-run]` and `problem-2-v2 version`; `--dry-run` validates inputs without executing code generation.
+- **CLI Interface:** `problem-2-v2 run --task <problem.md> --data <dir> --output <dir> [--model ... --search-provider ... --branches ... --dry-run]` and `problem-2-v2 version`; `--dry-run` validates inputs without executing code generation. Running renders an immediate startup banner (task/type/metric/baseline/dataset/model/search/loops), streams live stage and score telemetry (branches, candidates, refinement plans, ensemble rounds, finalization) with `flush=True`, and closes with a final summary box of duration, scores, delta, and artifact paths.
 - **Python Library API:** Programmatic invocation of individual subagents or the full pipeline via `MLEStarPipeline`, returning a structured `MLEStarResult` (lineage, artifacts, baseline delta).
 - **Observability:** Integrated with Pydantic Logfire for complete span-level tracing of LLM reasoning, code modifications, score trajectories, and tool executions.

@@ -54,4 +54,7 @@
 > `problem-2-v2` CLI (stdlib `argparse`) while implementing the master
 > orchestrator track (`master_orchestrator_cli_20260829`). No new runtime
 > dependencies. The `typer`/`rich` CLI tooling listed above is not used;
-> live score tables remain future work.
+> live console progress is provided by a stdlib `console` helper
+> (`announce`/`format_score`/`format_delta`, `flush=True`) added in the
+> live console progress track (`live_console_progress_20260829`); rich
+> interactive tables remain future work.

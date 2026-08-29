@@ -41,11 +41,11 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: End-to-End Integration & Final Verification
-- [ ] Task: Write end-to-end integration test
-    - [ ] Create `tests/execution/test_e2e_execution.py` testing full guardrail → execution → finalization chain
-    - [ ] Test complete flow: candidate script → guardrails → sandbox → debugger → finalizer → `./final/` output
-- [ ] Task: Run full test suite and coverage verification
-    - [ ] Execute `uv run pytest --cov=src --cov-report=term-missing`
-    - [ ] Verify >80% coverage on new `execution/` modules
-    - [ ] Verify all tests pass
+- [x] Task: Write end-to-end integration test
+    - [x] Create `tests/execution/test_e2e_execution.py` testing full guardrail → execution → finalization chain
+    - [x] Test complete flow: candidate script → guardrails → sandbox → debugger → finalizer → `./final/` output (c623c61)
+- [x] Task: Run full test suite and coverage verification
+    - [x] Execute `uv run pytest --cov=src --cov-report=term-missing`
+    - [x] Verify >80% coverage on new `execution/` modules (pipeline 97%, finalizer 93%, __init__ 100%)
+    - [x] Verify all tests pass (273 passed, 94.64% total)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

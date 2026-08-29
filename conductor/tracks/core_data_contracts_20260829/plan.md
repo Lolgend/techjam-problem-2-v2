@@ -54,13 +54,13 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Unified Contract API, Quality Gate & Package Exports
-- [ ] Task: Write failing integration and full serialization tests
-    - [ ] Create `tests/contracts/test_integration.py`
-    - [ ] Test round-trip JSON serialization across all contract models
-    - [ ] Test type validation and immutability settings
-- [ ] Task: Package contract exports in `src/problem_2_v2/contracts/__init__.py`
-    - [ ] Export all models, enums, and utility functions
-    - [ ] Run `uv run ruff check src tests` and `uv run ruff format src tests`
-    - [ ] Run `uv run mypy src`
-    - [ ] Run `uv run pytest --cov=src --cov-report=term-missing` (>80% coverage check)
+- [x] Task: Write failing integration and full serialization tests (90fc47f)
+    - [x] Create `tests/contracts/test_integration.py`
+    - [x] Test round-trip JSON serialization across all contract models
+    - [x] Test type validation and immutability settings
+- [x] Task: Package contract exports in `src/problem_2_v2/contracts/__init__.py` (dcc7586)
+    - [x] Export all models, enums, and utility functions
+    - [x] Run `uv run ruff check src tests` and `uv run ruff format src tests`
+    - [x] Run `uv run mypy src`
+    - [x] Run `uv run pytest --cov=src --cov-report=term-missing` (>80% coverage check)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

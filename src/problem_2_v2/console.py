@@ -7,6 +7,26 @@ with zero delay, and score/delta formatters render ``None`` gracefully.
 from __future__ import annotations
 
 
+_VERBOSE: bool = False
+
+
+def set_verbose(enabled: bool = True) -> None:
+    """Set global verbosity state."""
+    global _VERBOSE
+    _VERBOSE = enabled
+
+
+def is_verbose() -> bool:
+    """Return whether verbose logging is enabled."""
+    return _VERBOSE
+
+
+def verbose_log(message: str) -> None:
+    """Print a message only when verbose mode is active."""
+    if _VERBOSE:
+        print(f"  [VERBOSE] {message}", flush=True)
+
+
 def announce(message: str) -> None:
     """Print a telemetry message with an immediate flush.
 

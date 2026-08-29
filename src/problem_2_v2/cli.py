@@ -80,6 +80,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Search API key (e.g. for Tavily or Google Custom Search).",
     )
     run_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose telemetry and live subprocess execution logging.",
+    )
+    run_parser.add_argument(
+        "--logfire-token",
+        default=None,
+        help="Logfire write token for streaming traces to the web dashboard.",
+    )
+    run_parser.add_argument(
         "--dry-run", action="store_true", help="Validate inputs without running the pipeline."
     )
 
@@ -123,6 +134,26 @@ def _version_command() -> int:
 def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     """Execute the ``run`` subcommand (dry-run or full pipeline)."""
     import os
+
+    if args.verbose:
+        from problem_2_v2.console import set_verbose
+
+        set_verbose(True)
+
+    if args.logfire_token:
+        os.environ["LOGFIRE_TOKEN"] = args.logfire_token
+
+    try:
+        import logfire
+
+        logfire.configure(
+            service_name="mle-star",
+            send_to_logfire="if-token-present",
+            token=os.environ.get("LOGFIRE_TOKEN"),
+        )
+        logfire.instrument_pydantic_ai()
+    except Exception:
+        pass
 
     if args.base_url:
         os.environ["OPENAI_BASE_URL"] = args.base_url

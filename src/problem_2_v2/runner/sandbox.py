@@ -142,4 +142,19 @@ class SubprocessRunner:
         )
         score = result.extract_validation_score(result.stdout)
         result.validation_score = score
+
+        from problem_2_v2.console import is_verbose
+
+        if is_verbose():
+            if result.stdout.strip():
+                print(
+                    f"\n--- [Sandbox Output ({sandbox.name})] ---\n{result.stdout.strip()}\n----------------------------------------",
+                    flush=True,
+                )
+            if result.stderr.strip():
+                print(
+                    f"\n--- [Sandbox Stderr ({sandbox.name})] ---\n{result.stderr.strip()}\n----------------------------------------",
+                    flush=True,
+                )
+
         return result

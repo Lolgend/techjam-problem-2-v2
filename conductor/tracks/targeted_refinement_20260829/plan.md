@@ -15,7 +15,7 @@
     - [x] Verify extractor tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Guardrails Layer (Data Leakage & Data Usage Checkers)
+## Phase 2: Guardrails Layer (Data Leakage & Data Usage Checkers) [checkpoint: 9a6a977]
 - [x] Task: Write failing tests for DataLeakageCheckerAgent (74823b0)
     - [x] Create `tests/guardrails/test_leakage.py` testing preprocessing block extraction, leakage detection (Figure 20), and code repair (Figure 21)
 - [x] Task: Implement `DataLeakageCheckerAgent` in `src/problem_2_v2/guardrails/leakage.py` (9a6a977)
@@ -26,7 +26,7 @@
 - [x] Task: Implement `DataUsageCheckerAgent` in `src/problem_2_v2/guardrails/usage.py` (9a6a977)
     - [x] Implement usage checking agent and fallback validation
     - [x] Verify usage tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Targeted Coder & Adaptive Refinement Planner
 - [ ] Task: Write failing tests for CoderAgent

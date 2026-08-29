@@ -28,3 +28,6 @@
 - [x] Task: Verify dry-run output formatting on KuaiRand-Pure.md
     - [x] Run `uv run problem-2-v2 run --task KuaiRand-Pure.md --data src/KuaiRand-Pure-dataset/data --dry-run`
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions (2e560f6)

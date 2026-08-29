@@ -1,13 +1,13 @@
 # Implementation Plan: Live Real-Time Console Progress, Startup Banner & Stage Telemetry Streaming
 
 ## Phase 1: CLI Startup Banner & Master Orchestrator Stage Telemetry
-- [ ] Task: Write failing tests for CLI startup banner, summary box, and orchestrator stage announcements
-    - [ ] Create `tests/test_live_progress.py` testing banner rendering, stage boundary output, and summary box
-- [ ] Task: Implement startup banner and summary box in `src/problem_2_v2/cli.py`
-    - [ ] Add ASCII banner with task, dataset, model, and search config details
-    - [ ] Add final summary box with duration, baseline score, final validation score, delta, and artifact file paths
-- [ ] Task: Implement stage boundary logging in `src/problem_2_v2/orchestrator.py`
-    - [ ] Add clear stage announcements: Ingestion -> Parallel Branches -> Ensembling -> Finalization
+- [x] Task: Write failing tests for CLI startup banner, summary box, and orchestrator stage announcements
+    - [x] Create `tests/test_live_progress.py` testing banner rendering, stage boundary output, and summary box
+- [x] Task: Implement startup banner and summary box in `src/problem_2_v2/cli.py`
+    - [x] Add ASCII banner with task, dataset, model, and search config details
+    - [x] Add final summary box with duration, baseline score, final validation score, delta, and artifact file paths
+- [x] Task: Implement stage boundary logging in `src/problem_2_v2/orchestrator.py`
+    - [x] Add clear stage announcements: Ingestion -> Parallel Branches -> Ensembling -> Finalization
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Sub-Pipeline Live Telemetry & Score Streaming

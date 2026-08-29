@@ -75,3 +75,9 @@
 > cards (never empty), `InitializationPipeline` can seed the official
 > baseline script as candidate 1, and `ModelMergerAgent` preserves the best
 > individual on failed merges. No new runtime dependencies.
+>
+> **2026-08-30:** Fixed duplicate relative-path resolution in
+> `SubprocessRunner` while fixing the sandbox path resolution track
+> (`sandbox_path_resolution_fix_20260830`): `prepare_sandbox` and
+> `run_code` now resolve sandbox and `solution.py` paths to absolute via
+> `.resolve()`, eliminating `[Errno 2]` when `runs_dir` is relative.

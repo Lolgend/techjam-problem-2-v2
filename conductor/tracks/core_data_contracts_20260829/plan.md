@@ -21,16 +21,16 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Task Specification, Execution Telemetry & Artifact Lineage
-- [ ] Task: Write failing tests for TaskSpecification markdown parser and ExecutionResult
-    - [ ] Create `tests/contracts/test_task.py`
-    - [ ] Test markdown problem description parser (`from_markdown`) with sample competition specs
-    - [ ] Test ExecutionResult validation score regex extraction (`Final Validation Performance: {score}`)
-    - [ ] Test PipelineArtifact lineage tracking and JSON serialization
-- [ ] Task: Implement TaskSpecification, ExecutionResult, and PipelineArtifact in `src/problem_2_v2/contracts/task.py`
-    - [ ] Define `TaskSpecification` with markdown ingestion helper
-    - [ ] Define `ExecutionResult` with metric extraction and error traceback capture
-    - [ ] Define `PipelineArtifact` with code diff and version history
-    - [ ] Verify tests pass
+- [x] Task: Write failing tests for TaskSpecification markdown parser and ExecutionResult (d1b0228)
+    - [x] Create `tests/contracts/test_task.py`
+    - [x] Test markdown problem description parser (`from_markdown`) with sample competition specs
+    - [x] Test ExecutionResult validation score regex extraction (`Final Validation Performance: {score}`)
+    - [x] Test PipelineArtifact lineage tracking and JSON serialization
+- [x] Task: Implement TaskSpecification, ExecutionResult, and PipelineArtifact in `src/problem_2_v2/contracts/task.py` (271d07b)
+    - [x] Define `TaskSpecification` with markdown ingestion helper
+    - [x] Define `ExecutionResult` with metric extraction and error traceback capture
+    - [x] Define `PipelineArtifact` with code diff and version history
+    - [x] Verify tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Search Retrieval, Refinement & Guardrail Schemas

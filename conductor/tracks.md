@@ -2,7 +2,7 @@
 
 ---
 
-- [~] **Track: Fix Subprocess Sandbox Path Resolution in SubprocessRunner**
+- [x] **Track: Fix Subprocess Sandbox Path Resolution in SubprocessRunner**
   *Link: [./tracks/sandbox_path_resolution_fix_20260830/index.md](./tracks/sandbox_path_resolution_fix_20260830/index.md)*
 - [ ] **Track: Robust Multi-Provider Model Card Retrieval, Fallback Parsing & Baseline Seeding**
   *Link: [./tracks/robust_candidate_retrieval_20260830/index.md](./tracks/robust_candidate_retrieval_20260830/index.md)*

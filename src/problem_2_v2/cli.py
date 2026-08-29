@@ -96,6 +96,9 @@ def _version_command() -> int:
 
 def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
     """Execute the ``run`` subcommand (dry-run or full pipeline)."""
+    seeds = _parse_seeds(args.seeds)
+    if seeds is not None and len(seeds) != args.branches:
+        parser.error(f"--seeds ({len(seeds)}) must match --branches ({args.branches}).")
     config = MLEStarConfig(
         model=args.model,
         search_provider=args.search_provider,
@@ -103,7 +106,7 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         outer_loops=args.outer_loops,
         inner_loops=args.inner_loops,
         ensemble_rounds=args.ensemble_rounds,
-        seeds=_parse_seeds(args.seeds),
+        seeds=seeds,
     )
     pipeline = MLEStarPipeline(config=config)
 
@@ -118,11 +121,10 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         print(f"Run failed: {exc}", file=sys.stderr)
         return 1
 
+    final_str = f"{result.final_score:.4f}" if result.final_score is not None else "n/a"
+    delta_str = f"{result.score_delta:.4f}" if result.score_delta is not None else "n/a"
     print(f"Run completed in {result.duration_seconds:.1f}s")
-    print(
-        f"Baseline: {result.baseline_score:.4f}  "
-        f"Final: {result.final_score:.4f}  Delta: {result.score_delta:.4f}"
-    )
+    print(f"Baseline: {result.baseline_score:.4f}  Final: {final_str}  Delta: {delta_str}")
     if result.final_artifact is not None:
         _copy_final_output(result.final_artifact.output_dir, args.output)
         print(f"Artifacts written to {args.output}")

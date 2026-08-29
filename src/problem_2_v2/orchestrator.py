@@ -164,14 +164,8 @@ class MLEStarPipeline:
             FileNotFoundError: When the task markdown file is missing.
             NotADirectoryError: When the dataset directory is missing.
         """
-        task_path = Path(task_md_path)
-        if not task_path.is_file():
-            raise FileNotFoundError(f"Task markdown file not found: {task_md_path}")
-        data_path = Path(dataset_dir)
-        if not data_path.is_dir():
-            raise NotADirectoryError(f"Dataset directory not found: {dataset_dir}")
-        md_text = task_path.read_text(encoding="utf-8")
-        return TaskSpecification.from_markdown(md_text, dataset_dir=dataset_dir)
+        _, spec = self._ingest(task_md_path, dataset_dir)
+        return spec
 
     def run(
         self,
@@ -180,6 +174,9 @@ class MLEStarPipeline:
         run_id: str | None = None,
     ) -> MLEStarResult:
         """Run the full pipeline synchronously (blocking).
+
+        Must be called from a thread without a running event loop; use
+        ``run_async`` from within an active event loop.
 
         Args:
             task_md_path: Path to the problem markdown file.
@@ -211,9 +208,8 @@ class MLEStarPipeline:
         run_id = run_id or f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         with logfire.span("mlestar.run", run_id=run_id):
-            spec = self.validate(task_md_path, dataset_dir)
+            md_text, spec = self._ingest(task_md_path, dataset_dir)
             baseline = spec.baseline_score
-            md_text = Path(task_md_path).read_text(encoding="utf-8")
 
             with logfire.span("mlestar.parallel_branches", run_id=run_id):
                 seeds = (
@@ -258,6 +254,17 @@ class MLEStarPipeline:
             duration_seconds=time.monotonic() - started,
             success=final_score is not None,
         )
+
+    def _ingest(self, task_md_path: str, dataset_dir: str) -> tuple[str, TaskSpecification]:
+        """Validate paths, read the markdown, and parse the task spec once."""
+        task_path = Path(task_md_path)
+        if not task_path.is_file():
+            raise FileNotFoundError(f"Task markdown file not found: {task_md_path}")
+        data_path = Path(dataset_dir)
+        if not data_path.is_dir():
+            raise NotADirectoryError(f"Dataset directory not found: {dataset_dir}")
+        md_text = task_path.read_text(encoding="utf-8")
+        return md_text, TaskSpecification.from_markdown(md_text, dataset_dir=dataset_dir)
 
     def _build_provider(self) -> SearchProvider:
         """Build the configured search provider backend."""

@@ -83,6 +83,60 @@ class TestCLI:
                 ]
             )
 
+    def test_run_rejects_seed_branch_mismatch(self, tmp_path: Path, capsys) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        with pytest.raises(SystemExit):
+            main(
+                [
+                    "run",
+                    "--task",
+                    str(task_file),
+                    "--data",
+                    str(data_dir),
+                    "--search-provider",
+                    "mock",
+                    "--branches",
+                    "4",
+                    "--seeds",
+                    "1,2",
+                ]
+            )
+
+    def test_run_failed_result_exits_cleanly(self, tmp_path: Path, capsys, monkeypatch) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
+
+        def failed_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=None,
+                baseline_score=0.5,
+                final_score=None,
+                score_delta=None,
+                duration_seconds=1.0,
+                success=False,
+            )
+
+        monkeypatch.setattr("problem_2_v2.orchestrator.MLEStarPipeline.run", failed_run)
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "mock",
+            ]
+        )
+        captured = capsys.readouterr()
+        assert code == 1
+        assert "Final: n/a" in captured.out
+        assert "Delta: n/a" in captured.out
+        assert "TypeError" not in captured.err
+
     def test_run_dry_run_rejects_missing_data(self, tmp_path: Path, capsys) -> None:
         task_file, _ = _write_task(tmp_path)
         code = main(

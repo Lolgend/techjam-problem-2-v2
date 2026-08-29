@@ -19,6 +19,7 @@ from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
+from problem_2_v2.execution.pipeline import ExecutionConfig, ExecutionGuardrailPipeline
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
 from problem_2_v2.refinement.ablation import AblationAgent, AblationSummarizerAgent
@@ -90,9 +91,8 @@ class RefinementPipeline:
         extractor: Target code block extractor.
         planner: Adaptive refinement planner.
         coder: Code block refiner.
-        leakage: Data leakage guardrail.
-        usage: Data usage guardrail.
-        debugger: Execution debugger.
+        execution: Unified execution guardrail pipeline (guardrails,
+            sandbox execution, and the debugger loop).
         runner: Sandbox runner.
         outer_loops: Number of outer iterations (T).
         inner_loops: Number of inner iterations (K).
@@ -105,10 +105,11 @@ class RefinementPipeline:
         extractor: CodeBlockExtractorAgent,
         planner: RefinementPlannerAgent,
         coder: CoderAgent,
-        leakage: DataLeakageCheckerAgent,
-        usage: DataUsageCheckerAgent,
-        debugger: DebuggerAgent,
-        runner: SubprocessRunner,
+        leakage: DataLeakageCheckerAgent | None = None,
+        usage: DataUsageCheckerAgent | None = None,
+        debugger: DebuggerAgent | None = None,
+        runner: SubprocessRunner | None = None,
+        execution: ExecutionGuardrailPipeline | None = None,
         outer_loops: int = 3,
         inner_loops: int = 3,
     ) -> None:
@@ -124,20 +125,47 @@ class RefinementPipeline:
             usage: Data usage guardrail.
             debugger: Execution debugger.
             runner: Sandbox runner.
+            execution: Unified execution guardrail pipeline. When omitted,
+                one is built from the leakage, usage, debugger, and runner
+                components.
             outer_loops: Number of outer iterations (T).
             inner_loops: Number of inner iterations (K).
+
+        Raises:
+            ValueError: When neither ``execution`` nor the execution
+                component quartet is provided.
         """
         self.ablation = ablation
         self.summarizer = summarizer
         self.extractor = extractor
         self.planner = planner
         self.coder = coder
-        self.leakage = leakage
-        self.usage = usage
-        self.debugger = debugger
-        self.runner = runner
         self.outer_loops = outer_loops
         self.inner_loops = inner_loops
+
+        if execution is not None:
+            self.execution = execution
+            self.runner = runner or execution.runner
+        else:
+            if leakage is None or usage is None or debugger is None or runner is None:
+                raise ValueError(
+                    "Either execution or (leakage, usage, debugger, runner) must be provided."
+                )
+            self.execution = ExecutionGuardrailPipeline(
+                config=ExecutionConfig(
+                    timeout_seconds=runner.timeout_seconds,
+                    max_debug_rounds=debugger.max_debug_rounds,
+                    sandbox_base_dir=str(runner.runs_dir),
+                ),
+                leakage=leakage,
+                usage=usage,
+                runner=runner,
+                debugger=debugger,
+            )
+            self.runner = runner
+        self.leakage = self.execution.leakage
+        self.usage = self.execution.usage
+        self.debugger = self.execution.debugger
 
     def refine(
         self,
@@ -330,35 +358,21 @@ class RefinementPipeline:
             patched = patch_script(base_code, block.raw_code, refined)
             candidate_code = patched
 
-            try:
-                leakage_status, guarded = self.leakage.audit(patched)
-                candidate_code = guarded
-                if leakage_status.is_leaking:
-                    errors.append("data leakage detected and repaired")
-            except Exception as exc:
-                errors.append(f"leakage check failed: {exc}")
-
-            try:
-                usage_status = self.usage.audit(spec, candidate_code)
-                if usage_status.improved_code_block:
-                    candidate_code = usage_status.improved_code_block
-                    errors.append("unused data incorporated")
-            except Exception as exc:
-                errors.append(f"usage check failed: {exc}")
-
-            code_diff = compute_code_diff(base_code, candidate_code)
-
-            outcome = self.debugger.debug(
-                candidate_code,
+            result = self.execution.run(
+                patched,
+                spec,
                 run_id=run_id,
                 candidate_id=f"refine_t{t}_k{k}",
-                dataset_dir=spec.dataset_dir,
-                dataset_files=spec.dataset_files,
             )
-            score = outcome.result.validation_score
+            guarded = self.execution.last_guarded_code or patched
+            candidate_code = guarded
+            score = result.validation_score
             success = score is not None
-            if not success and outcome.result.stderr:
-                errors.append(outcome.result.stderr[-500:])
+            code_diff = compute_code_diff(base_code, guarded)
+            if not success and result.stderr:
+                errors.append(result.stderr[-500:])
+            if guarded != patched:
+                errors.append("guardrails modified the candidate")
         except ValueError as exc:
             errors.append(str(exc))
         except Exception as exc:

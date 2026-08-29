@@ -17,6 +17,7 @@ from pydantic_ai import Agent
 from problem_2_v2.contracts.code_utils import extract_python_code, validate_python_syntax
 from problem_2_v2.contracts.guardrails import EnsembleStrategy
 from problem_2_v2.contracts.task import ExecutionResult, PipelineArtifact, TaskSpecification
+from problem_2_v2.execution.pipeline import ExecutionGuardrailPipeline
 from problem_2_v2.runner.debugger import DebuggerAgent
 
 _ENSEMBLER_INSTRUCTIONS = (
@@ -75,17 +76,27 @@ class EnsemblerAgent:
 
     Attributes:
         debugger: Debugger agent used to repair failing ensemble scripts.
+        execution: Optional unified execution guardrail pipeline; when
+            provided, ensemble scripts are run through it instead of the
+            debugger directly.
         agent: Pydantic AI agent producing the unified ensemble script.
     """
 
-    def __init__(self, debugger: DebuggerAgent, model: str = "openai:gpt-4o") -> None:
+    def __init__(
+        self,
+        debugger: DebuggerAgent,
+        model: str = "openai:gpt-4o",
+        execution: ExecutionGuardrailPipeline | None = None,
+    ) -> None:
         """Create an ensembler.
 
         Args:
             debugger: Debugger agent for execution repair.
             model: Pydantic AI model string.
+            execution: Optional unified execution guardrail pipeline.
         """
         self.debugger = debugger
+        self.execution = execution
         self.agent = Agent(
             model,
             name="ensembler_agent",
@@ -144,27 +155,33 @@ class EnsemblerAgent:
             )
 
         candidate_id = f"ens_r{round_index}"
-        outcome = self.debugger.debug(
-            code,
-            run_id=run_id,
-            candidate_id=candidate_id,
-            dataset_dir=spec.dataset_dir,
-            dataset_files=spec.dataset_files,
-        )
-        score = outcome.result.validation_score
+        if self.execution is not None:
+            result = self.execution.run(code, spec, run_id=run_id, candidate_id=candidate_id)
+            final_code = self.execution.last_executed_code or code
+            debug_rounds = self.execution.last_debug_rounds
+            runs_dir = self.execution.runner.runs_dir
+        else:
+            outcome = self.debugger.debug(
+                code,
+                run_id=run_id,
+                candidate_id=candidate_id,
+                dataset_dir=spec.dataset_dir,
+                dataset_files=spec.dataset_files,
+            )
+            result = outcome.result
+            final_code = outcome.code
+            debug_rounds = outcome.debug_rounds
+            runs_dir = self.debugger.runner.runs_dir
+        score = result.validation_score
         submission = (
-            Path(self.debugger.runner.runs_dir)
-            / run_id
-            / f"sandbox_{candidate_id}"
-            / "final"
-            / "submission.csv"
+            Path(runs_dir) / run_id / f"sandbox_{candidate_id}" / "final" / "submission.csv"
         )
         return EnsembleRun(
             round_index=round_index,
-            code=outcome.code,
-            result=outcome.result,
+            code=final_code,
+            result=result,
             score=score,
-            debug_rounds=outcome.debug_rounds,
+            debug_rounds=debug_rounds,
             submission_path=str(submission) if submission.exists() else None,
             success=score is not None,
         )

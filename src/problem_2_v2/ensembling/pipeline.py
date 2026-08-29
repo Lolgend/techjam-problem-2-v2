@@ -20,6 +20,7 @@ from problem_2_v2.contracts.guardrails import EnsembleStrategy
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.ensembling.ensembler import EnsemblerAgent
 from problem_2_v2.ensembling.planner import EnsemblePlannerAgent
+from problem_2_v2.execution.pipeline import ExecutionGuardrailPipeline
 from problem_2_v2.runner.sandbox import SubprocessRunner
 
 
@@ -79,6 +80,8 @@ class EnsemblePipeline:
         ensembler: Code ensembling agent.
         runner: Sandbox runner (provides the runs directory).
         rounds: Number of ensemble rounds (R).
+        execution: Unified execution guardrail pipeline used by the
+            ensembler, if any.
     """
 
     def __init__(
@@ -87,6 +90,7 @@ class EnsemblePipeline:
         ensembler: EnsemblerAgent,
         runner: SubprocessRunner,
         rounds: int = 3,
+        execution: ExecutionGuardrailPipeline | None = None,
     ) -> None:
         """Create the ensemble pipeline.
 
@@ -95,11 +99,16 @@ class EnsemblePipeline:
             ensembler: Code ensembling agent.
             runner: Sandbox runner.
             rounds: Number of ensemble rounds (R).
+            execution: Unified execution guardrail pipeline; wired into
+                the ensembler when it has none.
         """
         self.planner = planner
         self.ensembler = ensembler
         self.runner = runner
         self.rounds = rounds
+        self.execution = execution
+        if execution is not None and ensembler.execution is None:
+            ensembler.execution = execution
 
     def run(
         self,

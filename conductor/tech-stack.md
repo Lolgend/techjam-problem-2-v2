@@ -40,3 +40,11 @@
 > search-guided initialization track (`ingestion_search_init_20260829`).
 > Peak memory monitoring is deferred: the sandbox currently provides
 > isolation, timeouts, and score-line parsing only.
+>
+> **2026-08-29:** Unified the execution safeguards into an
+> `ExecutionGuardrailPipeline` orchestrator and added the
+> `FinalArtifactProducer` finalizer while implementing the execution
+> guardrail modules track (`execution_guardrails_20260829`). No new runtime
+> dependencies. Peak memory monitoring remains deferred (the spec's "memory
+> limits" requirement is covered by sandbox isolation, timeouts, and
+> `./input` mapping).

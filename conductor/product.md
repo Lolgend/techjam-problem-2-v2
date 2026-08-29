@@ -53,11 +53,12 @@ Given a problem description in Markdown format (specifying task objectives, data
   - Error/recovery events and manual intervention count (target: 0)
 
 ### 5. Safeguards, Verification & Execution Runtime
+- **Execution Guardrail Pipeline:** A unified orchestrator (`ExecutionGuardrailPipeline`) sequencing the data leakage check, data usage check, sandbox execution, and automatic debugging loop, configured via `ExecutionConfig` (timeouts, retry rounds, guardrail toggles). Both the refinement and ensembling pipelines route all script execution through it.
 - **Local Subprocess Runner:** Isolated execution with configurable timeouts, GPU/CUDA acceleration, memory monitoring, and robust exception trapping.
 - **Debugging Agent ($A_{\text{debugger}}$):** Iteratively corrects execution errors and runtime tracebacks up to max retry rounds without human intervention.
 - **Data Leakage Checker ($A_{\text{leakage}}$):** Extracts preprocessing code blocks, inspects for test/val contamination during train steps, and auto-corrects leaky logic.
 - **Data Usage Checker ($A_{\text{data}}$):** Cross-references task description with dataset files to ensure all auxiliary features/modalities are consumed.
-- **Test & Submission Generator ($A_{\text{test}}$):** Restores full training data (removes temporary subsampling) and generates formatted `./final/submission.csv`.
+- **Final Artifact Producer ($A_{\text{finalizer}}$):** Restores full training data (removes temporary subsampling), trains on the complete dataset, and produces the production-ready `./final/` output (serialized model files, `metrics.json` evaluation scores, and `submission.csv`).
 
 ## User Interface & Integration
 - **CLI Interface:** `problem-2-v2 run --task <problem.md> --input <dir> --output <dir>` with real-time progress logging.

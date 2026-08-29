@@ -40,17 +40,17 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Candidate Code Generation & Evaluation ($\mathcal{A}_{\text{init}}$)
-- [ ] Task: Write failing tests for CandidateEvaluatorAgent
-    - [ ] Create `tests/initialization/test_evaluator.py`
-    - [ ] Test candidate script generation prompt with `TaskSpecification` + `ModelCard`
-    - [ ] Test hold-out validation and 30,000 row subsampling constraint enforcement
-    - [ ] Test evaluation and score sorting ($\pi$ permutation)
-- [ ] Task: Implement `CandidateEvaluatorAgent` in `src/problem_2_v2/initialization/evaluator.py`
-    - [ ] Implement Pydantic AI candidate generation agent with Figure 10 prompt
-    - [ ] Implement code fence extraction and AST validation
-    - [ ] Integrate execution with `SubprocessRunner` and `DebuggerAgent`
-    - [ ] Implement ranking and candidate sorting
-    - [ ] Verify evaluator tests pass
+- [x] Task: Write failing tests for CandidateEvaluatorAgent (53c316f)
+    - [x] Create `tests/initialization/test_evaluator.py`
+    - [x] Test candidate script generation prompt with `TaskSpecification` + `ModelCard`
+    - [x] Test hold-out validation and 30,000 row subsampling constraint enforcement
+    - [x] Test evaluation and score sorting ($\pi$ permutation)
+- [x] Task: Implement `CandidateEvaluatorAgent` in `src/problem_2_v2/initialization/evaluator.py` (8041f18)
+    - [x] Implement Pydantic AI candidate generation agent with Figure 10 prompt
+    - [x] Implement code fence extraction and AST validation
+    - [x] Integrate execution with `SubprocessRunner` and `DebuggerAgent`
+    - [x] Implement ranking and candidate sorting
+    - [x] Verify evaluator tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Sequential Model Merging ($\mathcal{A}_{\text{merger}}$) & Pipeline Orchestrator

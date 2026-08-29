@@ -58,3 +58,12 @@
 > (`announce`/`format_score`/`format_delta`, `flush=True`) added in the
 > live console progress track (`live_console_progress_20260829`); rich
 > interactive tables remain future work.
+>
+> **2026-08-30:** Fixed Windows Proactor `WinError 10038` socket teardown
+> crashes by configuring `asyncio.WindowsSelectorEventLoopPolicy` on
+> Windows (`configure_event_loop_policy` in the orchestrator, invoked by
+> the CLI and `MLEStarPipeline.run`). `DuckDuckGoSearchProvider` is now
+> thread-safe (serialized via `threading.Lock`, fresh scoped
+> `DDGS(timeout=20)` sessions per call, graceful `[]` fallback on
+> socket/network/rate-limit errors) while fixing the
+> `windows_asyncio_socket_fix_20260829` track.

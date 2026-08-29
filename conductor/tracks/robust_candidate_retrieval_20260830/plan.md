@@ -18,9 +18,9 @@
     - [x] Ensure `ModelMergerAgent` always preserves the highest scoring individual candidate if merging fails
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 3: Full System Integration & Regression Verification
+## Phase 3: Full System Integration & Regression Verification [checkpoint: ce90691]
 - [x] Task: Run full test suite and verify 100% pass rate
     - [x] Execute `uv run pytest --tb=short -q` across all 310+ tests (346 passed)
 - [~] Task: Verify end-to-end initialization on KuaiRand-Pure.md
-    - [ ] Run dry-run and mock test verifying candidate evaluation and baseline score generation
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+    - [x] Run dry-run and mock test verifying candidate evaluation and baseline score generation
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

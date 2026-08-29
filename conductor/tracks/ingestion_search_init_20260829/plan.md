@@ -21,22 +21,22 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Execution Sandbox & Autonomous Debugger
-- [ ] Task: Write failing tests for SubprocessRunner
-    - [ ] Create `tests/runner/test_sandbox.py`
-    - [ ] Test isolated sandbox directory creation and input data symlinking/copying
-    - [ ] Test execution timeout, exit code capture, and metric parsing (`ExecutionResult`)
-    - [ ] Test syntax error and exception capture
-- [ ] Task: Implement `SubprocessRunner` in `src/problem_2_v2/runner/sandbox.py`
-    - [ ] Implement directory workspace management and `./input` mapping
-    - [ ] Implement subprocess execution with timeout and process termination
-    - [ ] Implement stdout/stderr capture and validation score regex extraction
-    - [ ] Verify sandbox tests pass
-- [ ] Task: Write failing tests for DebuggerAgent
-    - [ ] Create `tests/runner/test_debugger.py` testing automated traceback repair for syntax/import/runtime errors
-- [ ] Task: Implement `DebuggerAgent` in `src/problem_2_v2/runner/debugger.py`
-    - [ ] Implement Pydantic AI debugger agent with Figure 19 prompt
-    - [ ] Implement iterative repair loop up to `max_debug_rounds`
-    - [ ] Verify debugger tests pass
+- [x] Task: Write failing tests for SubprocessRunner (3d796cd)
+    - [x] Create `tests/runner/test_sandbox.py`
+    - [x] Test isolated sandbox directory creation and input data symlinking/copying
+    - [x] Test execution timeout, exit code capture, and metric parsing (`ExecutionResult`)
+    - [x] Test syntax error and exception capture
+- [x] Task: Implement `SubprocessRunner` in `src/problem_2_v2/runner/sandbox.py` (3d95ead)
+    - [x] Implement directory workspace management and `./input` mapping
+    - [x] Implement subprocess execution with timeout and process termination
+    - [x] Implement stdout/stderr capture and validation score regex extraction
+    - [x] Verify sandbox tests pass
+- [x] Task: Write failing tests for DebuggerAgent (2207ba3)
+    - [x] Create `tests/runner/test_debugger.py` testing automated traceback repair for syntax/import/runtime errors
+- [x] Task: Implement `DebuggerAgent` in `src/problem_2_v2/runner/debugger.py` (209d12b)
+    - [x] Implement Pydantic AI debugger agent with Figure 19 prompt
+    - [x] Implement iterative repair loop up to `max_debug_rounds`
+    - [x] Verify debugger tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Candidate Code Generation & Evaluation ($\mathcal{A}_{\text{init}}$)

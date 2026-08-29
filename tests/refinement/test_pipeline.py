@@ -178,3 +178,59 @@ class TestRefinementPipeline:
         ]
         assert records[0].validation_score == pytest.approx(0.85)
         assert records[0].delta_from_baseline == pytest.approx(0.05)
+
+    def test_planner_failure_does_not_crash_run(self, pipeline: RefinementPipeline) -> None:
+        def exploding_model(messages, info):
+            raise RuntimeError("LLM backend down")
+
+        from pydantic_ai.models.function import FunctionModel
+
+        with (
+            pipeline.ablation.agent.override(
+                model=TestModel(custom_output_text="print('ablation done')")
+            ),
+            pipeline.summarizer.agent.override(model=TestModel(custom_output_args=_report_args())),
+            pipeline.extractor.agent.override(
+                model=TestModel(custom_output_args=_extractor_args())
+            ),
+            pipeline.planner.agent.override(model=FunctionModel(function=exploding_model)),
+            pipeline.coder.agent.override(
+                model=TestModel(custom_output_text=f"```python\n{REFINED_BLOCK}\n```")
+            ),
+            pipeline.leakage.check_agent.override(
+                model=TestModel(custom_output_args=_leak_clean_args())
+            ),
+            pipeline.usage.agent.override(
+                model=TestModel(custom_output_text="All the provided information is used.")
+            ),
+        ):
+            result = pipeline.refine(
+                _spec(), INITIAL_CODE, initial_score=0.80, run_id="plannerfail"
+            )
+        assert result.final_score == pytest.approx(0.85)
+        assert result.final_code == IMPROVED_SCRIPT
+
+    def test_extractor_failure_does_not_crash_run(self, pipeline: RefinementPipeline) -> None:
+        def exploding_model(messages, info):
+            raise RuntimeError("LLM backend down")
+
+        from pydantic_ai.models.function import FunctionModel
+
+        with (
+            pipeline.ablation.agent.override(
+                model=TestModel(custom_output_text="print('ablation done')")
+            ),
+            pipeline.summarizer.agent.override(model=TestModel(custom_output_args=_report_args())),
+            pipeline.extractor.agent.override(model=FunctionModel(function=exploding_model)),
+            pipeline.leakage.check_agent.override(
+                model=TestModel(custom_output_args=_leak_clean_args())
+            ),
+            pipeline.usage.agent.override(
+                model=TestModel(custom_output_text="All the provided information is used.")
+            ),
+        ):
+            result = pipeline.refine(
+                _spec(), INITIAL_CODE, initial_score=0.80, run_id="extractorfail"
+            )
+        assert result.final_score == pytest.approx(0.80)
+        assert result.final_code == INITIAL_CODE

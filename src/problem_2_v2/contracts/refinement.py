@@ -21,7 +21,30 @@ __all__ = [
     "AblationReport",
     "TargetCodeBlock",
     "RefinementPlan",
+    "block_in_script",
 ]
+
+
+def block_in_script(code_block: str, script: str) -> bool:
+    """Check whether a code block appears in a script (indentation-tolerant).
+
+    The block may have been extracted without its surrounding indentation,
+    so each line is matched against its stripped content at a line
+    boundary.
+
+    Args:
+        code_block: The code block to locate.
+        script: The script to search.
+
+    Returns:
+        True when every non-blank line of the block matches a run of
+        script lines at line boundaries.
+    """
+    stripped_lines = [re.escape(line.strip()) for line in code_block.splitlines() if line.strip()]
+    if not stripped_lines:
+        return False
+    pattern = re.compile(r"(?m)^[ \t]*" + r"\n[ \t]*".join(stripped_lines))
+    return pattern.search(script) is not None
 
 
 class AblationVariant(BaseModel):

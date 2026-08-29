@@ -10,8 +10,9 @@ from __future__ import annotations
 import logfire
 from pydantic_ai import Agent
 
+from problem_2_v2.contracts.enums import ComponentCategory
 from problem_2_v2.contracts.guardrails import DataLeakageStatus
-from problem_2_v2.refinement.extractor import CodeBlockExtractorAgent
+from problem_2_v2.contracts.refinement import TargetCodeBlock, block_in_script
 
 _CHECK_INSTRUCTIONS = (
     "You audit Python machine learning code for data leakage.\n"
@@ -140,12 +141,8 @@ class DataLeakageCheckerAgent:
         if original in code:
             return code.replace(original, corrected, 1)
 
-        block = CodeBlockExtractorAgent._block_in_solution(original, code)
-        if not block:
+        if not block_in_script(original, code):
             raise ValueError("Suspicious block not found in solution script.")
-        from problem_2_v2.contracts.enums import ComponentCategory
-        from problem_2_v2.contracts.refinement import TargetCodeBlock
-
         target = TargetCodeBlock(
             raw_code=original,
             category=ComponentCategory.DATA_PREPROCESSING,

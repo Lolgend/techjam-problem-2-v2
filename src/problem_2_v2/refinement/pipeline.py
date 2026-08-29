@@ -194,7 +194,7 @@ class RefinementPipeline:
                             ablation_summary=summary,
                             previous_blocks=refined_blocks,
                         )
-                    except ValueError as exc:
+                    except Exception as exc:
                         logfire.warn("refinement.extract.failed", t=t, error=str(exc))
                         continue
 
@@ -203,11 +203,14 @@ class RefinementPipeline:
                     attempts: list[tuple[str, float | None]] = []
 
                     for k in range(self.inner_loops):
-                        plan = (
-                            initial_plan
-                            if k == 0
-                            else self.planner.next_plan(block, attempts, iteration_index=k)
-                        )
+                        if k == 0:
+                            plan = initial_plan
+                        else:
+                            try:
+                                plan = self.planner.next_plan(block, attempts, iteration_index=k)
+                            except Exception as exc:
+                                logfire.warn("refinement.planner.failed", t=t, k=k, error=str(exc))
+                                break
                         with logfire.span("refinement.inner", t=t, k=k):
                             record, candidate_code = self._inner_step(
                                 spec=spec,
@@ -325,7 +328,6 @@ class RefinementPipeline:
         try:
             refined = self.coder.refine(block, plan)
             patched = patch_script(base_code, block.raw_code, refined)
-            code_diff = compute_code_diff(base_code, patched)
             candidate_code = patched
 
             try:
@@ -343,6 +345,8 @@ class RefinementPipeline:
                     errors.append("unused data incorporated")
             except Exception as exc:
                 errors.append(f"usage check failed: {exc}")
+
+            code_diff = compute_code_diff(base_code, candidate_code)
 
             outcome = self.debugger.debug(
                 candidate_code,

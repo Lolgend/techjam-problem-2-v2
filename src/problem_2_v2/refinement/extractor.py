@@ -8,14 +8,12 @@ $p_0$.
 
 from __future__ import annotations
 
-import re
-
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 
 from problem_2_v2.contracts.enums import ComponentCategory
-from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
+from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock, block_in_script
 
 _EXTRACTOR_INSTRUCTIONS = (
     "You are a Kaggle grandmaster attending a competition. In order to win "
@@ -108,7 +106,7 @@ class CodeBlockExtractorAgent:
             raise ValueError("Extractor returned no refinement plans.")
         item = items[0]
 
-        if not self._block_in_solution(item.code_block, solution):
+        if not block_in_script(item.code_block, solution):
             raise ValueError("Extracted code block not found in solution script.")
 
         block = TargetCodeBlock(
@@ -153,19 +151,3 @@ class CodeBlockExtractorAgent:
             f"# Your task\nGiven the ablation study results, suggest an "
             f"effective next plan and extract the code block to improve."
         )
-
-    @staticmethod
-    def _block_in_solution(code_block: str, solution: str) -> bool:
-        """Check block presence with indentation-tolerant line matching.
-
-        The LLM may return the block without its surrounding indentation,
-        so each line is matched against its stripped content at a line
-        boundary.
-        """
-        stripped_lines = [
-            re.escape(line.strip()) for line in code_block.splitlines() if line.strip()
-        ]
-        if not stripped_lines:
-            return False
-        pattern = re.compile(r"(?m)^[ \t]*" + r"\n[ \t]*".join(stripped_lines))
-        return pattern.search(solution) is not None

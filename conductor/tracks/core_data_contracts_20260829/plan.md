@@ -11,13 +11,13 @@
     - [x] Implement `validate_python_syntax`
     - [x] Implement `compute_code_diff`
     - [x] Verify tests pass
-- [ ] Task: Write failing tests for core Enums and MetricDirection logic
-    - [ ] Create `tests/contracts/test_enums.py`
-    - [ ] Test `MetricDirection.is_better` and `MetricDirection.delta` for MAXIMIZE / MINIMIZE
-    - [ ] Test `TaskType` and `ComponentCategory` enum members
-- [ ] Task: Implement enums in `src/problem_2_v2/contracts/enums.py`
-    - [ ] Implement `MetricDirection`, `TaskType`, `ComponentCategory`, `EnsembleMethod`
-    - [ ] Verify tests pass
+- [x] Task: Write failing tests for core Enums and MetricDirection logic (a756c71)
+    - [x] Create `tests/contracts/test_enums.py`
+    - [x] Test `MetricDirection.is_better` and `MetricDirection.delta` for MAXIMIZE / MINIMIZE
+    - [x] Test `TaskType` and `ComponentCategory` enum members
+- [x] Task: Implement enums in `src/problem_2_v2/contracts/enums.py` (76fe8ed)
+    - [x] Implement `MetricDirection`, `TaskType`, `ComponentCategory`, `EnsembleMethod`
+    - [x] Verify tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Task Specification, Execution Telemetry & Artifact Lineage

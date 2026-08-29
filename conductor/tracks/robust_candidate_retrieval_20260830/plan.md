@@ -1,0 +1,26 @@
+# Implementation Plan: Robust Multi-Provider Model Card Retrieval, Fallback Parsing & Baseline Seeding
+
+## Phase 1: Dual-Mode Parsing & Domain Fallback in RetrieverAgent
+- [ ] Task: Write tests for JSON regex parsing, markdown extraction, and domain fallbacks
+    - [ ] Add tests in `tests/search/test_retriever.py` for raw JSON text parsing, markdown extraction, and empty LLM fallback
+- [ ] Task: Implement dual-mode parser and domain fallback cards in `search/retriever.py`
+    - [ ] Implement `_parse_cards(raw_text: str)` extracting JSON blocks and markdown lists
+    - [ ] Implement `get_domain_fallback_cards(task_type)` for Recommender, Tabular, NLP, Vision modalities
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 2: Baseline Code Seeding & Robust Initialization Pipeline
+- [ ] Task: Write tests for baseline script discovery and candidate injection
+    - [ ] Add tests in `tests/initialization/test_pipeline.py` verifying baseline injection
+- [ ] Task: Implement baseline script detection and injection in `initialization/pipeline.py`
+    - [ ] Check for `src/baseline/baseline.py` or workspace baseline script and add as Candidate 1
+- [ ] Task: Implement candidate status logging and merger fallback in `evaluator.py` and `merger.py`
+    - [ ] Print `[Candidate {i}/{M}] {name} -> Score: {score}` with live unbuffered flush
+    - [ ] Ensure `ModelMergerAgent` always preserves the highest scoring individual candidate if merging fails
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 3: Full System Integration & Regression Verification
+- [ ] Task: Run full test suite and verify 100% pass rate
+    - [ ] Execute `uv run pytest --tb=short -q` across all 310+ tests
+- [ ] Task: Verify end-to-end initialization on KuaiRand-Pure.md
+    - [ ] Run dry-run and mock test verifying candidate evaluation and baseline score generation
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

@@ -1,10 +1,10 @@
 # Implementation Plan: Fix Subprocess Sandbox Path Resolution in SubprocessRunner
 
 ## Phase 1: Absolute Path Normalization in SubprocessRunner
-- [ ] Task: Write tests for relative runs_dir path execution in `tests/runner/test_sandbox.py`
-    - [ ] Add unit test verifying that SubprocessRunner with relative `runs_dir` executes `solution.py` without `[Errno 2]`
-- [ ] Task: Implement absolute path normalization in `src/problem_2_v2/runner/sandbox.py`
-    - [ ] Ensure `prepare_sandbox` and `run_code` resolve `sandbox` and `script_path` to absolute paths via `.resolve()`
+- [x] Task: Write tests for relative runs_dir path execution in `tests/runner/test_sandbox.py`
+    - [x] Add unit test verifying that SubprocessRunner with relative `runs_dir` executes `solution.py` without `[Errno 2]`
+- [x] Task: Implement absolute path normalization in `src/problem_2_v2/runner/sandbox.py`
+    - [x] Ensure `prepare_sandbox` and `run_code` resolve `sandbox` and `script_path` to absolute paths via `.resolve()`
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Full System Integration & Regression Verification

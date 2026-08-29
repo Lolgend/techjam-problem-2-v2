@@ -81,3 +81,13 @@ class TestDebuggerAgent:
             outcome = debugger.debug(no_score)
         assert outcome.recovered is True
         assert outcome.debug_rounds == 1
+
+    def test_llm_failure_does_not_crash_the_loop(self, runner: SubprocessRunner) -> None:
+        def exploding_model(messages, info):
+            raise RuntimeError("LLM backend down")
+
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=2)
+        with debugger.agent.override(model=FunctionModel(function=exploding_model)):
+            outcome = debugger.debug(BROKEN_SYNTAX)
+        assert outcome.recovered is False
+        assert outcome.debug_rounds == 2

@@ -120,6 +120,17 @@ class TestTavilySearchProvider:
         provider = TavilySearchProvider(api_key="k", client=FakeClient())  # type: ignore[arg-type]
         assert provider.provider_name == "tavily"
 
+    def test_context_manager_closes_client(self) -> None:
+        class TrackedClient(FakeClient):
+            closed = False
+
+            def close(self) -> None:
+                TrackedClient.closed = True
+
+        with TavilySearchProvider(api_key="k", client=TrackedClient()) as provider:  # type: ignore[arg-type]
+            assert provider.search("q")
+        assert TrackedClient.closed is True
+
 
 class TestGoogleSearchProvider:
     """Test the Google Custom Search integration with an injected client."""

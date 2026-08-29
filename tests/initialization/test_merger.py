@@ -159,3 +159,17 @@ class TestModelMergerAgent:
         assert outcome.lineage[1].version == 1
         assert outcome.lineage[1].parent_version == 0
         assert outcome.lineage[1].applied_diff is not None
+
+    def test_lineage_records_failed_top_candidate(self, merger: ModelMergerAgent) -> None:
+        ranked = [
+            _evaluation("A", CODE_A, None),  # type: ignore[arg-type]
+            _evaluation("B", CODE_B, 0.95),
+        ]
+        scripted = {CODE_B: 0.95}
+        with merger.agent.override(model=scripted_merger_model(scripted)):
+            outcome = merger.merge(_spec(), ranked, run_id="r")
+        assert len(outcome.lineage) == 2
+        assert outcome.lineage[0].version == 0
+        assert outcome.lineage[0].validation_score is None
+        assert outcome.lineage[1].version == 1
+        assert outcome.lineage[1].parent_version == 0

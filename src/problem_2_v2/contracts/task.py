@@ -211,7 +211,10 @@ class PipelineArtifact(BaseModel):
 
     version: int = Field(description="Monotonic artifact version number.")
     full_code: str = Field(description="The complete solution script.")
-    validation_score: float = Field(description="Validation score achieved.")
+    validation_score: float | None = Field(
+        default=None,
+        description="Validation score achieved, or None when evaluation failed.",
+    )
     parent_version: int | None = Field(default=None, description="Parent artifact version.")
     applied_diff: str | None = Field(default=None, description="Unified diff from the parent.")
     iteration_stage: str = Field(description="Stage that produced this artifact.")

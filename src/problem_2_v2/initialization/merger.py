@@ -154,17 +154,16 @@ class ModelMergerAgent:
         steps: list[MergeStep] = []
         merged_count = 0
 
-        if best.score is not None:
-            lineage.append(
-                PipelineArtifact(
-                    version=0,
-                    full_code=best.code,
-                    validation_score=best.score,
-                    parent_version=None,
-                    applied_diff=None,
-                    iteration_stage="init",
-                )
+        lineage.append(
+            PipelineArtifact(
+                version=0,
+                full_code=best.code,
+                validation_score=best.score,
+                parent_version=None,
+                applied_diff=None,
+                iteration_stage="init",
             )
+        )
 
         for k in range(1, len(ranked)):
             candidate = ranked[k]

@@ -124,7 +124,11 @@ class DebuggerAgent:
                     f"# Error\n{error_text}\n"
                     f"# Your task\nPlease revise the code to fix the error."
                 )
-                response = self.agent.run_sync(prompt)
+                try:
+                    response = self.agent.run_sync(prompt)
+                except Exception:
+                    logfire.warn("debugger.repair_round.llm_failed", round=rounds)
+                    continue
                 current_code = response.output
             result = self.runner.run_code(current_code, sandbox_dir=str(sandbox))
 

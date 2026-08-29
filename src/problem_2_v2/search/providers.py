@@ -119,6 +119,16 @@ class TavilySearchProvider:
             for item in payload.get("results", [])
         ]
 
+    def close(self) -> None:
+        """Close the underlying HTTP client."""
+        self._client.close()
+
+    def __enter__(self) -> TavilySearchProvider:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
+
 
 class GoogleSearchProvider:
     """Search provider backed by the Google Custom Search JSON API.
@@ -170,6 +180,16 @@ class GoogleSearchProvider:
             )
             for item in payload.get("items", [])
         ]
+
+    def close(self) -> None:
+        """Close the underlying HTTP client."""
+        self._client.close()
+
+    def __enter__(self) -> GoogleSearchProvider:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
 
 
 class DuckDuckGoSearchProvider:

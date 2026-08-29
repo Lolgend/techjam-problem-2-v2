@@ -12,6 +12,7 @@ import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 
+from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.task import ExecutionResult
 from problem_2_v2.runner.sandbox import SubprocessRunner
 
@@ -129,7 +130,11 @@ class DebuggerAgent:
                 except Exception:
                     logfire.warn("debugger.repair_round.llm_failed", round=rounds)
                     continue
-                current_code = response.output
+                repaired_code = extract_python_code(response.output)
+                if not repaired_code:
+                    logfire.warn("debugger.repair_round.no_code", round=rounds)
+                    continue
+                current_code = repaired_code
             result = self.runner.run_code(current_code, sandbox_dir=str(sandbox))
 
         return DebugOutcome(

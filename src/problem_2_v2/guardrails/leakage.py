@@ -10,6 +10,7 @@ from __future__ import annotations
 import logfire
 from pydantic_ai import Agent
 
+from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.enums import ComponentCategory
 from problem_2_v2.contracts.guardrails import DataLeakageStatus
 from problem_2_v2.contracts.refinement import TargetCodeBlock, block_in_script
@@ -111,7 +112,7 @@ class DataLeakageCheckerAgent:
         with logfire.span("guardrails.leakage_repair"):
             prompt = f"# Python code\n{code}\n# Your task\nRefine the code to prevent data leakage."
             response = self.repair_agent.run_sync(prompt)
-        corrected = response.output.strip()
+        corrected = extract_python_code(response.output)
         return self._patch(code, suspicious_block, corrected)
 
     def audit(self, code: str) -> tuple[DataLeakageStatus, str]:

@@ -43,6 +43,15 @@ class TestDebuggerAgent:
         assert outcome.result.success is True
         assert outcome.result.validation_score == pytest.approx(0.5)
 
+    def test_repair_strips_markdown_fences(self, debugger: DebuggerAgent) -> None:
+        fenced_fix = f"```python\n{FIXED_CODE}\n```"
+        with debugger.agent.override(model=TestModel(custom_output_text=fenced_fix)):
+            outcome = debugger.debug(BROKEN_SYNTAX)
+        assert outcome.recovered is True
+        assert outcome.debug_rounds == 1
+        assert "```" not in outcome.code
+        assert outcome.result.validation_score == pytest.approx(0.5)
+
     def test_recovers_runtime_error(self, debugger: DebuggerAgent) -> None:
         with debugger.agent.override(model=TestModel(custom_output_text=FIXED_CODE)):
             outcome = debugger.debug(BROKEN_RUNTIME)

@@ -84,6 +84,14 @@ class TestDataLeakageCheckerAgent:
         assert SUSPICIOUS_BLOCK in repaired
         assert "X_train = scaler.fit_transform" in repaired
 
+    def test_repair_strips_markdown_fences(self) -> None:
+        checker = DataLeakageCheckerAgent(model="test")
+        with checker.repair_agent.override(
+            model=TestModel(custom_output_text=f"```python\n{CORRECTED_BLOCK}\n```")
+        ):
+            repaired = checker.repair(LEAKY_CODE, SUSPICIOUS_BLOCK)
+        assert "```" not in repaired
+
     def test_repair_raises_when_block_not_found(self) -> None:
         checker = DataLeakageCheckerAgent(model="test")
         with (
@@ -96,6 +104,7 @@ class TestDataLeakageCheckerAgent:
 
     def test_audit_fixes_leaky_code(self) -> None:
         checker = DataLeakageCheckerAgent(model="test")
+        fixed_block = CORRECTED_BLOCK + "\n# repaired leak"
         with (
             checker.check_agent.override(
                 model=TestModel(
@@ -103,13 +112,14 @@ class TestDataLeakageCheckerAgent:
                 )
             ),
             checker.repair_agent.override(
-                model=TestModel(custom_output_text=f"```python\n{CORRECTED_BLOCK}\n```")
+                model=TestModel(custom_output_text=f"```python\n{fixed_block}\n```")
             ),
         ):
             status, code = checker.audit(LEAKY_CODE)
         assert status.is_leaking is True
         assert code != LEAKY_CODE
         assert "Final Validation Performance" in code
+        assert "```" not in code
 
     def test_audit_returns_code_unchanged_when_clean(self) -> None:
         checker = DataLeakageCheckerAgent(model="test")

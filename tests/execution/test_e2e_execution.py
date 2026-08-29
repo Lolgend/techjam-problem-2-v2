@@ -100,7 +100,7 @@ class TestEndToEndExecution:
             assert result.success is True
             assert result.validation_score == pytest.approx(0.80)
             assert pipeline.last_debug_rounds == 1
-            assert pipeline.last_executed_code == REPAIRED_CANDIDATE
+            assert pipeline.last_executed_code == REPAIRED_CANDIDATE.strip()
 
             artifact = finalizer.produce(pipeline.last_executed_code or "", spec, run_id="e2e")
 

@@ -12,6 +12,7 @@ import difflib
 import re
 
 _FENCED_BLOCK_RE = re.compile(r"```(?:python)?\s*\n?(.*?)```", re.DOTALL)
+_FENCE_LINE_RE = re.compile(r"^\s*```[^\n]*$")
 
 
 def extract_python_code(text: str) -> str:
@@ -27,16 +28,38 @@ def extract_python_code(text: str) -> str:
         the first block is returned. Otherwise the text is stripped of
         leading/trailing whitespace and returned when it parses as valid
         Python (raw code); prose that is not valid Python yields an empty
-        string.
+        string. Residual leading/trailing markdown fence lines are removed
+        unconditionally so malformed LLM responses never leak `` ``` ``
+        markers into executed code.
     """
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     match = _FENCED_BLOCK_RE.search(text)
     if match is not None:
-        return match.group(1).strip()
+        return _strip_residual_fences(match.group(1)).strip()
     stripped = text.strip()
     if stripped and _parses_as_python(stripped):
         return stripped
+    cleaned = _strip_residual_fences(stripped)
+    if cleaned and _parses_as_python(cleaned):
+        return cleaned.strip()
     return ""
+
+
+def _strip_residual_fences(text: str) -> str:
+    """Remove any leading/trailing markdown backtick fence lines.
+
+    Args:
+        text: Text that may begin or end with backtick fence lines.
+
+    Returns:
+        The text with leading and trailing fence lines removed.
+    """
+    lines = text.splitlines()
+    while lines and _FENCE_LINE_RE.match(lines[0]):
+        lines.pop(0)
+    while lines and _FENCE_LINE_RE.match(lines[-1]):
+        lines.pop()
+    return "\n".join(lines)
 
 
 def _parses_as_python(code: str) -> bool:

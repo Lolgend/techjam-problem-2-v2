@@ -44,6 +44,21 @@ class TestExtractPythonCode:
         text = '```python\r\nprint("a")\r\n```'
         assert extract_python_code(text) == 'print("a")'
 
+    def test_strips_leading_fence_from_unclosed_block(self) -> None:
+        """A response with an opening fence but no closing fence is recovered."""
+        text = "```python\nimport numpy as np\nx = np.array([1])\n"
+        assert extract_python_code(text) == "import numpy as np\nx = np.array([1])"
+
+    def test_strips_residual_trailing_fence(self) -> None:
+        """A stray trailing fence line is removed before parsing."""
+        text = "print('x')\n```\n"
+        assert extract_python_code(text) == "print('x')"
+
+    def test_strips_residual_fences_around_fenced_block(self) -> None:
+        """Well-formed fenced responses are still extracted cleanly."""
+        text = "```python\nprint('ok')\n```\n"
+        assert extract_python_code(text) == "print('ok')"
+
 
 class TestValidatePythonSyntax:
     """Test `validate_python_syntax` AST-based syntax validation."""

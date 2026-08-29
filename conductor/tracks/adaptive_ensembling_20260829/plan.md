@@ -27,7 +27,7 @@
     - [x] Verify ensembler tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 4: Iterative Ensemble Pipeline & End-to-End Orchestrator
+## Phase 4: Iterative Ensemble Pipeline & End-to-End Orchestrator [checkpoint: e2a29ed]
 - [x] Task: Write failing tests for EnsemblePipeline (af231a6)
     - [x] Create `tests/ensembling/test_pipeline.py` testing $R$ optimization rounds, score delta tracking, winner selection ($s^*_{\text{ens}}$), and JSONL iteration logging
 - [x] Task: Implement `EnsemblePipeline` in `src/problem_2_v2/ensembling/pipeline.py` (e2a29ed)
@@ -38,4 +38,4 @@
 - [x] Task: Write failing end-to-end integration test (af231a6)
     - [x] Create `tests/ensembling/test_e2e_ensembling.py` testing full workflow from $L$ candidates through $R$ ensembling rounds to final submission
     - [x] Verify end-to-end test passes
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

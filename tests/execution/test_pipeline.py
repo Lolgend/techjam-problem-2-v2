@@ -174,6 +174,20 @@ class TestExecutionGuardrailPipeline:
             guarded = pipeline.guard(GOOD_CODE, _spec())
         assert "numpy" in guarded
 
+    def test_guard_refreshes_last_guarded_code(self, tmp_path: Path) -> None:
+        pipeline = _pipeline(tmp_path)
+        with (
+            pipeline.leakage.check_agent.override(
+                model=TestModel(custom_output_args=_leak_clean_args())
+            ),
+            pipeline.usage.agent.override(
+                model=TestModel(custom_output_text="All the provided information is used.")
+            ),
+        ):
+            guarded = pipeline.guard(GOOD_CODE, _spec())
+        assert guarded == GOOD_CODE
+        assert pipeline.last_guarded_code == GOOD_CODE
+
     def test_guardrail_toggles_skip_passes(self, tmp_path: Path) -> None:
         def exploding_model(messages, info):
             raise RuntimeError("guardrail should not be invoked")

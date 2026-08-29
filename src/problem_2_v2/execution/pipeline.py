@@ -46,6 +46,10 @@ class ExecutionConfig(BaseModel):
 class ExecutionGuardrailPipeline:
     """Orchestrates guardrails, sandbox execution, and the debugger loop.
 
+    The ``last_*`` attributes record the most recent synchronous run and
+    are read immediately after ``run()``; callers must not invoke ``run``
+    concurrently on the same instance.
+
     Attributes:
         config: Pipeline configuration.
         leakage: Data leakage checker agent.
@@ -123,6 +127,7 @@ class ExecutionGuardrailPipeline:
                         guarded = usage_status.improved_code_block
                 except Exception as exc:
                     logfire.warn("execution.usage_check.failed", error=str(exc))
+        self.last_guarded_code = guarded
         return guarded
 
     def run(
@@ -146,7 +151,6 @@ class ExecutionGuardrailPipeline:
         """
         with logfire.span("execution.run", run_id=run_id, candidate_id=candidate_id):
             guarded = self.guard(code, spec)
-            self.last_guarded_code = guarded
             with logfire.span("execution.sandbox_exec"):
                 outcome = self.debugger.debug(
                     guarded,

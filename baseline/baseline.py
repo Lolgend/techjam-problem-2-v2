@@ -99,7 +99,7 @@ def run_fm(splits, k=16, lr=0.001, epochs=40, bs=8192, patience=4, seed=0, verbo
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument('--data_dir', default='./KuaiRand-Pure/data',
+    ap.add_argument('--data_dir', default='./KuaiRand-Pure-dataset/data',
                     help='KuaiRand-Pure 解压后的 data 目录')
     ap.add_argument('--model', default='fm', choices=['pop', 'fm', 'random'])
     ap.add_argument('--k', type=int, default=16)

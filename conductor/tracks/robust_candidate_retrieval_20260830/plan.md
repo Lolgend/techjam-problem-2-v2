@@ -1,11 +1,11 @@
 # Implementation Plan: Robust Multi-Provider Model Card Retrieval, Fallback Parsing & Baseline Seeding
 
 ## Phase 1: Dual-Mode Parsing & Domain Fallback in RetrieverAgent
-- [ ] Task: Write tests for JSON regex parsing, markdown extraction, and domain fallbacks
-    - [ ] Add tests in `tests/search/test_retriever.py` for raw JSON text parsing, markdown extraction, and empty LLM fallback
-- [ ] Task: Implement dual-mode parser and domain fallback cards in `search/retriever.py`
-    - [ ] Implement `_parse_cards(raw_text: str)` extracting JSON blocks and markdown lists
-    - [ ] Implement `get_domain_fallback_cards(task_type)` for Recommender, Tabular, NLP, Vision modalities
+- [x] Task: Write tests for JSON regex parsing, markdown extraction, and domain fallbacks
+    - [x] Add tests in `tests/search/test_retriever.py` for raw JSON text parsing, markdown extraction, and empty LLM fallback
+- [x] Task: Implement dual-mode parser and domain fallback cards in `search/retriever.py`
+    - [x] Implement `_parse_cards(raw_text: str)` extracting JSON blocks and markdown lists
+    - [x] Implement `get_domain_fallback_cards(task_type)` for Recommender, Tabular, NLP, Vision modalities
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Baseline Code Seeding & Robust Initialization Pipeline

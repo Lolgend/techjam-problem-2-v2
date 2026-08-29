@@ -10,7 +10,7 @@
     - [x] Add clear stage announcements: Ingestion -> Parallel Branches -> Ensembling -> Finalization
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Sub-Pipeline Live Telemetry & Score Streaming
+## Phase 2: Sub-Pipeline Live Telemetry & Score Streaming [checkpoint: 32606e6]
 - [x] Task: Write tests for real-time progress emissions across sub-pipelines
     - [x] Add test cases verifying live console emissions in `tests/test_live_progress.py`
 - [x] Task: Implement live logging in `parallel.py` and `initialization/pipeline.py`
@@ -20,7 +20,7 @@
     - [x] Add outer loop ablation reports and inner loop refinement plans/scores in `RefinementPipeline`
     - [x] Add ensembling round strategies and merged scores in `EnsemblePipeline`
     - [x] Add subsampling removal and full-data training status in `FinalArtifactProducer`
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Full System Integration & Regression Verification
 - [ ] Task: Execute full test suite and verify 100% pass rate

@@ -1,0 +1,19 @@
+[project]
+name = "problem-2-v2"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Zhi Wei", email = "lumzhiwei@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.13.5",
+]
+
+[project.scripts]
+problem-2-v2 = "problem_2_v2:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"

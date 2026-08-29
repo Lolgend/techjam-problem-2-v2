@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "skills": {
+    "building-pydantic-ai-agents": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/building-pydantic-ai-agents/SKILL.md",
+      "computedHash": "bb474c7cc6c736d59423b6041ded02725b9e3f147eccc430abe67a14bdee7e5e"
+    },
+    "conductor-implement": {
+      "source": "gemini-cli-extensions/conductor",
+      "sourceType": "github",
+      "skillPath": "skills/conductor-implement/SKILL.md",
+      "computedHash": "4c29546630067a91ba37f695b95bbb8c5ed3daae1310c4a9aa8f93c7b532eb34"
+    },
+    "conductor-new-track": {
+      "source": "gemini-cli-extensions/conductor",
+      "sourceType": "github",
+      "skillPath": "skills/conductor-new-track/SKILL.md",
+      "computedHash": "0460b012205d3a4c1b50e3ea378862d43da555dd8fc0dfc2d2ad2f039df8932c"
+    },
+    "conductor-revert": {
+      "source": "gemini-cli-extensions/conductor",
+      "sourceType": "github",
+      "skillPath": "skills/conductor-revert/SKILL.md",
+      "computedHash": "be2d62dd2d6bb974ebfb889cfce1c578ab5a03d956588bc37b41b6dbcb88e86c"
+    },
+    "conductor-review": {
+      "source": "gemini-cli-extensions/conductor",
+      "sourceType": "github",
+      "skillPath": "skills/conductor-review/SKILL.md",
+      "computedHash": "1194fca74c22eb020b5d8dbbefb6f990608b09877f5eebda2cd85476de585326"
+    },
+    "conductor-setup": {
+      "source": "gemini-cli-extensions/conductor",
+      "sourceType": "github",
+      "skillPath": "skills/conductor-setup/SKILL.md",
+      "computedHash": "bbfda0041341bb1c90e3069c09ed5ea483712d1ffeefef2a6c9cde24ce1a29f3"
+    },
+    "conductor-status": {
+      "source": "gemini-cli-extensions/conductor",
+      "sourceType": "github",
+      "skillPath": "skills/conductor-status/SKILL.md",
+      "computedHash": "6cb9dc6448a1f5e057689ca2693b282b3fd4fcb3721eff8d3aa8c56be987a681"
+    },
+    "logfire-instrumentation": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/logfire-instrumentation/SKILL.md",
+      "computedHash": "92de56ec8194c58c1200af326a54f390adb7233aed19ecafd8214882aeff2974"
+    },
+    "logfire-query": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/logfire-query/SKILL.md",
+      "computedHash": "fbfc52f32f0b6951cdb36f87e876d9c5bf318e2a528d3ce7d6c77d04f4ef85e3"
+    },
+    "logfire-ui": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/logfire-ui/SKILL.md",
+      "computedHash": "3499e1345a1e1cbc9d86a82b3d2fa62bb9a16d9d5430b819269ac9394d698836"
+    },
+    "pydantic": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pydantic/SKILL.md",
+      "computedHash": "8cd70778fa5511c1cb362f3162035e2c7df00349f13b96b31dd06a625d5774a7"
+    },
+    "pydantic-ai-harness": {
+      "source": "pydantic/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pydantic-ai-harness/SKILL.md",
+      "computedHash": "0307cd541bf213b36f92ebb1abe74c1a57edcfc50909bbd9bf4f0b3bb03b190c"
+    }
+  }
+}

@@ -63,6 +63,35 @@ class TestSubprocessExecution:
         assert result.validation_score == pytest.approx(0.9123)
         assert "Final Validation Performance: 0.9123" in result.stdout
 
+    def test_relative_runs_dir_executes_cleanly(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        relative_runner = SubprocessRunner(
+            runs_dir="relative_runs",
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        sandbox = relative_runner.prepare_sandbox(run_id="run1", candidate_id="cand1")
+        assert sandbox.is_absolute()
+        assert "relative_runs" in str(sandbox)
+        result = relative_runner.run_code(OK_SCRIPT, sandbox_dir=str(sandbox))
+        assert result.success is True
+        assert result.returncode == 0
+        assert result.validation_score == pytest.approx(0.9123)
+        assert (sandbox / "solution.py").exists()
+
+    def test_run_code_resolves_relative_sandbox_dir(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        relative_runner = SubprocessRunner(
+            runs_dir="relative_runs",
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        relative_runner.prepare_sandbox(run_id="run1", candidate_id="cand1")
+        relative_sandbox = Path("relative_runs") / "run1" / "sandbox_cand1"
+        result = relative_runner.run_code(OK_SCRIPT, sandbox_dir=str(relative_sandbox))
+        assert result.success is True
+        assert result.validation_score == pytest.approx(0.9123)
+
     def test_non_zero_exit_is_failure(self, runner: SubprocessRunner) -> None:
         sandbox = runner.prepare_sandbox(run_id="r", candidate_id="c")
         result = runner.run_code(FAILING_SCRIPT, sandbox_dir=str(sandbox))

@@ -70,7 +70,7 @@ class SubprocessRunner:
         Returns:
             The path to the prepared sandbox directory.
         """
-        sandbox = self.runs_dir / run_id / f"sandbox_{candidate_id}"
+        sandbox = (self.runs_dir / run_id / f"sandbox_{candidate_id}").resolve()
         sandbox.mkdir(parents=True, exist_ok=True)
         input_dir = sandbox / "input"
         input_dir.mkdir(exist_ok=True)
@@ -99,8 +99,8 @@ class SubprocessRunner:
             An ``ExecutionResult`` with stdout, stderr, return code,
             duration, and the parsed validation score.
         """
-        sandbox = Path(sandbox_dir)
-        script_path = sandbox / "solution.py"
+        sandbox = Path(sandbox_dir).resolve()
+        script_path = (sandbox / "solution.py").resolve()
         script_path.write_text(code, encoding="utf-8")
 
         env = os.environ.copy()

@@ -16,16 +16,16 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Guardrails Layer (Data Leakage & Data Usage Checkers)
-- [ ] Task: Write failing tests for DataLeakageCheckerAgent
-    - [ ] Create `tests/guardrails/test_leakage.py` testing preprocessing block extraction, leakage detection (Figure 20), and code repair (Figure 21)
-- [ ] Task: Implement `DataLeakageCheckerAgent` in `src/problem_2_v2/guardrails/leakage.py`
-    - [ ] Implement detection and correction agents with AST-safe code replacement
-    - [ ] Verify leakage tests pass
-- [ ] Task: Write failing tests for DataUsageCheckerAgent
-    - [ ] Create `tests/guardrails/test_usage.py` testing missing data source detection and code improvement (Figure 22)
-- [ ] Task: Implement `DataUsageCheckerAgent` in `src/problem_2_v2/guardrails/usage.py`
-    - [ ] Implement usage checking agent and fallback validation
-    - [ ] Verify usage tests pass
+- [x] Task: Write failing tests for DataLeakageCheckerAgent (74823b0)
+    - [x] Create `tests/guardrails/test_leakage.py` testing preprocessing block extraction, leakage detection (Figure 20), and code repair (Figure 21)
+- [x] Task: Implement `DataLeakageCheckerAgent` in `src/problem_2_v2/guardrails/leakage.py` (9a6a977)
+    - [x] Implement detection and correction agents with AST-safe code replacement
+    - [x] Verify leakage tests pass
+- [x] Task: Write failing tests for DataUsageCheckerAgent (74823b0)
+    - [x] Create `tests/guardrails/test_usage.py` testing missing data source detection and code improvement (Figure 22)
+- [x] Task: Implement `DataUsageCheckerAgent` in `src/problem_2_v2/guardrails/usage.py` (9a6a977)
+    - [x] Implement usage checking agent and fallback validation
+    - [x] Verify usage tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Targeted Coder & Adaptive Refinement Planner

@@ -1,16 +1,16 @@
 # Implementation Plan: Core Architecture & Pydantic Data Contracts
 
 ## Phase 1: Code Utilities & Base Contract Infrastructure
-- [ ] Task: Write failing unit tests for code extraction, AST syntax validation, and diff generation
-    - [ ] Create `tests/contracts/test_code_utils.py`
-    - [ ] Test markdown code block extraction (fenced with ```python, raw code, mixed text)
-    - [ ] Test AST syntax validation with valid code and syntax error cases
-    - [ ] Test unified diff computation
-- [ ] Task: Implement code utilities in `src/problem_2_v2/contracts/code_utils.py`
-    - [ ] Implement `extract_python_code`
-    - [ ] Implement `validate_python_syntax`
-    - [ ] Implement `compute_code_diff`
-    - [ ] Verify tests pass
+- [x] Task: Write failing unit tests for code extraction, AST syntax validation, and diff generation (1aa94f0)
+    - [x] Create `tests/contracts/test_code_utils.py`
+    - [x] Test markdown code block extraction (fenced with ```python, raw code, mixed text)
+    - [x] Test AST syntax validation with valid code and syntax error cases
+    - [x] Test unified diff computation
+- [x] Task: Implement code utilities in `src/problem_2_v2/contracts/code_utils.py` (ade4ae4)
+    - [x] Implement `extract_python_code`
+    - [x] Implement `validate_python_syntax`
+    - [x] Implement `compute_code_diff`
+    - [x] Verify tests pass
 - [ ] Task: Write failing tests for core Enums and MetricDirection logic
     - [ ] Create `tests/contracts/test_enums.py`
     - [ ] Test `MetricDirection.is_better` and `MetricDirection.delta` for MAXIMIZE / MINIMIZE

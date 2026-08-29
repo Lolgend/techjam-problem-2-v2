@@ -33,7 +33,7 @@
     - [x] Verify tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 3: Search Retrieval, Refinement & Guardrail Schemas
+## Phase 3: Search Retrieval, Refinement & Guardrail Schemas [checkpoint: 3927a13]
 - [x] Task: Write failing tests for Search, Ablation, Refinement, and Guardrail schemas (22e651c)
     - [x] Create `tests/contracts/test_search_refinement.py`
     - [x] Test `ModelCard` and `RetrievedCandidates` validation and code extraction
@@ -51,7 +51,7 @@
     - [x] Implement `DataLeakageStatus` with paper-exact prompt string normalization
     - [x] Implement `DataUsageStatus` and `EnsembleStrategy`
     - [x] Verify all tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Unified Contract API, Quality Gate & Package Exports
 - [ ] Task: Write failing integration and full serialization tests

@@ -20,7 +20,7 @@
     - [x] Verify tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Task Specification, Execution Telemetry & Artifact Lineage
+## Phase 2: Task Specification, Execution Telemetry & Artifact Lineage [checkpoint: 271d07b]
 - [x] Task: Write failing tests for TaskSpecification markdown parser and ExecutionResult (d1b0228)
     - [x] Create `tests/contracts/test_task.py`
     - [x] Test markdown problem description parser (`from_markdown`) with sample competition specs
@@ -31,7 +31,7 @@
     - [x] Define `ExecutionResult` with metric extraction and error traceback capture
     - [x] Define `PipelineArtifact` with code diff and version history
     - [x] Verify tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Search Retrieval, Refinement & Guardrail Schemas
 - [ ] Task: Write failing tests for Search, Ablation, Refinement, and Guardrail schemas

@@ -27,6 +27,10 @@
 - **CLI & Formatting:** `typer`, `rich` (live tables, score progression, colored logs)
 
 ## Quality & Development Tooling
-- **Testing:** `pytest`, `pytest-asyncio`
+- **Testing:** `pytest`, `pytest-asyncio`, `pytest-cov` (coverage target: >80%, spec NFR: >90%)
 - **Linter & Formatter:** `ruff`
-- **Type Checking:** `mypy`
+- **Type Checking:** `mypy --strict` (with `pydantic.mypy` plugin)
+
+> **2026-08-29:** Added `pytest-cov` and the strict mypy `pydantic.mypy` plugin
+> configuration while implementing the Pydantic data contracts track
+> (`core_data_contracts_20260829`).

@@ -1,18 +1,18 @@
 # Implementation Plan: Targeted Code Block Refinement Phase
 
 ## Phase 1: Ablation Generation, Summarization & Code Block Extraction
-- [ ] Task: Write failing tests for AblationAgent and AblationSummarizerAgent
-    - [ ] Create `tests/refinement/test_ablation.py` testing Figure 12 ablation script generation and Figure 13 raw log summarization into `AblationReport`
-- [ ] Task: Implement `AblationAgent` and `AblationSummarizerAgent` in `src/problem_2_v2/refinement/ablation.py`
-    - [ ] Implement Pydantic AI agent generating ablation scripts disabling 2–3 components
-    - [ ] Implement summarizer agent digesting raw execution outputs into `AblationReport`
-    - [ ] Verify ablation tests pass
-- [ ] Task: Write failing tests for CodeBlockExtractorAgent
-    - [ ] Create `tests/refinement/test_extractor.py` testing Figure 14 target code block extraction and initial plan $p_0$ generation
-- [ ] Task: Implement `CodeBlockExtractorAgent` in `src/problem_2_v2/refinement/extractor.py`
-    - [ ] Implement Pydantic AI extractor agent returning `TargetCodeBlock` and `RefinementPlan`
-    - [ ] Implement history context formatting for previously refined blocks
-    - [ ] Verify extractor tests pass
+- [x] Task: Write failing tests for AblationAgent and AblationSummarizerAgent (5f85645)
+    - [x] Create `tests/refinement/test_ablation.py` testing Figure 12 ablation script generation and Figure 13 raw log summarization into `AblationReport`
+- [x] Task: Implement `AblationAgent` and `AblationSummarizerAgent` in `src/problem_2_v2/refinement/ablation.py` (513415c)
+    - [x] Implement Pydantic AI agent generating ablation scripts disabling 2–3 components
+    - [x] Implement summarizer agent digesting raw execution outputs into `AblationReport`
+    - [x] Verify ablation tests pass
+- [x] Task: Write failing tests for CodeBlockExtractorAgent (5f85645)
+    - [x] Create `tests/refinement/test_extractor.py` testing Figure 14 target code block extraction and initial plan $p_0$ generation
+- [x] Task: Implement `CodeBlockExtractorAgent` in `src/problem_2_v2/refinement/extractor.py` (513415c)
+    - [x] Implement Pydantic AI extractor agent returning `TargetCodeBlock` and `RefinementPlan`
+    - [x] Implement history context formatting for previously refined blocks
+    - [x] Verify extractor tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Guardrails Layer (Data Leakage & Data Usage Checkers)

@@ -1,23 +1,23 @@
 # Implementation Plan: Ingestion & Search-Guided Initialization Phase
 
 ## Phase 1: Task Ingestion & Search Provider Layer
-- [ ] Task: Write failing tests for TaskExtractor and SearchProviders
-    - [ ] Create `tests/ingestion/test_extractor.py` testing markdown problem description extraction to `TaskSpecification`
-    - [ ] Create `tests/search/test_providers.py` testing `MockSearchProvider`, `TavilySearchProvider`, and `DuckDuckGoSearchProvider`
-- [ ] Task: Implement `TaskExtractor` agent in `src/problem_2_v2/ingestion/extractor.py`
-    - [ ] Implement Pydantic AI agent with structured output bound to `TaskSpecification`
-    - [ ] Implement fallback heuristic markdown extractor for offline/mock environments
-    - [ ] Verify ingestion tests pass
-- [ ] Task: Implement `SearchProvider` interfaces in `src/problem_2_v2/search/providers.py`
-    - [ ] Define `SearchProvider` protocol and `SearchResult` model
-    - [ ] Implement `MockSearchProvider`, `TavilySearchProvider`, `GoogleSearchProvider`, and `DuckDuckGoSearchProvider`
-    - [ ] Verify provider tests pass
-- [ ] Task: Write failing tests for `RetrieverAgent`
-    - [ ] Create `tests/search/test_retriever.py` testing query construction, model card parsing, and candidate count
-- [ ] Task: Implement `RetrieverAgent` in `src/problem_2_v2/search/retriever.py`
-    - [ ] Implement query generation from `TaskSpecification`
-    - [ ] Implement Pydantic AI retriever agent with Figure 9 prompt to output `RetrievedCandidates`
-    - [ ] Verify retriever tests pass
+- [x] Task: Write failing tests for TaskExtractor and SearchProviders (e75fce8)
+    - [x] Create `tests/ingestion/test_extractor.py` testing markdown problem description extraction to `TaskSpecification`
+    - [x] Create `tests/search/test_providers.py` testing `MockSearchProvider`, `TavilySearchProvider`, and `DuckDuckGoSearchProvider`
+- [x] Task: Implement `TaskExtractor` agent in `src/problem_2_v2/ingestion/extractor.py` (f7f8302)
+    - [x] Implement Pydantic AI agent with structured output bound to `TaskSpecification`
+    - [x] Implement fallback heuristic markdown extractor for offline/mock environments
+    - [x] Verify ingestion tests pass
+- [x] Task: Implement `SearchProvider` interfaces in `src/problem_2_v2/search/providers.py` (f7f8302)
+    - [x] Define `SearchProvider` protocol and `SearchResult` model
+    - [x] Implement `MockSearchProvider`, `TavilySearchProvider`, `GoogleSearchProvider`, and `DuckDuckGoSearchProvider`
+    - [x] Verify provider tests pass
+- [x] Task: Write failing tests for `RetrieverAgent` (36bf108)
+    - [x] Create `tests/search/test_retriever.py` testing query construction, model card parsing, and candidate count
+- [x] Task: Implement `RetrieverAgent` in `src/problem_2_v2/search/retriever.py` (7f7d850)
+    - [x] Implement query generation from `TaskSpecification`
+    - [x] Implement Pydantic AI retriever agent with Figure 9 prompt to output `RetrievedCandidates`
+    - [x] Verify retriever tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Execution Sandbox & Autonomous Debugger

@@ -41,7 +41,7 @@
     - [x] Verify planner tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 4: Nested Refinement Pipeline & End-to-End Orchestrator
+## Phase 4: Nested Refinement Pipeline & End-to-End Orchestrator [checkpoint: 7e72a32]
 - [x] Task: Write failing tests for RefinementPipeline (2c9b44f)
     - [x] Create `tests/refinement/test_pipeline.py` testing nested $T \times K$ loops, score tracking, best candidate promotion, and JSONL iteration logging
 - [x] Task: Implement `RefinementPipeline` in `src/problem_2_v2/refinement/pipeline.py` (7e72a32)
@@ -51,4 +51,4 @@
 - [x] Task: Write failing end-to-end integration test (2c9b44f)
     - [x] Create `tests/refinement/test_e2e_refinement.py` testing initialization pipeline output feeding into refinement pipeline
     - [x] Verify end-to-end test passes
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

@@ -18,14 +18,14 @@
     - [x] Verify planner tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 3: Code Ensembler ($\mathcal{A}_{\text{ensembler}}$)
+## Phase 3: Code Ensembler ($\mathcal{A}_{\text{ensembler}}$) [checkpoint: 4c9e447]
 - [x] Task: Write failing tests for EnsemblerAgent (0beb96a)
     - [x] Create `tests/ensembling/test_ensembler.py` testing single-file merged script synthesis (Figure 18 prompt), `./final/submission.csv` creation, and AST validation
 - [x] Task: Implement `EnsemblerAgent` in `src/problem_2_v2/ensembling/ensembler.py` (4c9e447)
     - [x] Implement Pydantic AI ensembler agent generating unified executable Python code
     - [x] Clean markdown fences, validate AST syntax, and execute in `SubprocessRunner` with `DebuggerAgent` fallback
     - [x] Verify ensembler tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Iterative Ensemble Pipeline & End-to-End Orchestrator
 - [ ] Task: Write failing tests for EnsemblePipeline

@@ -12,8 +12,8 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Full System Integration & Concurrent Regression Verification
-- [ ] Task: Run full test suite and verify 100% pass rate
-    - [ ] Execute `uv run pytest --tb=short -q` across all 310+ tests
-- [ ] Task: Verify parallel branch launch on Windows without WinError 10038
-    - [ ] Run concurrent execution test on Windows
+- [x] Task: Run full test suite and verify 100% pass rate
+    - [x] Execute `uv run pytest --tb=short -q` across all 310+ tests (333 passed)
+- [x] Task: Verify parallel branch launch on Windows without WinError 10038
+    - [x] Run concurrent execution test on Windows (2 branches, real subprocesses, selector policy, no OSError)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

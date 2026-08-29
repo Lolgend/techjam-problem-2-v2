@@ -64,3 +64,6 @@
     - [x] Run `uv run mypy src`
     - [x] Run `uv run pytest --cov=src --cov-report=term-missing` (>80% coverage check)
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions (fa45f0d)

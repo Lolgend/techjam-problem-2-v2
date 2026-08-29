@@ -26,12 +26,12 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Command-Line Interface (cli.py & __init__.py:main)
-- [ ] Task: Write failing tests for CLI commands and argument parser
-    - [ ] Create `tests/test_cli.py` testing `run` command flags, `--dry-run`, `--version`, and invalid argument handling
-- [ ] Task: Implement CLI entry point in `src/problem_2_v2/cli.py`
-    - [ ] Implement argparse parser with subcommands `run` and `version`
-    - [ ] Update `src/problem_2_v2/__init__.py` to export `main`, `MLEStarPipeline`, `MLEStarConfig`, and `MLEStarResult`
-    - [ ] Verify CLI tests pass
+- [x] Task: Write failing tests for CLI commands and argument parser
+    - [x] Create `tests/test_cli.py` testing `run` command flags, `--dry-run`, `--version`, and invalid argument handling
+- [x] Task: Implement CLI entry point in `src/problem_2_v2/cli.py`
+    - [x] Implement argparse parser with subcommands `run` and `version`
+    - [x] Update `src/problem_2_v2/__init__.py` to export `main`, `MLEStarPipeline`, `MLEStarConfig`, and `MLEStarResult`
+    - [x] Verify CLI tests pass (2533bd0)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Full End-to-End System Integration & Final Verification

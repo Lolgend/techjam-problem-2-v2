@@ -1,18 +1,18 @@
 # Implementation Plan: Execution Environment & Guardrail Modules
 
 ## Phase 1: Unified Execution Guardrail Pipeline
-- [ ] Task: Write failing tests for ExecutionConfig and ExecutionGuardrailPipeline
-    - [ ] Create `tests/execution/test_pipeline.py` testing sequential Leakage → Usage → Sandbox → Debugger orchestration
-    - [ ] Test `ExecutionConfig` controls (timeout, max_debug_rounds, guardrail toggles)
-    - [ ] Test graceful degradation when individual guardrail LLM calls fail
-    - [ ] Test successful execution returns validated `ExecutionResult` with parsed score
-- [ ] Task: Implement `ExecutionConfig` and `ExecutionGuardrailPipeline` in `src/problem_2_v2/execution/pipeline.py`
-    - [ ] Define `ExecutionConfig` Pydantic model with timeout, retry, and toggle settings
-    - [ ] Implement unified `run(script, task_spec) -> ExecutionResult` method
-    - [ ] Wire existing `DataLeakageCheckerAgent`, `DataUsageCheckerAgent`, `SubprocessRunner`, and `DebuggerAgent`
-    - [ ] Add Logfire span tracing for each pipeline stage
-    - [ ] Verify pipeline tests pass
-- [ ] Task: Create `src/problem_2_v2/execution/__init__.py` with package exports
+- [x] Task: Write failing tests for ExecutionConfig and ExecutionGuardrailPipeline
+    - [x] Create `tests/execution/test_pipeline.py` testing sequential Leakage → Usage → Sandbox → Debugger orchestration
+    - [x] Test `ExecutionConfig` controls (timeout, max_debug_rounds, guardrail toggles)
+    - [x] Test graceful degradation when individual guardrail LLM calls fail
+    - [x] Test successful execution returns validated `ExecutionResult` with parsed score
+- [~] Task: Implement `ExecutionConfig` and `ExecutionGuardrailPipeline` in `src/problem_2_v2/execution/pipeline.py`
+    - [x] Define `ExecutionConfig` Pydantic model with timeout, retry, and toggle settings
+    - [x] Implement unified `run(script, task_spec) -> ExecutionResult` method
+    - [x] Wire existing `DataLeakageCheckerAgent`, `DataUsageCheckerAgent`, `SubprocessRunner`, and `DebuggerAgent`
+    - [x] Add Logfire span tracing for each pipeline stage
+    - [x] Verify pipeline tests pass (c9c7034)
+- [~] Task: Create `src/problem_2_v2/execution/__init__.py` with package exports
     - [ ] Re-export `ExecutionGuardrailPipeline`, `ExecutionConfig`, and `FinalArtifactProducer`
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 

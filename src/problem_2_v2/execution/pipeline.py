@@ -1,0 +1,160 @@
+"""Unified execution guardrail pipeline (leakage -> usage -> sandbox -> debugger).
+
+Routes every script execution through a single reusable orchestrator: the
+data leakage guardrail, the data usage guardrail, the subprocess sandbox,
+and the automatic debugger loop, returning a validated ``ExecutionResult``.
+"""
+
+from __future__ import annotations
+
+import logfire
+from pydantic import BaseModel, ConfigDict, Field
+
+from problem_2_v2.contracts.task import ExecutionResult, TaskSpecification
+from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
+from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
+from problem_2_v2.runner.debugger import DebuggerAgent
+from problem_2_v2.runner.sandbox import SubprocessRunner
+
+
+class ExecutionConfig(BaseModel):
+    """Configuration for the execution guardrail pipeline.
+
+    Attributes:
+        timeout_seconds: Per-script sandbox wall-clock timeout.
+        max_debug_rounds: Debugger repair budget.
+        sandbox_base_dir: Root directory holding per-run sandboxes.
+        enable_leakage_check: Whether to run the data leakage guardrail.
+        enable_usage_check: Whether to run the data usage guardrail.
+        production_timeout_seconds: Extended timeout for full-dataset
+            finalization runs.
+    """
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+
+    timeout_seconds: int = Field(default=600, description="Sandbox timeout in seconds.")
+    max_debug_rounds: int = Field(default=3, description="Debugger repair budget.")
+    sandbox_base_dir: str = Field(default="runs", description="Sandbox root directory.")
+    enable_leakage_check: bool = Field(default=True, description="Run the leakage guardrail.")
+    enable_usage_check: bool = Field(default=True, description="Run the usage guardrail.")
+    production_timeout_seconds: int = Field(
+        default=3600,
+        description="Extended timeout for full-dataset finalization.",
+    )
+
+
+class ExecutionGuardrailPipeline:
+    """Orchestrates guardrails, sandbox execution, and the debugger loop.
+
+    Attributes:
+        config: Pipeline configuration.
+        leakage: Data leakage checker agent.
+        usage: Data usage checker agent.
+        runner: Sandbox subprocess runner.
+        debugger: Automatic debugger agent.
+        last_guarded_code: The most recently guarded (post-check) code.
+        last_executed_code: The most recently executed code (post-debug).
+        last_debug_rounds: Repair rounds used by the most recent run.
+    """
+
+    def __init__(
+        self,
+        config: ExecutionConfig | None = None,
+        leakage: DataLeakageCheckerAgent | None = None,
+        usage: DataUsageCheckerAgent | None = None,
+        runner: SubprocessRunner | None = None,
+        debugger: DebuggerAgent | None = None,
+        model: str = "openai:gpt-4o",
+    ) -> None:
+        """Create the execution guardrail pipeline.
+
+        Args:
+            config: Pipeline configuration (defaults to ``ExecutionConfig``).
+            leakage: Data leakage checker agent.
+            usage: Data usage checker agent.
+            runner: Sandbox subprocess runner.
+            debugger: Automatic debugger agent.
+            model: Pydantic AI model string used for any default agents.
+        """
+        self.config = config or ExecutionConfig()
+        self.leakage = leakage or DataLeakageCheckerAgent(model=model)
+        self.usage = usage or DataUsageCheckerAgent(model=model)
+        self.runner = runner or SubprocessRunner(
+            runs_dir=self.config.sandbox_base_dir,
+            timeout_seconds=self.config.timeout_seconds,
+        )
+        self.debugger = debugger or DebuggerAgent(
+            runner=self.runner,
+            model=model,
+            max_debug_rounds=self.config.max_debug_rounds,
+        )
+        self.last_guarded_code: str | None = None
+        self.last_executed_code: str | None = None
+        self.last_debug_rounds: int = 0
+
+    def guard(self, code: str, spec: TaskSpecification) -> str:
+        """Apply the leakage and usage passes to a script.
+
+        Guardrail passes degrade gracefully: when an LLM check fails the
+        pass is skipped with a warning and the code is left unchanged.
+
+        Args:
+            code: The solution script to audit.
+            spec: The task specification (dataset metadata source).
+
+        Returns:
+            The guarded script, possibly repaired or augmented by the
+            active guardrail checks.
+        """
+        guarded = code
+        if self.config.enable_leakage_check:
+            with logfire.span("execution.leakage_check"):
+                try:
+                    status, guarded = self.leakage.audit(code)
+                    if status.is_leaking:
+                        logfire.warn("execution.leakage_detected")
+                except Exception as exc:
+                    logfire.warn("execution.leakage_check.failed", error=str(exc))
+        if self.config.enable_usage_check:
+            with logfire.span("execution.usage_check"):
+                try:
+                    usage_status = self.usage.audit(spec, guarded)
+                    if usage_status.improved_code_block:
+                        guarded = usage_status.improved_code_block
+                except Exception as exc:
+                    logfire.warn("execution.usage_check.failed", error=str(exc))
+        return guarded
+
+    def run(
+        self,
+        code: str,
+        spec: TaskSpecification,
+        run_id: str = "exec",
+        candidate_id: str = "candidate",
+    ) -> ExecutionResult:
+        """Execute code through guardrails, sandbox, and the debugger loop.
+
+        Args:
+            code: The candidate Python script to execute.
+            spec: The task specification.
+            run_id: Identifier of the current run.
+            candidate_id: Identifier of the candidate script.
+
+        Returns:
+            A validated ``ExecutionResult`` with success flag, stdout,
+            stderr, parsed validation score, and runtime duration.
+        """
+        with logfire.span("execution.run", run_id=run_id, candidate_id=candidate_id):
+            guarded = self.guard(code, spec)
+            self.last_guarded_code = guarded
+            with logfire.span("execution.sandbox_exec"):
+                outcome = self.debugger.debug(
+                    guarded,
+                    run_id=run_id,
+                    candidate_id=candidate_id,
+                    dataset_dir=spec.dataset_dir,
+                    dataset_files=spec.dataset_files,
+                )
+            self.last_executed_code = outcome.code
+            self.last_debug_rounds = outcome.debug_rounds
+            return outcome.result

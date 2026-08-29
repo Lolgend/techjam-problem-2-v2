@@ -11,7 +11,7 @@
   - Google Gemini (`gemini-2.5-pro`, `gemini-2.0-flash`)
   - Anthropic Claude (`claude-3-7-sonnet`, `claude-3-5-sonnet`)
   - OpenAI (`gpt-4o`, `o1`, `o3-mini`)
-- **Web Search Tools:** Modular retriever layer supporting Google Search API (CSE), Tavily API, DuckDuckGo, and Mock/Offline file-based search.
+- **Web Search Tools:** Modular retriever layer supporting Google Search API (CSE), Tavily API, DuckDuckGo, and Mock/Offline file-based search, built on `httpx`.
 
 ## Machine Learning & Data Processing Ecosystem
 - **Core Scientific:** `numpy`, `pandas`, `scipy`
@@ -19,7 +19,7 @@
 - **Deep Learning & Vision/NLP:** `torch` (CUDA enabled), `torchvision`, `timm`, `transformers`, `accelerate`
 
 ## Execution Engine & Runtime Safeguards
-- **Subprocess Runner:** `subprocess` with isolated working directories, stream piping, execution timeout control, and memory protection.
+- **Subprocess Runner:** `subprocess` with isolated working directories, stream piping, execution timeout control, and CUDA environment passthrough.
 - **Data Leakage & Preprocessing Verification:** AST static analysis + Pydantic AI LLM checker.
 
 ## Observability, Telemetry & UI
@@ -34,3 +34,9 @@
 > **2026-08-29:** Added `pytest-cov` and the strict mypy `pydantic.mypy` plugin
 > configuration while implementing the Pydantic data contracts track
 > (`core_data_contracts_20260829`).
+>
+> **2026-08-29:** Added `pydantic-ai`, `duckduckgo-search`, `httpx`, and
+> `logfire` as runtime dependencies while implementing the ingestion &
+> search-guided initialization track (`ingestion_search_init_20260829`).
+> Peak memory monitoring is deferred: the sandbox currently provides
+> isolation, timeouts, and score-line parsing only.

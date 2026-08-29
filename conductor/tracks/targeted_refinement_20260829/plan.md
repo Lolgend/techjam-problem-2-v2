@@ -42,13 +42,13 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Nested Refinement Pipeline & End-to-End Orchestrator
-- [ ] Task: Write failing tests for RefinementPipeline
-    - [ ] Create `tests/refinement/test_pipeline.py` testing nested $T \times K$ loops, score tracking, best candidate promotion, and JSONL iteration logging
-- [ ] Task: Implement `RefinementPipeline` in `src/problem_2_v2/refinement/pipeline.py`
-    - [ ] Implement Algorithm 2 orchestrator wiring Ablation -> Extractor -> Planner -> Coder -> Guardrails -> Sandbox Runner -> Score Evaluation
-    - [ ] Implement structured iteration log streaming (`runs/<run_id>/iteration_logs.jsonl`)
-    - [ ] Verify refinement pipeline tests pass
-- [ ] Task: Write failing end-to-end integration test
-    - [ ] Create `tests/refinement/test_e2e_refinement.py` testing initialization pipeline output feeding into refinement pipeline
-    - [ ] Verify end-to-end test passes
+- [x] Task: Write failing tests for RefinementPipeline (2c9b44f)
+    - [x] Create `tests/refinement/test_pipeline.py` testing nested $T \times K$ loops, score tracking, best candidate promotion, and JSONL iteration logging
+- [x] Task: Implement `RefinementPipeline` in `src/problem_2_v2/refinement/pipeline.py` (7e72a32)
+    - [x] Implement Algorithm 2 orchestrator wiring Ablation -> Extractor -> Planner -> Coder -> Guardrails -> Sandbox Runner -> Score Evaluation
+    - [x] Implement structured iteration log streaming (`runs/<run_id>/iteration_logs.jsonl`)
+    - [x] Verify refinement pipeline tests pass
+- [x] Task: Write failing end-to-end integration test (2c9b44f)
+    - [x] Create `tests/refinement/test_e2e_refinement.py` testing initialization pipeline output feeding into refinement pipeline
+    - [x] Verify end-to-end test passes
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

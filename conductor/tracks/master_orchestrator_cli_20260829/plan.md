@@ -35,9 +35,9 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Full End-to-End System Integration & Final Verification
-- [ ] Task: Write end-to-end master pipeline integration test
-    - [ ] Create `tests/test_e2e_master.py` testing complete execution from raw markdown task to final `./final/` production artifacts
-- [ ] Task: Run full test suite and verify 100% pass rate and coverage
+- [x] Task: Write end-to-end master pipeline integration test
+    - [x] Create `tests/test_e2e_master.py` testing complete execution from raw markdown task to final `./final/` production artifacts
+- [~] Task: Run full test suite and verify 100% pass rate and coverage
     - [ ] Execute `uv run pytest --cov=src --cov-report=term-missing`
     - [ ] Verify all tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

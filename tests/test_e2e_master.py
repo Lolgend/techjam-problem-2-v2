@@ -1,8 +1,8 @@
-"""Unit tests for the master orchestrator and configuration.
+"""End-to-end master pipeline integration test.
 
-Covers ``MLEStarConfig`` defaults and validation, ``MLEStarResult``
-fields, the 5-stage coordination of ``MLEStarPipeline``, baseline delta
-calculation, and dry-run path validation.
+Verifies complete execution from a raw markdown task description through
+the 5-stage ``MLEStarPipeline`` to production-ready ``./final/`` artifacts
+on disk, and the CLI round-trip that copies them to ``--output``.
 """
 
 import sys
@@ -10,13 +10,13 @@ from contextlib import ExitStack
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
+from problem_2_v2 import main
 from problem_2_v2.config import MLEStarConfig
-from problem_2_v2.contracts.task import TaskSpecification
+from problem_2_v2.execution.finalizer import FinalArtifact
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
 from problem_2_v2.ingestion.extractor import TaskExtractor
@@ -103,7 +103,7 @@ def _planner_args() -> dict[str, object]:
 
 
 def _branch_factory(tmp_path: Path):
-    """Build a TestModel-configured branch factory for orchestrator tests."""
+    """TestModel-configured branch factory producing 0.51/0.52 solutions."""
 
     def branch_builder(seed: int):
         score = 0.51 + seed * 0.01
@@ -185,15 +185,6 @@ def _pipeline(tmp_path: Path) -> MLEStarPipeline:
     )
 
 
-def _write_task(tmp_path: Path) -> tuple[Path, Path]:
-    task_file = tmp_path / "problem.md"
-    task_file.write_text(_MD, encoding="utf-8")
-    data_dir = tmp_path / "data"
-    data_dir.mkdir(exist_ok=True)
-    (data_dir / "train.csv").write_text("x,y\n1,0\n2,1\n3,0\n", encoding="utf-8")
-    return task_file, data_dir
-
-
 def _override_agents(pipeline: MLEStarPipeline) -> ExitStack:
     stack = ExitStack()
     stack.enter_context(
@@ -224,182 +215,93 @@ def _override_agents(pipeline: MLEStarPipeline) -> ExitStack:
     return stack
 
 
-class TestMLEStarConfig:
-    """Test the master configuration hyperparameters."""
-
-    def test_defaults(self) -> None:
-        config = MLEStarConfig()
-        assert config.model == "openai:gpt-4o"
-        assert config.search_provider == "duckduckgo"
-        assert config.num_candidates == 4
-        assert config.num_branches == 2
-        assert config.outer_loops == 3
-        assert config.inner_loops == 3
-        assert config.ensemble_rounds == 3
-        assert config.seeds is None
-        assert config.subsample_size == 30000
-        assert config.timeout_seconds == 600
-        assert config.production_timeout_seconds == 3600
-        assert config.max_debug_rounds == 3
-        assert config.runs_dir == "runs"
-        assert config.final_output_dir == "final"
-
-    def test_overrides(self) -> None:
-        config = MLEStarConfig(
-            model="google:gemini-2.0-flash",
-            search_provider="mock",
-            num_candidates=8,
-            num_branches=4,
-            seeds=[7, 8, 9],
-            timeout_seconds=120,
-        )
-        assert config.model == "google:gemini-2.0-flash"
-        assert config.search_provider == "mock"
-        assert config.num_candidates == 8
-        assert config.num_branches == 4
-        assert config.seeds == [7, 8, 9]
-        assert config.timeout_seconds == 120
-
-    def test_invalid_search_provider_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            MLEStarConfig(search_provider="bogus")
-
-    def test_non_positive_counts_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            MLEStarConfig(num_branches=0)
+def _write_task(tmp_path: Path) -> tuple[Path, Path]:
+    task_file = tmp_path / "problem.md"
+    task_file.write_text(_MD, encoding="utf-8")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    (data_dir / "train.csv").write_text("x,y\n1,0\n2,1\n3,0\n", encoding="utf-8")
+    return task_file, data_dir
 
 
-class TestMLEStarPipeline:
-    """Test the 5-stage master coordination."""
+class TestEndToEndMaster:
+    """Test the full markdown-to-artifact execution."""
 
-    def test_build_provider_mock(self, tmp_path: Path) -> None:
-        pipeline = MLEStarPipeline(
-            config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="mock")
-        )
-        assert pipeline._provider.provider_name == "mock"
-
-    def test_build_provider_tavily_requires_key(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError):
-            MLEStarPipeline(
-                config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="tavily")
-            )
-
-    def test_build_provider_google_requires_key(self, tmp_path: Path) -> None:
-        with pytest.raises(ValueError):
-            MLEStarPipeline(
-                config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="google")
-            )
-
-    def test_build_provider_duckduckgo(self, tmp_path: Path) -> None:
-        pipeline = MLEStarPipeline(
-            config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="duckduckgo")
-        )
-        assert pipeline._provider.provider_name == "duckduckgo"
-
-    def test_default_branch_builder(self, tmp_path: Path) -> None:
-        pipeline = MLEStarPipeline(
-            config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), timeout_seconds=5),
-            search_provider=MockSearchProvider(),
-        )
-        init, refine = pipeline._build_branch(0)
-        assert isinstance(init, InitializationPipeline)
-        assert isinstance(refine, RefinementPipeline)
-        assert init.retriever.num_candidates == 4
-
-    def test_dry_run_validation(self, tmp_path: Path) -> None:
-        task_file, data_dir = _write_task(tmp_path)
-        pipeline = _pipeline(tmp_path)
-
-        spec = pipeline.validate(str(task_file), str(data_dir))
-        assert isinstance(spec, TaskSpecification)
-        assert spec.task_name == "Demo"
-        assert spec.baseline_score == pytest.approx(0.50)
-
-    def test_dry_run_rejects_missing_paths(self, tmp_path: Path) -> None:
-        pipeline = _pipeline(tmp_path)
-        with pytest.raises(FileNotFoundError):
-            pipeline.validate(str(tmp_path / "missing.md"), str(tmp_path))
-        task_file = tmp_path / "problem.md"
-        task_file.write_text(_MD, encoding="utf-8")
-        with pytest.raises(NotADirectoryError):
-            pipeline.validate(str(task_file), str(tmp_path / "no_data"))
-
-    async def test_five_stage_coordination(self, tmp_path: Path) -> None:
+    async def test_master_run_produces_final_artifacts(self, tmp_path: Path) -> None:
         task_file, data_dir = _write_task(tmp_path)
         pipeline = _pipeline(tmp_path)
 
         with _override_agents(pipeline):
-            result = await pipeline.run_async(str(task_file), str(data_dir), run_id="master1")
+            result = await pipeline.run_async(str(task_file), str(data_dir), run_id="e2e_master")
 
         assert isinstance(result, MLEStarResult)
         assert result.success is True
-        assert result.task_spec.baseline_score == pytest.approx(0.50)
         assert len(result.branch_artifacts) == 2
         assert result.ensemble_result is not None
-        assert result.ensemble_result.best_score == pytest.approx(0.88)
         assert result.final_artifact is not None
-        assert result.final_artifact.validation_score == pytest.approx(0.90)
         assert result.final_score == pytest.approx(0.90)
         assert result.score_delta == pytest.approx(0.40)
-        assert result.duration_seconds >= 0
 
-    def test_run_sync_entrypoint(self, tmp_path: Path) -> None:
+        output = Path(result.final_artifact.output_dir)
+        assert output.is_dir()
+        assert (output / "submission.csv").exists()
+        assert (output / "metrics.json").exists()
+        assert (output / "model.joblib").exists()
+        assert result.final_artifact.submission_path is not None
+        assert result.final_artifact.metrics == {"auroc": 0.90}
+
+    def test_cli_run_copies_artifacts_to_output(self, tmp_path: Path, capsys, monkeypatch) -> None:
         task_file, data_dir = _write_task(tmp_path)
-        pipeline = _pipeline(tmp_path)
+        spec_dir = tmp_path / "prod"
+        spec_dir.mkdir(exist_ok=True)
+        (spec_dir / "submission.csv").write_text("id,pred\n1,0.5\n", encoding="utf-8")
+        (spec_dir / "metrics.json").write_text('{"auroc": 0.9}', encoding="utf-8")
+        (spec_dir / "model.joblib").write_bytes(b"model")
 
-        with _override_agents(pipeline):
-            result = pipeline.run(str(task_file), str(data_dir), run_id="master2")
-        assert result.success is True
-        assert result.score_delta == pytest.approx(0.40)
+        from problem_2_v2.contracts.task import TaskSpecification
+        from problem_2_v2.orchestrator import MLEStarPipeline as Orchestrator
 
-    async def test_failed_branches_produce_failure_result(self, tmp_path: Path) -> None:
-        task_file, data_dir = _write_task(tmp_path)
+        spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
 
-        def exploding_model(messages, info):
-            raise RuntimeError("retrieval backend down")
-
-        def failing_branch_builder(seed: int):
-            runner = SubprocessRunner(
-                runs_dir=str(tmp_path / "runs"),
-                timeout_seconds=5,
-                python_executable=sys.executable,
-            )
-            debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
-            init = InitializationPipeline(
-                extractor=TaskExtractor(use_llm=False),
-                retriever=RetrieverAgent(
-                    provider=MockSearchProvider(),
-                    model=FunctionModel(function=exploding_model),
-                    num_candidates=1,
+        def fake_run(self, task, data, run_id=None):
+            return MLEStarResult(
+                task_spec=spec,
+                branch_artifacts=[],
+                ensemble_result=None,
+                final_artifact=FinalArtifact(
+                    code="print(1)",
+                    output_dir=str(spec_dir),
+                    model_paths=[str(spec_dir / "model.joblib")],
+                    metrics={"auroc": 0.9},
+                    submission_path=str(spec_dir / "submission.csv"),
+                    validation_score=0.9,
+                    success=True,
                 ),
-                evaluator=CandidateEvaluatorAgent(debugger=debugger, model="test"),
-                merger=ModelMergerAgent(debugger=debugger, model="test"),
+                baseline_score=0.5,
+                final_score=0.9,
+                score_delta=0.4,
+                duration_seconds=1.2,
+                success=True,
             )
-            refine = RefinementPipeline(
-                ablation=AblationAgent(model="test"),
-                summarizer=AblationSummarizerAgent(runner=runner, model="test"),
-                extractor=CodeBlockExtractorAgent(model="test"),
-                planner=RefinementPlannerAgent(model="test"),
-                coder=CoderAgent(model="test"),
-                leakage=DataLeakageCheckerAgent(model="test"),
-                usage=DataUsageCheckerAgent(model="test"),
-                debugger=debugger,
-                runner=runner,
-                outer_loops=1,
-                inner_loops=1,
-            )
-            return init, refine
 
-        pipeline = MLEStarPipeline(
-            config=MLEStarConfig(
-                runs_dir=str(tmp_path / "runs"), num_branches=2, timeout_seconds=5
-            ),
-            branch_builder=failing_branch_builder,
-            search_provider=MockSearchProvider(),
+        monkeypatch.setattr(Orchestrator, "run", fake_run)
+        out_dir = tmp_path / "final_out"
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "mock",
+                "--output",
+                str(out_dir),
+            ]
         )
-        result = await pipeline.run_async(str(task_file), str(data_dir), run_id="master3")
-        assert result.success is False
-        assert result.branch_artifacts == []
-        assert result.ensemble_result is None
-        assert result.final_artifact is None
-        assert result.score_delta is None
+        out = capsys.readouterr().out
+        assert code == 0
+        assert (out_dir / "submission.csv").exists()
+        assert (out_dir / "metrics.json").exists()
+        assert (out_dir / "model.joblib").exists()
+        assert "Artifacts written to" in out

@@ -359,7 +359,7 @@ class TestMLEStarPipeline:
         task_file, data_dir = _write_task(tmp_path)
 
         def exploding_model(messages, info):
-            raise RuntimeError("retrieval backend down")
+            raise RuntimeError("evaluator backend down")
 
         def failing_branch_builder(seed: int):
             runner = SubprocessRunner(
@@ -371,11 +371,19 @@ class TestMLEStarPipeline:
             init = InitializationPipeline(
                 extractor=TaskExtractor(use_llm=False),
                 retriever=RetrieverAgent(
-                    provider=MockSearchProvider(),
-                    model=FunctionModel(function=exploding_model),
+                    provider=MockSearchProvider(
+                        results={
+                            "classification": [
+                                SearchResult(title="t", url="https://e.com", snippet="s")
+                            ]
+                        }
+                    ),
+                    model=TestModel(custom_output_args=_CARD_ARGS),
                     num_candidates=1,
                 ),
-                evaluator=CandidateEvaluatorAgent(debugger=debugger, model="test"),
+                evaluator=CandidateEvaluatorAgent(
+                    debugger=debugger, model=FunctionModel(function=exploding_model)
+                ),
                 merger=ModelMergerAgent(debugger=debugger, model="test"),
             )
             refine = RefinementPipeline(

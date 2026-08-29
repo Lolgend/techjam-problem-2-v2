@@ -20,7 +20,7 @@
     - [x] Verify retriever tests pass
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Execution Sandbox & Autonomous Debugger
+## Phase 2: Execution Sandbox & Autonomous Debugger [checkpoint: 209d12b]
 - [x] Task: Write failing tests for SubprocessRunner (3d796cd)
     - [x] Create `tests/runner/test_sandbox.py`
     - [x] Test isolated sandbox directory creation and input data symlinking/copying
@@ -37,7 +37,7 @@
     - [x] Implement Pydantic AI debugger agent with Figure 19 prompt
     - [x] Implement iterative repair loop up to `max_debug_rounds`
     - [x] Verify debugger tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Candidate Code Generation & Evaluation ($\mathcal{A}_{\text{init}}$)
 - [ ] Task: Write failing tests for CandidateEvaluatorAgent

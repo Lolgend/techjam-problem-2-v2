@@ -15,7 +15,7 @@ from pathlib import Path
 from problem_2_v2.config import MLEStarConfig
 from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.task import TaskSpecification
-from problem_2_v2.orchestrator import MLEStarPipeline, MLEStarResult
+from problem_2_v2.orchestrator import MLEStarPipeline, MLEStarResult, configure_event_loop_policy
 
 _PROVIDERS = ("duckduckgo", "tavily", "google", "mock")
 _BANNER_WIDTH = 78
@@ -99,6 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     import os
 
     os.environ.setdefault("LOGFIRE_IGNORE_NO_CONFIG", "1")
+    configure_event_loop_policy()
     parser = build_parser()
     args = parser.parse_args(argv)
 

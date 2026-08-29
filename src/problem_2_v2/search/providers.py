@@ -8,10 +8,12 @@ a deterministic offline mock for testing.
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any, Protocol, runtime_checkable
 
 import httpx
 import logfire
+from ddgs import DDGS
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -195,23 +197,44 @@ class GoogleSearchProvider:
 class DuckDuckGoSearchProvider:
     """Free web search provider backed by the ``ddgs`` package.
 
+    Searches are serialized with a lock because the underlying session is
+    not thread-safe, and a fresh scoped ``DDGS(timeout=20)`` session is
+    created per call when no backend is injected. Network/socket/rate-limit
+    failures degrade gracefully to an empty result list.
+
     Args:
         backend: A DuckDuckGo ``DDGS``-compatible backend; when omitted a
-            real ``DDGS`` instance is created. Tests inject a fake.
+            fresh session is created per search. Tests inject a fake.
     """
 
-    def __init__(self, backend: Any | None = None) -> None:
-        if backend is None:
-            from ddgs import DDGS
+    _SESSION_TIMEOUT = 20
 
-            backend = DDGS()
+    def __init__(self, backend: Any | None = None) -> None:
         self._backend = backend
+        self._lock = threading.Lock()
         self.provider_name = "duckduckgo"
 
     def search(self, query: str, num_results: int = 5) -> list[SearchResult]:
-        """Query DuckDuckGo and map the raw dicts to search results."""
-        with logfire.span("search.duckduckgo", query=query, num_results=num_results):
-            raw = self._backend.text(query, max_results=num_results)
+        """Query DuckDuckGo and map the raw dicts to search results.
+
+        Args:
+            query: The search query.
+            num_results: Maximum number of results to return.
+
+        Returns:
+            The ranked list of search results; empty on any backend error.
+        """
+        with self._lock, logfire.span("search.duckduckgo", query=query, num_results=num_results):
+            try:
+                backend = (
+                    self._backend
+                    if self._backend is not None
+                    else DDGS(timeout=self._SESSION_TIMEOUT)
+                )
+                raw = backend.text(query, max_results=num_results)
+            except Exception as exc:
+                logfire.warn("search.duckduckgo.failed", error=str(exc))
+                return []
         return [
             SearchResult(
                 title=item.get("title", ""),

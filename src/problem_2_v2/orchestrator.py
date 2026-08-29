@@ -8,6 +8,7 @@ Artifact Production -> Baseline Comparison into a single ``run`` /
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -45,6 +46,19 @@ from problem_2_v2.search.providers import (
     TavilySearchProvider,
 )
 from problem_2_v2.search.retriever import RetrieverAgent
+
+
+def configure_event_loop_policy() -> None:
+    """Use the selector event loop policy on Windows.
+
+    The default Proactor loop on Windows can raise ``OSError`` WinError
+    10038 during socket teardown of ``asyncio.to_thread`` worker sockets in
+    concurrent parallel branches. The selector policy avoids the Proactor
+    ``_ProactorBasePipeTransport`` teardown path. It is a no-op on other
+    platforms.
+    """
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 class MLEStarResult(BaseModel):
@@ -187,6 +201,7 @@ class MLEStarPipeline:
         Returns:
             An ``MLEStarResult`` describing the full run outcome.
         """
+        configure_event_loop_policy()
         return asyncio.run(self.run_async(task_md_path, dataset_dir, run_id=run_id))
 
     async def run_async(

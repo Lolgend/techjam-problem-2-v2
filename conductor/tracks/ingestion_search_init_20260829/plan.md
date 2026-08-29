@@ -54,15 +54,15 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: Sequential Model Merging ($\mathcal{A}_{\text{merger}}$) & Pipeline Orchestrator
-- [ ] Task: Write failing tests for ModelMergerAgent and InitializationPipeline
-    - [ ] Create `tests/initialization/test_merger.py` testing merging prompt, blending code generation, and greedy acceptance
-    - [ ] Create `tests/initialization/test_pipeline.py` testing end-to-end initialization workflow
-- [ ] Task: Implement `ModelMergerAgent` in `src/problem_2_v2/initialization/merger.py`
-    - [ ] Implement Pydantic AI merging agent with Figure 11 prompt
-    - [ ] Implement greedy sequential loop (Algorithm 1) with score comparison via `MetricDirection`
-    - [ ] Verify merger tests pass
-- [ ] Task: Implement `InitializationPipeline` coordinator in `src/problem_2_v2/initialization/pipeline.py`
-    - [ ] Wire TaskExtractor -> Retriever -> Evaluator -> Merger into single callable pipeline
-    - [ ] Generate initial `PipelineArtifact` with complete lineage history
-    - [ ] Verify pipeline integration tests pass
+- [x] Task: Write failing tests for ModelMergerAgent and InitializationPipeline (51108c1)
+    - [x] Create `tests/initialization/test_merger.py` testing merging prompt, blending code generation, and greedy acceptance
+    - [x] Create `tests/initialization/test_pipeline.py` testing end-to-end initialization workflow
+- [x] Task: Implement `ModelMergerAgent` in `src/problem_2_v2/initialization/merger.py` (15b9f71)
+    - [x] Implement Pydantic AI merging agent with Figure 11 prompt
+    - [x] Implement greedy sequential loop (Algorithm 1) with score comparison via `MetricDirection`
+    - [x] Verify merger tests pass
+- [x] Task: Implement `InitializationPipeline` coordinator in `src/problem_2_v2/initialization/pipeline.py` (15b9f71)
+    - [x] Wire TaskExtractor -> Retriever -> Evaluator -> Merger into single callable pipeline
+    - [x] Generate initial `PipelineArtifact` with complete lineage history
+    - [x] Verify pipeline integration tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

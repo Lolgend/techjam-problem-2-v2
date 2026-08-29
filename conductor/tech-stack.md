@@ -67,3 +67,11 @@
 > `DDGS(timeout=20)` sessions per call, graceful `[]` fallback on
 > socket/network/rate-limit errors) while fixing the
 > `windows_asyncio_socket_fix_20260829` track.
+>
+> **2026-08-30:** Hardened candidate retrieval and initial solution
+> generation while implementing the robust candidate retrieval track
+> (`robust_candidate_retrieval_20260830`): `RetrieverAgent` falls back from
+> structured output to raw JSON/markdown parsing to domain-aware starter
+> cards (never empty), `InitializationPipeline` can seed the official
+> baseline script as candidate 1, and `ModelMergerAgent` preserves the best
+> individual on failed merges. No new runtime dependencies.

@@ -21,9 +21,9 @@ Given a problem description in Markdown format (specifying task objectives, data
 
 ### 1. Baseline Ingestion & Initial Solution Generation
 - **Problem Reader & Parser:** Ingests Markdown problem descriptions (`problem.md`), extracting task metadata, target metrics ($h$), dataset schemas, and official baseline benchmarks.
-- **Retriever Agent ($A_{\text{retriever}}$):** Queries search engines (Google Search API, Tavily, DuckDuckGo, or local mock for offline testing) with the task description to retrieve $M$ candidate state-of-the-art models and concise example code snippets formatted as structured JSON model cards.
-- **Candidate Evaluation Agent ($A_{\text{init}}$):** Implements self-contained executable Python scripts for each candidate model and measures validation performance ($h(s)$) on hold-out validation sets (with automated 30k sample downsampling for fast experimentation).
-- **Merging Agent ($A_{\text{merger}}$):** Sequentially integrates non-dominated candidate models into an initial consolidated baseline ($s_0$) using an averaging ensemble as long as validation score improves.
+- **Retriever Agent ($A_{\text{retriever}}$):** Queries search engines (Google Search API, Tavily, DuckDuckGo, or local mock for offline testing) with the task description to retrieve $M$ candidate state-of-the-art models and concise example code snippets formatted as structured JSON model cards. Retrieval is resilient: structured output, raw JSON/markdown text parsing, and domain-aware fallback architectures guarantee a non-empty candidate list.
+- **Candidate Evaluation Agent ($A_{\text{init}}$):** Implements self-contained executable Python scripts for each candidate model and measures validation performance ($h(s)$) on hold-out validation sets (with automated 30k sample downsampling for fast experimentation). The official baseline starter script (`src/baseline/baseline.py`) is seeded as the first candidate when present, so $s_0$ can match or exceed the baseline score.
+- **Merging Agent ($A_{\text{merger}}$):** Sequentially integrates non-dominated candidate models into an initial consolidated baseline ($s_0$) using an averaging ensemble as long as validation score improves. If all merge attempts fail, the best individual candidate is preserved rather than returning an empty solution.
 
 ### 2. Targeted Code Block Extraction & Refinement (Nested Exploration)
 - **Outer Loop ($T$ iterations):**

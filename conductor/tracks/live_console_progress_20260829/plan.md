@@ -11,15 +11,15 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Sub-Pipeline Live Telemetry & Score Streaming
-- [ ] Task: Write tests for real-time progress emissions across sub-pipelines
-    - [ ] Add test cases verifying live console emissions in `tests/test_live_progress.py`
-- [ ] Task: Implement live logging in `parallel.py` and `initialization/pipeline.py`
-    - [ ] Add branch start/completion status in `ParallelSolutionGenerator`
-    - [ ] Add search retrieval, candidate evaluation 1..M scores, and merger s0 score in `InitializationPipeline`
-- [ ] Task: Implement live logging in `refinement/pipeline.py`, `ensembling/pipeline.py`, and `execution/finalizer.py`
-    - [ ] Add outer loop ablation reports and inner loop refinement plans/scores in `RefinementPipeline`
-    - [ ] Add ensembling round strategies and merged scores in `EnsemblePipeline`
-    - [ ] Add subsampling removal and full-data training status in `FinalArtifactProducer`
+- [x] Task: Write tests for real-time progress emissions across sub-pipelines
+    - [x] Add test cases verifying live console emissions in `tests/test_live_progress.py`
+- [x] Task: Implement live logging in `parallel.py` and `initialization/pipeline.py`
+    - [x] Add branch start/completion status in `ParallelSolutionGenerator`
+    - [x] Add search retrieval, candidate evaluation 1..M scores, and merger s0 score in `InitializationPipeline`
+- [x] Task: Implement live logging in `refinement/pipeline.py`, `ensembling/pipeline.py`, and `execution/finalizer.py`
+    - [x] Add outer loop ablation reports and inner loop refinement plans/scores in `RefinementPipeline`
+    - [x] Add ensembling round strategies and merged scores in `EnsemblePipeline`
+    - [x] Add subsampling removal and full-data training status in `FinalArtifactProducer`
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Full System Integration & Regression Verification

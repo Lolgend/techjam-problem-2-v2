@@ -1,6 +1,6 @@
 # Implementation Plan: Core Architecture & Pydantic Data Contracts
 
-## Phase 1: Code Utilities & Base Contract Infrastructure
+## Phase 1: Code Utilities & Base Contract Infrastructure [checkpoint: 76fe8ed]
 - [x] Task: Write failing unit tests for code extraction, AST syntax validation, and diff generation (1aa94f0)
     - [x] Create `tests/contracts/test_code_utils.py`
     - [x] Test markdown code block extraction (fenced with ```python, raw code, mixed text)
@@ -18,7 +18,7 @@
 - [x] Task: Implement enums in `src/problem_2_v2/contracts/enums.py` (76fe8ed)
     - [x] Implement `MetricDirection`, `TaskType`, `ComponentCategory`, `EnsembleMethod`
     - [x] Verify tests pass
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Task Specification, Execution Telemetry & Artifact Lineage
 - [ ] Task: Write failing tests for TaskSpecification markdown parser and ExecutionResult

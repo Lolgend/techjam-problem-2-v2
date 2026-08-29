@@ -35,7 +35,8 @@
 > configuration while implementing the Pydantic data contracts track
 > (`core_data_contracts_20260829`).
 >
-> **2026-08-29:** Added `pydantic-ai`, `duckduckgo-search`, `httpx`, and
+> **2026-08-29:** Added `pydantic-ai`, `ddgs` (DuckDuckGo search;
+> successor to `duckduckgo-search`), `httpx`, and
 > `logfire` as runtime dependencies while implementing the ingestion &
 > search-guided initialization track (`ingestion_search_init_20260829`).
 > Peak memory monitoring is deferred: the sandbox currently provides

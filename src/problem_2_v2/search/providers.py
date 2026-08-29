@@ -193,7 +193,7 @@ class GoogleSearchProvider:
 
 
 class DuckDuckGoSearchProvider:
-    """Free web search provider backed by ``duckduckgo_search``.
+    """Free web search provider backed by the ``ddgs`` package.
 
     Args:
         backend: A DuckDuckGo ``DDGS``-compatible backend; when omitted a
@@ -202,7 +202,7 @@ class DuckDuckGoSearchProvider:
 
     def __init__(self, backend: Any | None = None) -> None:
         if backend is None:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
 
             backend = DDGS()
         self._backend = backend

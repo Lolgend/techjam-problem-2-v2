@@ -8,7 +8,7 @@
     - [x] Implement `get_domain_fallback_cards(task_type)` for Recommender, Tabular, NLP, Vision modalities
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Baseline Code Seeding & Robust Initialization Pipeline
+## Phase 2: Baseline Code Seeding & Robust Initialization Pipeline [checkpoint: 7546785]
 - [x] Task: Write tests for baseline script discovery and candidate injection
     - [x] Add tests in `tests/initialization/test_pipeline.py` verifying baseline injection
 - [x] Task: Implement baseline script detection and injection in `initialization/pipeline.py`
@@ -16,7 +16,7 @@
 - [x] Task: Implement candidate status logging and merger fallback in `evaluator.py` and `merger.py`
     - [x] Print `[Candidate {i}/{M}] {name} -> Score: {score}` with live unbuffered flush
     - [x] Ensure `ModelMergerAgent` always preserves the highest scoring individual candidate if merging fails
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Full System Integration & Regression Verification
 - [ ] Task: Run full test suite and verify 100% pass rate

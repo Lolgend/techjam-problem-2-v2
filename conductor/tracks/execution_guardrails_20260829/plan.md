@@ -17,15 +17,15 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Final Artifact Producer ($\mathcal{A}_{\text{finalizer}}$)
-- [ ] Task: Write failing tests for FinalArtifactProducer
-    - [ ] Create `tests/execution/test_finalizer.py` testing subsampling removal, model serialization injection, `metrics.json` export, and `./final/` output structure
-    - [ ] Test AST validation of rewritten production script
-    - [ ] Test extended timeout execution with DebuggerAgent fallback
-- [ ] Task: Implement `FinalArtifactProducer` in `src/problem_2_v2/execution/finalizer.py`
-    - [ ] Implement Pydantic AI finalizer agent prompt for subsampling removal and serialization
-    - [ ] Define `FinalArtifact` Pydantic model (script, output_dir, model_paths, metrics, submission_path)
-    - [ ] Integrate with `SubprocessRunner` (production timeout) and `DebuggerAgent`
-    - [ ] Verify finalizer tests pass
+- [x] Task: Write failing tests for FinalArtifactProducer
+    - [x] Create `tests/execution/test_finalizer.py` testing subsampling removal, model serialization injection, `metrics.json` export, and `./final/` output structure
+    - [x] Test AST validation of rewritten production script
+    - [x] Test extended timeout execution with DebuggerAgent fallback
+- [~] Task: Implement `FinalArtifactProducer` in `src/problem_2_v2/execution/finalizer.py`
+    - [x] Implement Pydantic AI finalizer agent prompt for subsampling removal and serialization
+    - [x] Define `FinalArtifact` Pydantic model (script, output_dir, model_paths, metrics, submission_path)
+    - [x] Integrate with `SubprocessRunner` (production timeout) and `DebuggerAgent`
+    - [x] Verify finalizer tests pass (ea0c7e8)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Pipeline Integration Refactor

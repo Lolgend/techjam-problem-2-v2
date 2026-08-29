@@ -168,6 +168,8 @@ class TargetCodeBlock(BaseModel):
         stripped_lines = [
             re.escape(line.strip()) for line in self.raw_code.splitlines() if line.strip()
         ]
+        if not stripped_lines:
+            raise ValueError("Target code block is empty; cannot locate it in the full script.")
         return re.compile(r"(?m)^[ \t]*" + r"\n[ \t]*".join(stripped_lines))
 
     def _replace_by_lines(self, full_script: str, new_code: str) -> str:

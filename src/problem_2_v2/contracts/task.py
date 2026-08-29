@@ -9,7 +9,7 @@ pipeline artifacts across refinement iterations.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -216,6 +216,6 @@ class PipelineArtifact(BaseModel):
     applied_diff: str | None = Field(default=None, description="Unified diff from the parent.")
     iteration_stage: str = Field(description="Stage that produced this artifact.")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Creation timestamp.",
     )

@@ -47,6 +47,16 @@ class TestModelCard:
         )
         assert card.example_code == raw
 
+    def test_preserves_non_parsing_raw_fragment(self) -> None:
+        fragment = "if x > 1:  # incomplete standalone fragment"
+        card = ModelCard(
+            model_name="Frag",
+            rationale="r",
+            example_code=fragment,
+            library_dependencies=[],
+        )
+        assert card.example_code == fragment
+
     def test_requires_non_empty_model_name(self) -> None:
         with pytest.raises(ValidationError):
             ModelCard(
@@ -271,6 +281,12 @@ class TestTargetCodeBlock:
         block = self._block(raw_code="x = 1")
         with pytest.raises(ValueError, match="invalid Python"):
             block.replace_in(full, "if True:")
+
+    def test_replace_in_raises_on_empty_raw_code(self) -> None:
+        full = "def f():\n    x = 1\n    return x\n"
+        block = self._block(raw_code="   \n  ")
+        with pytest.raises(ValueError, match="empty"):
+            block.replace_in(full, "x = 2")
 
     def test_json_round_trip(self) -> None:
         block = self._block(start_line=1, end_line=2)

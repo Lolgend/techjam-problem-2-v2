@@ -89,6 +89,7 @@ class DataLeakageStatus(BaseModel):
         """
         if not isinstance(data, dict):
             return data
+        data = dict(data)
         status = data.get("leakage_status")
         if not isinstance(status, str):
             return data

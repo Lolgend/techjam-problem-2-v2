@@ -67,6 +67,17 @@ class TestDataLeakageStatus:
         )
         assert status.corrected_code_block == "fixed block"
 
+    def test_normalization_does_not_mutate_input_dict(self) -> None:
+        payload = {
+            "leakage_status": "Yes Data Leakage",
+            "is_leaking": False,
+            "suspicious_code_block": None,
+            "corrected_code_block": None,
+            "explanation": "x",
+        }
+        DataLeakageStatus.model_validate(payload)
+        assert payload["is_leaking"] is False
+
     def test_rejects_extra_fields(self) -> None:
         with pytest.raises(ValidationError):
             DataLeakageStatus(

@@ -49,3 +49,9 @@
 > dependencies. Peak memory monitoring remains deferred (the spec's "memory
 > limits" requirement is covered by sandbox isolation, timeouts, and
 > `./input` mapping).
+>
+> **2026-08-29:** Added the `MLEStarPipeline` master orchestrator and the
+> `problem-2-v2` CLI (stdlib `argparse`) while implementing the master
+> orchestrator track (`master_orchestrator_cli_20260829`). No new runtime
+> dependencies. The `typer`/`rich` CLI tooling listed above is not used;
+> live score tables remain future work.

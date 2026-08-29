@@ -61,6 +61,7 @@ Given a problem description in Markdown format (specifying task objectives, data
 - **Final Artifact Producer ($A_{\text{finalizer}}$):** Restores full training data (removes temporary subsampling), trains on the complete dataset, and produces the production-ready `./final/` output (serialized model files, `metrics.json` evaluation scores, and `submission.csv`).
 
 ## User Interface & Integration
-- **CLI Interface:** `problem-2-v2 run --task <problem.md> --input <dir> --output <dir>` with real-time progress logging.
-- **Python Library API:** Programmatic invocation and orchestration of individual subagents or end-to-end pipeline runs.
+- **Master Orchestrator:** `MLEStarPipeline` coordinates the 5-stage workflow (task ingestion, parallel branches, adaptive ensembling, final artifact production, baseline comparison) from a single `run()` / `run_async()` entry point, configured via `MLEStarConfig`.
+- **CLI Interface:** `problem-2-v2 run --task <problem.md> --data <dir> --output <dir> [--model ... --search-provider ... --branches ... --dry-run]` and `problem-2-v2 version`; `--dry-run` validates inputs without executing code generation.
+- **Python Library API:** Programmatic invocation of individual subagents or the full pipeline via `MLEStarPipeline`, returning a structured `MLEStarResult` (lineage, artifacts, baseline delta).
 - **Observability:** Integrated with Pydantic Logfire for complete span-level tracing of LLM reasoning, code modifications, score trajectories, and tool executions.

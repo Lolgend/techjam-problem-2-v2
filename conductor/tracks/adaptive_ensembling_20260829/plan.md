@@ -39,3 +39,6 @@
     - [x] Create `tests/ensembling/test_e2e_ensembling.py` testing full workflow from $L$ candidates through $R$ ensembling rounds to final submission
     - [x] Verify end-to-end test passes
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions (eaee42a)

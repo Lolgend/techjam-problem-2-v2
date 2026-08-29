@@ -92,6 +92,14 @@ class TestDataLeakageCheckerAgent:
             repaired = checker.repair(LEAKY_CODE, SUSPICIOUS_BLOCK)
         assert "```" not in repaired
 
+    def test_repair_without_code_leaves_code_unchanged(self) -> None:
+        checker = DataLeakageCheckerAgent(model="test")
+        with checker.repair_agent.override(
+            model=TestModel(custom_output_text="I cannot help with this task.")
+        ):
+            repaired = checker.repair(LEAKY_CODE, SUSPICIOUS_BLOCK)
+        assert repaired == LEAKY_CODE
+
     def test_repair_raises_when_block_not_found(self) -> None:
         checker = DataLeakageCheckerAgent(model="test")
         with (

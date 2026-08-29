@@ -113,6 +113,9 @@ class DataLeakageCheckerAgent:
             prompt = f"# Python code\n{code}\n# Your task\nRefine the code to prevent data leakage."
             response = self.repair_agent.run_sync(prompt)
         corrected = extract_python_code(response.output)
+        if not corrected:
+            logfire.warn("guardrails.leakage_repair.no_code")
+            return code
         return self._patch(code, suspicious_block, corrected)
 
     def audit(self, code: str) -> tuple[DataLeakageStatus, str]:

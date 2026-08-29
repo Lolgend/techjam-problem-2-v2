@@ -16,6 +16,7 @@ import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 
+from problem_2_v2.console import announce, format_score
 from problem_2_v2.contracts.code_utils import extract_python_code, validate_python_syntax
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.execution.pipeline import ExecutionConfig
@@ -145,6 +146,7 @@ class FinalArtifactProducer:
         if not valid:
             logfire.warn("finalizer.invalid_syntax", run_id=run_id, error=error)
 
+        announce("[Finalizer] Stripping subsampling and training on complete dataset...")
         with logfire.span("finalizer.production_exec", run_id=run_id):
             outcome = self.debugger.debug(
                 rewritten,
@@ -156,6 +158,9 @@ class FinalArtifactProducer:
         result = outcome.result
 
         final_dir = Path(self.debugger.runner.runs_dir) / run_id / "sandbox_final" / "final"
+        announce(
+            f"[Finalizer] Production run complete. Score: {format_score(result.validation_score)}"
+        )
         return FinalArtifact(
             code=outcome.code,
             output_dir=str(final_dir),

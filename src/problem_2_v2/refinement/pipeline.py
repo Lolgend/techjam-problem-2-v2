@@ -15,6 +15,7 @@ from pathlib import Path
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
+from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
@@ -209,6 +210,10 @@ class RefinementPipeline:
         with logfire.span("refinement.run", run_id=run_id):
             for t in range(self.outer_loops):
                 with logfire.span("refinement.outer", t=t):
+                    announce(
+                        f"[Outer {t + 1}/{self.outer_loops}] Running ablation study "
+                        f"across components..."
+                    )
                     try:
                         summary = self._outer_step(spec, current_code, ablation_history, run_id)
                     except Exception as exc:
@@ -225,6 +230,10 @@ class RefinementPipeline:
                     except Exception as exc:
                         logfire.warn("refinement.extract.failed", t=t, error=str(exc))
                         continue
+                    announce(
+                        f"[Outer {t + 1}/{self.outer_loops}] Extracted high-impact block: "
+                        f"'{block.category.value}'"
+                    )
 
                     best_inner_code = current_code
                     best_inner_score = current_score
@@ -253,6 +262,12 @@ class RefinementPipeline:
                                 logs_path=logs_path,
                             )
                         attempts.append((plan.natural_language_plan, record.validation_score))
+                        announce(
+                            f"[Inner {t + 1}.{k + 1}/{self.inner_loops}] Plan: "
+                            f"'{plan.natural_language_plan}' -> "
+                            f"Score: {format_score(record.validation_score)} "
+                            f"(Δ {format_delta(record.delta_from_baseline)})"
+                        )
 
                         if (
                             record.success

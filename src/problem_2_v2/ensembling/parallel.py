@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 import logfire
 
+from problem_2_v2.console import announce, format_score
 from problem_2_v2.contracts.task import PipelineArtifact
 from problem_2_v2.initialization.pipeline import InitializationPipeline
 from problem_2_v2.refinement.pipeline import RefinementPipeline, RefinementResult
@@ -68,6 +69,7 @@ class ParallelSolutionGenerator:
             raise ValueError("Seeds must be distinct per branch.")
 
         async def run_branch(seed: int, index: int) -> PipelineArtifact | None:
+            announce(f"[Branch {index} (seed={seed})] Starting pipeline...")
             with logfire.span("parallel.branch", index=index, seed=seed):
                 try:
                     init_pipeline, refine_pipeline = self.branch_builder(seed)
@@ -102,7 +104,12 @@ class ParallelSolutionGenerator:
                     )
                     logfire.warn("parallel.branch_failed", index=index, seed=seed, error=str(exc))
                     return None
-                return self._to_artifact(refine_result, index, seed)
+                artifact = self._to_artifact(refine_result, index, seed)
+                announce(
+                    f"[Branch {index} (seed={seed})] Finished with Score: "
+                    f"{format_score(artifact.validation_score)}"
+                )
+                return artifact
 
         results = await asyncio.gather(
             *(run_branch(seed, index) for index, seed in enumerate(seeds))

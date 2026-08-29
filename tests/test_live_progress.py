@@ -14,8 +14,13 @@ from pydantic_ai.models.test import TestModel
 
 from problem_2_v2 import main
 from problem_2_v2.config import MLEStarConfig
-from problem_2_v2.contracts.task import TaskSpecification
-from problem_2_v2.execution.finalizer import FinalArtifact
+from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
+from problem_2_v2.ensembling.ensembler import EnsemblerAgent
+from problem_2_v2.ensembling.parallel import ParallelSolutionGenerator
+from problem_2_v2.ensembling.pipeline import EnsemblePipeline
+from problem_2_v2.ensembling.planner import EnsemblePlannerAgent
+from problem_2_v2.execution.finalizer import FinalArtifact, FinalArtifactProducer
+from problem_2_v2.execution.pipeline import ExecutionConfig
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
 from problem_2_v2.ingestion.extractor import TaskExtractor
@@ -350,3 +355,205 @@ class TestOrchestratorStages:
         assert "[Stage 2/4] Aggregating Candidate Artifacts" in out
         assert "[Stage 3/4] Adaptive Ensembling (2 rounds)" in out
         assert "[Stage 4/4] Production Finalization" in out
+
+
+def _init_spec() -> TaskSpecification:
+    return TaskSpecification.from_markdown(
+        "**Task Type:** TABULAR_CLASSIFICATION\n"
+        "**Metric Name:** AUROC\n"
+        "**Metric Direction:** MAXIMIZE\n"
+        "**Target Variable:** label\n"
+        "**Dataset Files:** train.csv\n",
+        dataset_dir="/data",
+    )
+
+
+def _artifact(code: str, score: float, stage: str) -> PipelineArtifact:
+    return PipelineArtifact(
+        version=0,
+        full_code=code,
+        validation_score=score,
+        parent_version=None,
+        applied_diff=None,
+        iteration_stage=stage,
+    )
+
+
+def _init_pipeline(tmp_path: Path) -> InitializationPipeline:
+    runner = SubprocessRunner(
+        runs_dir=str(tmp_path / "runs"),
+        timeout_seconds=5,
+        python_executable=sys.executable,
+    )
+    debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+    branch_code = "print('Final Validation Performance: 0.50')\n"
+
+    def merger_model(messages, info):
+        return ModelResponse(parts=[TextPart(content=branch_code)])
+
+    return InitializationPipeline(
+        extractor=TaskExtractor(use_llm=False),
+        retriever=RetrieverAgent(
+            provider=MockSearchProvider(
+                results={
+                    "classification": [SearchResult(title="t", url="https://e.com", snippet="s")]
+                }
+            ),
+            model=TestModel(custom_output_args=_CARD_ARGS),
+            num_candidates=1,
+        ),
+        evaluator=CandidateEvaluatorAgent(
+            debugger=debugger, model=TestModel(custom_output_text=branch_code)
+        ),
+        merger=ModelMergerAgent(debugger=debugger, model=FunctionModel(function=merger_model)),
+    )
+
+
+class TestSubPipelineTelemetry:
+    """Test live console emissions across the sub-pipelines."""
+
+    async def test_branch_telemetry(self, tmp_path: Path, capsys) -> None:
+        data_dir = tmp_path / "data"
+        data_dir.mkdir(exist_ok=True)
+        (data_dir / "train.csv").write_text("x,y\n1,0\n", encoding="utf-8")
+        generator = ParallelSolutionGenerator(
+            branch_builder=_branch_factory(tmp_path), num_branches=2
+        )
+        await generator.generate(_MD, dataset_dir=str(data_dir), run_id="br_t", seeds=[0, 1])
+        out = capsys.readouterr().out
+        assert "[Branch 0 (seed=0)] Starting pipeline" in out
+        assert "[Branch 1 (seed=1)] Starting pipeline" in out
+        assert "[Branch 0 (seed=0)] Finished with Score: 0.5100" in out
+        assert "[Branch 1 (seed=1)] Finished with Score: 0.5200" in out
+
+    def test_initialization_telemetry(self, tmp_path: Path, capsys) -> None:
+        init = _init_pipeline(tmp_path)
+        init.run(_MD, dataset_dir=str(tmp_path / "data"), run_id="init_t")
+        out = capsys.readouterr().out
+        assert "[Search] Retrieving candidates via mock" in out
+        assert "[Candidate 1/1] Model1 -> Validation Score: 0.5000" in out
+        assert "[Merge] Sequential merging completed. Initial s0 Score: 0.5000" in out
+
+    def test_refinement_telemetry(self, tmp_path: Path, capsys) -> None:
+        runner = SubprocessRunner(
+            runs_dir=str(tmp_path / "runs"),
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+        pipeline = RefinementPipeline(
+            ablation=AblationAgent(model="test"),
+            summarizer=AblationSummarizerAgent(runner=runner, model="test"),
+            extractor=CodeBlockExtractorAgent(model="test"),
+            planner=RefinementPlannerAgent(model="test"),
+            coder=CoderAgent(model="test"),
+            leakage=DataLeakageCheckerAgent(model="test"),
+            usage=DataUsageCheckerAgent(model="test"),
+            debugger=debugger,
+            runner=runner,
+            outer_loops=1,
+            inner_loops=1,
+        )
+        initial_code = "x = 1\nprint('Final Validation Performance: 0.80')\n"
+        refined_block = "model = 'boosted'\nprint('Final Validation Performance: 0.85')"
+        target_block = "print('Final Validation Performance: 0.80')"
+        with (
+            pipeline.ablation.agent.override(
+                model=TestModel(custom_output_text="print('ablation done')")
+            ),
+            pipeline.summarizer.agent.override(
+                model=TestModel(
+                    custom_output_args={
+                        "baseline_score": 0.80,
+                        "ablation_results": [
+                            {
+                                "variant_id": "model",
+                                "validation_score": 0.82,
+                                "delta_from_baseline": 0.02,
+                                "summary": "Model mattered most.",
+                            }
+                        ],
+                        "highest_impact_component": "model",
+                        "raw_log_summary": "...",
+                    }
+                )
+            ),
+            pipeline.extractor.agent.override(
+                model=TestModel(
+                    custom_output_args=[
+                        {
+                            "code_block": target_block,
+                            "plan": "improve the model",
+                            "category": "MODEL_ARCHITECTURE",
+                        }
+                    ]
+                )
+            ),
+            pipeline.planner.agent.override(
+                model=TestModel(custom_output_text="improve the model")
+            ),
+            pipeline.coder.agent.override(
+                model=TestModel(custom_output_text=f"```python\n{refined_block}\n```")
+            ),
+            pipeline.leakage.check_agent.override(
+                model=TestModel(custom_output_args=_leak_clean_args())
+            ),
+            pipeline.usage.agent.override(
+                model=TestModel(custom_output_text="All the provided information is used.")
+            ),
+        ):
+            pipeline.refine(_init_spec(), initial_code, initial_score=0.80, run_id="ref_t")
+        out = capsys.readouterr().out
+        assert "[Outer 1/1] Running ablation study across components" in out
+        assert "[Outer 1/1] Extracted high-impact block: 'MODEL_ARCHITECTURE'" in out
+        assert "[Inner 1.1/1] Plan: 'improve the model' -> Score: 0.8500 (Δ +0.0500)" in out
+
+    def test_ensembling_telemetry(self, tmp_path: Path, capsys) -> None:
+        runner = SubprocessRunner(
+            runs_dir=str(tmp_path / "runs"),
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+        pipeline = EnsemblePipeline(
+            planner=EnsemblePlannerAgent(model="test"),
+            ensembler=EnsemblerAgent(debugger=debugger, model="test"),
+            runner=runner,
+            rounds=1,
+        )
+        solutions = [
+            _artifact("print('Final Validation Performance: 0.80')", 0.80, "branch_0"),
+            _artifact("print('Final Validation Performance: 0.82')", 0.82, "branch_1"),
+        ]
+        with (
+            pipeline.planner.agent.override(model=TestModel(custom_output_args=_planner_args())),
+            pipeline.ensembler.agent.override(
+                model=TestModel(
+                    custom_output_text="```python\nprint('Final Validation Performance: 0.85')\n```"
+                )
+            ),
+        ):
+            pipeline.run(_init_spec(), solutions, run_id="ens_t")
+        out = capsys.readouterr().out
+        assert "[Ensemble Round 1/1] Strategy: 'SIMPLE_AVERAGE' -> Score: 0.8500 (Δ +0.0300)" in out
+
+    def test_finalizer_telemetry(self, tmp_path: Path, capsys) -> None:
+        runner = SubprocessRunner(
+            runs_dir=str(tmp_path / "runs"),
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+        finalizer = FinalArtifactProducer(
+            debugger=debugger,
+            model="test",
+            config=ExecutionConfig(timeout_seconds=5),
+        )
+        solution = "print('Final Validation Performance: 0.80')\n"
+        with finalizer.agent.override(
+            model=TestModel(custom_output_text=f"```python\n{PRODUCTION_SCRIPT}\n```")
+        ):
+            finalizer.produce(solution, _init_spec(), run_id="fin_t")
+        out = capsys.readouterr().out
+        assert "[Finalizer] Stripping subsampling and training on complete dataset" in out
+        assert "[Finalizer] Production run complete. Score: 0.9000" in out

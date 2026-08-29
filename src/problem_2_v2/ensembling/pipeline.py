@@ -15,6 +15,7 @@ from pathlib import Path
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
+from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.enums import MetricDirection
 from problem_2_v2.contracts.guardrails import EnsembleStrategy
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
@@ -176,6 +177,16 @@ class EnsemblePipeline:
                         continue
                 attempts.append((strategy, run.score))
                 rounds_executed = r + 1
+                round_delta = (
+                    direction.delta(run.score, baseline)
+                    if run.score is not None and baseline is not None
+                    else None
+                )
+                announce(
+                    f"[Ensemble Round {r + 1}/{self.rounds}] Strategy: "
+                    f"'{strategy.method.value}' -> "
+                    f"Score: {format_score(run.score)} (Δ {format_delta(round_delta)})"
+                )
                 self._append_log(
                     logs_path,
                     EnsembleIterationLogRecord(
@@ -183,11 +194,7 @@ class EnsemblePipeline:
                         method=strategy.method.value,
                         plan=strategy.natural_language_plan,
                         validation_score=run.score,
-                        delta_from_baseline=(
-                            direction.delta(run.score, baseline)
-                            if run.score is not None and baseline is not None
-                            else None
-                        ),
+                        delta_from_baseline=round_delta,
                         success=run.success,
                         errors=(
                             [run.result.stderr[-500:]]

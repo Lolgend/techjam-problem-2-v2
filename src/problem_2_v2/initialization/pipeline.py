@@ -11,6 +11,7 @@ from __future__ import annotations
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
+from problem_2_v2.console import announce, format_score
 from problem_2_v2.contracts.search import RetrievedCandidates
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.ingestion.extractor import TaskExtractor
@@ -92,6 +93,9 @@ class InitializationPipeline:
         with logfire.span("initialization.run", run_id=run_id):
             with logfire.span("initialization.extract"):
                 spec = self.extractor.extract(md_text, dataset_dir=dataset_dir)
+            announce(
+                f"[Search] Retrieving candidates via {self.retriever.provider.provider_name}..."
+            )
             with logfire.span("initialization.retrieve"):
                 candidates = self.retriever.retrieve(spec)
             with logfire.span(
@@ -101,9 +105,18 @@ class InitializationPipeline:
                 evaluations = self.evaluator.evaluate_all(
                     spec, candidates.candidates, run_id=run_id
                 )
+            for index, evaluation in enumerate(evaluations):
+                announce(
+                    f"[Candidate {index + 1}/{len(evaluations)}] {evaluation.model_name} -> "
+                    f"Validation Score: {format_score(evaluation.score)}"
+                )
             ranked = self.evaluator.ranking(evaluations, spec.metric_direction)
             with logfire.span("initialization.merge", num_candidates=len(ranked)):
                 outcome = self.merger.merge(spec, ranked, run_id=run_id)
+            announce(
+                f"[Merge] Sequential merging completed. Initial s0 Score: "
+                f"{format_score(outcome.final_score)}"
+            )
         return InitializationResult(
             task=spec,
             candidates=candidates,

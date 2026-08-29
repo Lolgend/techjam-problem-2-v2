@@ -29,15 +29,15 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Pipeline Integration Refactor
-- [ ] Task: Write failing tests for refactored RefinementPipeline and EnsemblePipeline integration
-    - [ ] Create `tests/execution/test_integration.py` verifying both pipelines delegate to `ExecutionGuardrailPipeline`
-    - [ ] Verify all existing 252+ tests continue to pass (backward compatibility)
-- [ ] Task: Refactor `RefinementPipeline` to use `ExecutionGuardrailPipeline.run()`
-    - [ ] Replace direct guardrail and runner calls with unified pipeline delegation
-    - [ ] Verify refinement tests pass
-- [ ] Task: Refactor `EnsemblePipeline` to use `ExecutionGuardrailPipeline.run()`
-    - [ ] Replace direct guardrail and runner calls with unified pipeline delegation
-    - [ ] Verify ensemble tests pass
+- [x] Task: Write failing tests for refactored RefinementPipeline and EnsemblePipeline integration
+    - [x] Create `tests/execution/test_integration.py` verifying both pipelines delegate to `ExecutionGuardrailPipeline`
+    - [x] Verify all existing 252+ tests continue to pass (backward compatibility)
+- [x] Task: Refactor `RefinementPipeline` to use `ExecutionGuardrailPipeline.run()`
+    - [x] Replace direct guardrail and runner calls with unified pipeline delegation
+    - [x] Verify refinement tests pass
+- [x] Task: Refactor `EnsemblePipeline` to use `ExecutionGuardrailPipeline.run()`
+    - [x] Replace direct guardrail and runner calls with unified pipeline delegation
+    - [x] Verify ensemble tests pass
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 4: End-to-End Integration & Final Verification

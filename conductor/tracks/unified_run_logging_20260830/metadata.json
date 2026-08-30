@@ -1,0 +1,8 @@
+{
+  "track_id": "unified_run_logging_20260830",
+  "type": "refactor",
+  "status": "new",
+  "created_at": "2026-08-30T19:29:10+08:00",
+  "updated_at": "2026-08-30T19:29:10+08:00",
+  "description": "Unify all pipeline run logs into a single run-level runs/<run_id>/iteration_logs.jsonl file per run across parallel branches, ensembling, and final production stages."
+}

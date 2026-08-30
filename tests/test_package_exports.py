@@ -78,6 +78,8 @@ SUBMODULE_EXPORTS: dict[str, list[str]] = {
         "AblationVariant",
         "RefinementPlan",
         "TargetCodeBlock",
+        "IterationLogEntry",
+        "CentralIterationLogger",
         "compute_code_diff",
         "extract_python_code",
         "validate_python_syntax",

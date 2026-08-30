@@ -20,6 +20,10 @@ from problem_2_v2.contracts.guardrails import (
     DataUsageStatus,
     EnsembleStrategy,
 )
+from problem_2_v2.contracts.iteration import (
+    CentralIterationLogger,
+    IterationLogEntry,
+)
 from problem_2_v2.contracts.refinement import (
     AblationReport,
     AblationResultItem,
@@ -38,12 +42,14 @@ __all__ = [
     "AblationReport",
     "AblationResultItem",
     "AblationVariant",
+    "CentralIterationLogger",
     "ComponentCategory",
     "DataLeakageStatus",
     "DataUsageStatus",
     "EnsembleMethod",
     "EnsembleStrategy",
     "ExecutionResult",
+    "IterationLogEntry",
     "MetricDirection",
     "ModelCard",
     "PipelineArtifact",

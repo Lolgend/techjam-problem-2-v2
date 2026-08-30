@@ -142,6 +142,7 @@ class AblationSummarizerAgent:
         run_id: str,
         dataset_dir: str | None = None,
         dataset_files: list[str] | None = None,
+        iteration_index: int | None = None,
     ) -> AblationReport:
         """Execute the ablation script and summarize its raw output.
 
@@ -150,14 +151,18 @@ class AblationSummarizerAgent:
             run_id: Identifier of the current run.
             dataset_dir: Dataset directory for the sandbox, if any.
             dataset_files: Dataset files to map, if any.
+            iteration_index: Outer-loop iteration index, used to scope the
+                ablation sandbox to ``sandbox_ablation_t{t}`` so repeated
+                outer iterations never collide on one sandbox.
 
         Returns:
             A structured ``AblationReport`` describing per-variant outcomes
             and the highest-impact component.
         """
+        candidate_id = f"ablation_t{iteration_index}" if iteration_index is not None else "ablation"
         sandbox = self.runner.prepare_sandbox(
             run_id=run_id,
-            candidate_id="ablation",
+            candidate_id=candidate_id,
             dataset_dir=dataset_dir,
             dataset_files=dataset_files,
         )

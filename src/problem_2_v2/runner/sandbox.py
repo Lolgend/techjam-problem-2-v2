@@ -7,6 +7,7 @@ stdout/stderr/score telemetry.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import subprocess
@@ -118,8 +119,20 @@ class SubprocessRunner:
                 if not source.exists():
                     continue
                 target = input_dir / name
+                if target.exists():
+                    try:
+                        if source.samefile(target):
+                            continue
+                    except OSError:
+                        pass
+                    with contextlib.suppress(OSError):
+                        target.unlink()
                 try:
                     os.link(source, target)
+                except shutil.SameFileError:
+                    shutil.copy2(source, target)
+                except FileExistsError:
+                    shutil.copy2(source, target)
                 except OSError:
                     shutil.copy2(source, target)
         return sandbox

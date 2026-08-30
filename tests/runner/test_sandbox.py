@@ -1,5 +1,6 @@
 """Unit tests for the isolated subprocess execution sandbox."""
 
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -51,12 +52,110 @@ class TestSandboxWorkspace:
         assert (sandbox / "input" / "test.csv").read_text(encoding="utf-8") == "a,b\n3,4\n"
 
 
+class TestSandboxHardLinkIdempotency:
+    """Test repeated sandbox preparation never raises link/copy collisions."""
+
+    @staticmethod
+    def _data_dir(tmp_path: Path) -> Path:
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        (data_dir / "train.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+        return data_dir
+
+    def test_repeated_prepare_sandbox_with_hard_links_is_idempotent(
+        self, runner: SubprocessRunner, tmp_path: Path
+    ) -> None:
+        data_dir = self._data_dir(tmp_path)
+        first = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        second = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert first == second
+        assert (second / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+
+    def test_prepare_sandbox_handles_link_collision_without_samefile_error(
+        self, runner: SubprocessRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data_dir = self._data_dir(tmp_path)
+        runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+
+        def existing_target_link(src: str, dst: str) -> None:
+            raise FileExistsError(
+                f"[WinError 183] Cannot create a file when that file already exists: {dst}"
+            )
+
+        monkeypatch.setattr("problem_2_v2.runner.sandbox.os.link", existing_target_link)
+        sandbox = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert (sandbox / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+
+    def test_prepare_sandbox_falls_back_to_copy_when_link_raises_samefile_error(
+        self, runner: SubprocessRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data_dir = self._data_dir(tmp_path)
+
+        def samefile_link(src: str, dst: str) -> None:
+            raise shutil.SameFileError(f"Same file: {src} and {dst}")
+
+        monkeypatch.setattr("problem_2_v2.runner.sandbox.os.link", samefile_link)
+        sandbox = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert (sandbox / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+
+    def test_prepare_sandbox_replaces_stale_target_without_collision(
+        self, runner: SubprocessRunner, tmp_path: Path
+    ) -> None:
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        source = data_dir / "train.csv"
+        source.write_text("v1\n", encoding="utf-8")
+
+        sandbox = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        target = sandbox / "input" / "train.csv"
+        assert target.read_text(encoding="utf-8") == "v1\n"
+
+        target.unlink()
+        target.write_text("STALE\n", encoding="utf-8")
+        source.write_text("v2\n", encoding="utf-8")
+        runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert target.read_text(encoding="utf-8") == "v2\n"
+
+
 class TestSandboxBaselineAccess:
     """Test PYTHONPATH injection for the official baseline helper modules."""
 
-    def test_sandbox_scripts_can_import_baseline_modules(
-        self, runner: SubprocessRunner
-    ) -> None:
+    def test_sandbox_scripts_can_import_baseline_modules(self, runner: SubprocessRunner) -> None:
         code = (
             "import evaluate\n"
             "import data\n"

@@ -187,7 +187,7 @@ class RefinementPipeline:
                         f"across components..."
                     )
                     try:
-                        summary = self._outer_step(spec, current_code, ablation_history, run_id)
+                        summary = self._outer_step(spec, current_code, ablation_history, run_id, t)
                     except Exception as exc:
                         logfire.warn("refinement.outer.failed", t=t, error=str(exc))
                         continue
@@ -300,6 +300,7 @@ class RefinementPipeline:
         current_code: str,
         ablation_history: list[str],
         run_id: str,
+        iteration_index: int,
     ) -> str:
         """Run ablate -> summarize for one outer iteration.
 
@@ -308,6 +309,8 @@ class RefinementPipeline:
             current_code: The current solution script.
             ablation_history: Previous ablation summaries.
             run_id: Identifier of the current run.
+            iteration_index: Zero-based outer-loop index, used to scope
+                the ablation sandbox.
 
         Returns:
             The summarized ablation output for the extractor.
@@ -318,6 +321,7 @@ class RefinementPipeline:
             run_id=run_id,
             dataset_dir=spec.dataset_dir,
             dataset_files=spec.dataset_files,
+            iteration_index=iteration_index,
         )
         return report.raw_log_summary or report.model_dump_json()
 

@@ -123,6 +123,63 @@ class TestSandboxHardLinkIdempotency:
         )
         assert (sandbox / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
 
+    def test_prepare_sandbox_falls_back_to_copy_when_link_raises_file_exists_error(
+        self, runner: SubprocessRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data_dir = self._data_dir(tmp_path)
+
+        def existing_link(src: str, dst: str) -> None:
+            raise FileExistsError(f"already exists: {dst}")
+
+        monkeypatch.setattr("problem_2_v2.runner.sandbox.os.link", existing_link)
+        sandbox = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert (sandbox / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+
+    def test_prepare_sandbox_falls_back_to_copy_when_link_unsupported(
+        self, runner: SubprocessRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data_dir = self._data_dir(tmp_path)
+
+        def unsupported_link(src: str, dst: str) -> None:
+            raise OSError(f"[Errno 1] Operation not permitted: {dst}")
+
+        monkeypatch.setattr("problem_2_v2.runner.sandbox.os.link", unsupported_link)
+        sandbox = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert (sandbox / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+
+    def test_prepare_sandbox_handles_samefile_check_failure(
+        self, runner: SubprocessRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        data_dir = self._data_dir(tmp_path)
+        runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+
+        def broken_samefile(self: Path, other: Path) -> bool:
+            raise OSError("cannot stat path")
+
+        monkeypatch.setattr("pathlib.Path.samefile", broken_samefile)
+        sandbox = runner.prepare_sandbox(
+            run_id="run1",
+            candidate_id="ablation",
+            dataset_dir=str(data_dir),
+            dataset_files=["train.csv"],
+        )
+        assert (sandbox / "input" / "train.csv").read_text(encoding="utf-8") == "a,b\n1,2\n"
+
     def test_prepare_sandbox_replaces_stale_target_without_collision(
         self, runner: SubprocessRunner, tmp_path: Path
     ) -> None:

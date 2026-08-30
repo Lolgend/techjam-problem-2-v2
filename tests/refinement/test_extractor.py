@@ -156,6 +156,39 @@ class TestCodeBlockExtractorAgent:
             )
         assert block.raw_code == SOLUTION
 
+    def test_fallback_returns_primary_def_when_block_unrelated(self) -> None:
+        agent = CodeBlockExtractorAgent(model="test")
+        block_text = "loss_fn = torch.nn.BCELoss()"
+        with agent.agent.override(
+            model=TestModel(custom_output_args=[self._item_args(block_text)])
+        ):
+            block, _ = agent.extract(
+                solution=SOLUTION_WITH_DEF,
+                ablation_summary="Loss mattered most.",
+                previous_blocks=[],
+            )
+        assert block.raw_code == (
+            "def train_model():\n"
+            "    X = data.drop(columns=['y'])\n"
+            "    y = data['y']\n"
+            "    model = LogisticRegression()\n"
+            "    model.fit(X, y)\n"
+            "    return model"
+        )
+
+    def test_fallback_returns_solution_when_syntax_invalid(self) -> None:
+        agent = CodeBlockExtractorAgent(model="test")
+        bad_solution = "def broken(:\n    pass\n"
+        with agent.agent.override(
+            model=TestModel(custom_output_args=[self._item_args("unrelated block")])
+        ):
+            block, _ = agent.extract(
+                solution=bad_solution,
+                ablation_summary="summary",
+                previous_blocks=[],
+            )
+        assert block.raw_code == bad_solution
+
     def test_prompt_includes_history_and_previous_blocks(self) -> None:
         agent = CodeBlockExtractorAgent(model="test")
         prompt = agent.build_prompt(

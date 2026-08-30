@@ -1,15 +1,15 @@
 # Implementation Plan: Single-Branch Ensembling Bypass
 
 ## Phase 1: Ensemble Pipeline Fast-Path (TDD)
-- [ ] Task: Write failing unit tests for single-candidate ensemble handling in `tests/ensembling/test_pipeline.py`
-    - [ ] Test `EnsemblePipeline.run` with a single candidate artifact returns immediately with 0 rounds executed and zero LLM calls
-    - [ ] Test `EnsemblePipeline.run` with `rounds=0` returns best individual candidate artifact directly
-    - [ ] Test `EnsemblePipeline.run` with empty solutions raises `ValueError`
-    - [ ] Verify tests fail as expected (Red phase)
-- [ ] Task: Implement single-solution and zero-rounds fast-path in `src/problem_2_v2/ensembling/pipeline.py`
-    - [ ] Add input validation and instant-return logic in `EnsemblePipeline.run`
-    - [ ] Ensure `EnsembleResult` returned has `rounds_executed=0`, `best_code`, and `optimal_solution` populated
-    - [ ] Verify all ensembling pipeline tests pass (Green phase)
+- [x] Task: Write failing unit tests for single-candidate ensemble handling in `tests/ensembling/test_pipeline.py` (`d47265d`)
+    - [x] Test `EnsemblePipeline.run` with a single candidate artifact returns immediately with 0 rounds executed and zero LLM calls
+    - [x] Test `EnsemblePipeline.run` with `rounds=0` returns best individual candidate artifact directly
+    - [x] Test `EnsemblePipeline.run` with empty solutions raises `ValueError`
+    - [x] Verify tests fail as expected (Red phase)
+- [x] Task: Implement single-solution and zero-rounds fast-path in `src/problem_2_v2/ensembling/pipeline.py` (`d47265d`)
+    - [x] Add input validation and instant-return logic in `EnsemblePipeline.run`
+    - [x] Ensure `EnsembleResult` returned has `rounds_executed=0`, `best_code`, and `optimal_solution` populated
+    - [x] Verify all ensembling pipeline tests pass (Green phase)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Master Orchestrator Integration & E2E Verification (TDD)

@@ -38,6 +38,7 @@ Given a problem description in Markdown format (specifying task objectives, data
 
 ### 3. LLM-Driven Ensembling Strategy Exploration
 - Evaluates $L$ candidate solutions produced from parallel runs.
+- **Conditional Bypass:** When only one candidate solution exists ($L=1$, a single successful branch, or `ensemble_rounds=0`), Stage 3 is skipped with an informational console announcement and the single/best candidate is forwarded directly to Stage 4, avoiding redundant self-ensembling LLM calls and sandbox executions.
 - **Ensemble Planner Agent ($A_{\text{ens\_planner}}$):** Proposes $R$ rounds of novel ensembling techniques (e.g., weighted averaging with grid search, stacking with meta-learners, rank averaging, out-of-fold blending).
 - **Ensembler Agent ($A_{\text{ensembler}}$):** Implements the ensemble plan into a single executable script producing `./final/submission.csv`.
 - Selects optimal ensemble $s_{\text{ens}}^*$ based on validation metrics.

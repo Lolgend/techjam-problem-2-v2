@@ -1,16 +1,16 @@
 # Implementation Plan: Unified Run-Level Iteration Logging
 
 ## Phase 1: Contract & Logger Refactoring (TDD)
-- [ ] Task: Write failing unit tests for `root_run_id` and single-file path resolution in `tests/test_iteration_logging.py`
-    - [ ] Add test cases for `root_run_id` across POSIX and Windows hierarchical run IDs
-    - [ ] Add test cases verifying `for_run` resolves nested branch and final namespaces to the root run log file
-    - [ ] Add test cases for path-keyed instance synchronization and multi-threaded append integrity
-    - [ ] Verify tests fail as expected (Red phase)
-- [ ] Task: Implement `root_run_id` and path-synchronized registry in `src/problem_2_v2/contracts/iteration.py`
-    - [ ] Define `root_run_id(run_id: str) -> str`
-    - [ ] Update `CentralIterationLogger.for_run` to resolve to the root run path
-    - [ ] Implement path-keyed instance caching and thread locking
-    - [ ] Verify all iteration logging unit tests pass (Green phase)
+- [x] Task: Write failing unit tests for `root_run_id` and single-file path resolution in `tests/test_iteration_logging.py` (`74d3549`)
+    - [x] Add test cases for `root_run_id` across POSIX and Windows hierarchical run IDs
+    - [x] Add test cases verifying `for_run` resolves nested branch and final namespaces to the root run log file
+    - [x] Add test cases for path-keyed instance synchronization and multi-threaded append integrity
+    - [x] Verify tests fail as expected (Red phase)
+- [x] Task: Implement `root_run_id` and path-synchronized registry in `src/problem_2_v2/contracts/iteration.py` (`74d3549`)
+    - [x] Define `root_run_id(run_id: str) -> str`
+    - [x] Update `CentralIterationLogger.for_run` to resolve to the root run path
+    - [x] Implement path-keyed instance caching and thread locking
+    - [x] Verify all iteration logging unit tests pass (Green phase)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Pipeline Integration & End-to-End Verification

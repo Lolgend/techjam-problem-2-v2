@@ -31,7 +31,7 @@ Given a problem description in Markdown format (specifying task objectives, data
   - **Summarization Module ($A_{\text{summarize}}$):** Extracts clean component-impact summaries from raw execution outputs.
   - **Extractor Module ($A_{\text{extractor}}$):** Identifies the single code block ($c_t$) with highest performance impact, avoiding previously modified blocks for exploration diversity, and drafts initial improvement plan ($p_0$).
 - **Inner Loop ($K$ iterations):**
-  - **Coder Agent ($A_{\text{coder}}$):** Rewrites target code block $c_t$ into refined block $c_t^k$ according to the plan.
+  - **Coder Agent ($A_{\text{coder}}$):** Rewrites target code block $c_t$ into refined block $c_t^k$ according to the plan. All generation, refinement, and ensembling agents are instructed to evaluate validation performance with the official baseline harness (`from evaluate import evaluate` → `evaluate(val_user_ids, val_labels, val_predictions)`), so every score and delta ($\Delta(m)$) strictly matches the competition metric.
   - **Replacement & Evaluation:** Replaces $c_t$ with $c_t^k$ in the full script and records validation score and delta over baseline ($\Delta(m) = \text{score}_{\text{agent}} - \text{score}_{\text{baseline}}$).
   - **Planner Agent ($A_{\text{planner}}$):** Proposes subsequent novel refinement plans ($p_k$) conditioned on historical attempt trajectory and scores.
   - **Best Candidate Selection:** Promotes improved solutions to $s_{t+1}$ only upon score gain.

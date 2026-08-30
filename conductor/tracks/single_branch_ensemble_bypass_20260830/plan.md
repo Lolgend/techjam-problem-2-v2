@@ -13,14 +13,14 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Master Orchestrator Integration & E2E Verification (TDD)
-- [ ] Task: Write tests for single-branch ensembling bypass in `tests/test_orchestrator.py`
-    - [ ] Test orchestrator with `num_branches=1` skips ensembling stage and passes candidate code directly to `finalizer.produce`
-    - [ ] Test console announcements indicate that Stage 3 Ensembling is skipped
-    - [ ] Test orchestrator with `ensemble_rounds=0` skips ensembling even when multiple branches exist
-    - [ ] Verify tests fail as expected (Red phase)
-- [ ] Task: Update Stage 3 bypass logic in `src/problem_2_v2/orchestrator.py`
-    - [ ] Update Stage 3 guard: `if len(artifacts) > 1 and self.config.ensemble_rounds > 0:`
-    - [ ] Add `elif len(artifacts) == 1:` console notification and direct pass-through
-    - [ ] Add `elif len(artifacts) > 1 and self.config.ensemble_rounds == 0:` notification and direct pass-through
-    - [ ] Verify orchestrator and full test suite pass cleanly (Green phase)
+- [x] Task: Write tests for single-branch ensembling bypass in `tests/test_orchestrator.py` (`b812da0`)
+    - [x] Test orchestrator with `num_branches=1` skips ensembling stage and passes candidate code directly to `finalizer.produce`
+    - [x] Test console announcements indicate that Stage 3 Ensembling is skipped
+    - [x] Test orchestrator with `ensemble_rounds=0` skips ensembling even when multiple branches exist
+    - [x] Verify tests fail as expected (Red phase)
+- [x] Task: Update Stage 3 bypass logic in `src/problem_2_v2/orchestrator.py` (`b812da0`)
+    - [x] Update Stage 3 guard: `if len(artifacts) > 1 and self.config.ensemble_rounds > 0:`
+    - [x] Add `elif len(artifacts) == 1:` console notification and direct pass-through
+    - [x] Add `elif len(artifacts) > 1 and self.config.ensemble_rounds == 0:` notification and direct pass-through
+    - [x] Verify orchestrator and full test suite pass cleanly (Green phase)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

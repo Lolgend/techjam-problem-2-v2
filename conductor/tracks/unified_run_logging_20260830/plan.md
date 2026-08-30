@@ -13,7 +13,7 @@
     - [x] Verify all iteration logging unit tests pass (Green phase)
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Pipeline Integration & End-to-End Verification
+## Phase 2: Pipeline Integration & End-to-End Verification `[checkpoint: 436b96d]`
 - [x] Task: Update and expand end-to-end master logging tests in `tests/test_e2e_master.py` (`436b96d`)
     - [x] Update `test_master_run_streams_unified_iteration_logs` to assert strictly one root `iteration_logs.jsonl`
     - [x] Assert absence of nested `branch_0/iteration_logs.jsonl` and `final/iteration_logs.jsonl` files
@@ -23,4 +23,4 @@
     - [x] Run full test suite (`uv run pytest`) and verify 100% pass rate
     - [x] Run type check (`uv run mypy src tests`) and linter (`uv run ruff check src tests`)
     - [x] Check code coverage (`uv run pytest --cov=src --cov-report=term-missing`)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

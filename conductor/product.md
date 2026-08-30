@@ -45,12 +45,12 @@ Given a problem description in Markdown format (specifying task objectives, data
 ### 4. Convergence & Resource Accounting
 - **Convergence Detection:** Automatically determines convergence when the validation score fails to improve by more than $\epsilon$ over $N$ consecutive iterations or when the compute/token budget is exhausted.
 - **Telemetry & Resource Tracking:** Tracks cumulative token consumption (input + output tokens) and GPU runtime (GPU-hours / seconds) per iteration and across the entire run.
-- **Iteration Run-Logger:** Generates structured per-iteration run logs capturing:
-  - Iteration number & targeted pipeline component
+- **Iteration Run-Logger:** A unified `CentralIterationLogger` streams a single structured `IterationLogEntry` schema (iteration_id, stage, hypothesis, code_diff, metrics, validation_score, delta_from_baseline, error_recovery_events, success, target_component, branch_index, timestamp, duration_seconds) as JSONL to `runs/<run_id>/iteration_logs.jsonl` from every stage: candidate evaluations and greedy merges (Stage 1), ablation studies and inner refinement patches (Stage 2), ensemble rounds (Stage 3), and the production finalizer (Stage 4). Records capture:
+  - Iteration id & targeted pipeline component
   - Hypothesis & strategic intent
   - Applied code diff
   - Resulting validation metric & delta over baseline
-  - Error/recovery events and manual intervention count (target: 0)
+  - Error/recovery events and debugger repair rounds
 
 ### 5. Safeguards, Verification & Execution Runtime
 - **Execution Guardrail Pipeline:** A unified orchestrator (`ExecutionGuardrailPipeline`) sequencing the data leakage check, data usage check, sandbox execution, and automatic debugging loop, configured via `ExecutionConfig` (timeouts, retry rounds, guardrail toggles). Both the refinement and ensembling pipelines route all script execution through it.

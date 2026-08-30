@@ -11,8 +11,8 @@
 - [x] Task: Hook Stage 2 ablation studies and inner refinement patches to central `iteration_logs.jsonl` in `src/problem_2_v2/refinement/pipeline.py` (3214fd8)
 - [x] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md) (3214fd8)
 
-## Phase 3: Stage 3 (Ensembling), Stage 4 (Finalizer) & E2E Validation (TDD)
+## Phase 3: Stage 3 (Ensembling), Stage 4 (Finalizer) & E2E Validation (TDD) `[checkpoint: 4847f56]`
 - [x] Task: Write failing unit tests for Stage 3 ensembling and Stage 4 finalizer logging in `tests/test_ensembling_pipeline.py` and `tests/test_finalizer.py` (4847f56)
 - [x] Task: Hook Stage 3 ensembling and Stage 4 production finalizer to central `iteration_logs.jsonl` in `src/problem_2_v2/ensembling/pipeline.py` and `src/problem_2_v2/execution/finalizer.py` (4847f56)
 - [x] Task: Run full test suite and verify end-to-end execution logging (4847f56)
-- [ ] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md) (4847f56)

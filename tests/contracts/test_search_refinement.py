@@ -10,6 +10,7 @@ from problem_2_v2.contracts.refinement import (
     AblationVariant,
     RefinementPlan,
     TargetCodeBlock,
+    align_replacement_indent,
     find_matching_block,
 )
 from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
@@ -82,6 +83,40 @@ class TestFindMatchingBlock:
 
     def test_returns_none_on_empty_block(self) -> None:
         assert find_matching_block("   \n  ", self.SCRIPT) is None
+
+
+class TestAlignReplacementIndent:
+    """Test indentation normalization for replacement code blocks."""
+
+    def test_applies_base_indent_to_unindented_replacement(self) -> None:
+        aligned = align_replacement_indent("model = XGB()\nmodel.fit(X, y)", "    ")
+        assert aligned == "    model = XGB()\n    model.fit(X, y)"
+
+    def test_normalizes_preindented_replacement_without_doubling(self) -> None:
+        aligned = align_replacement_indent("    model = XGB()\n    model.fit(X, y)", "    ")
+        assert aligned == "    model = XGB()\n    model.fit(X, y)"
+
+    def test_preserves_relative_nesting_of_mixed_indent(self) -> None:
+        replacement = (
+            "    model = XGB()\n"
+            "    if use_gpu:\n"
+            "        model = XGB(tree_method='gpu_hist')\n"
+            "    model.fit(X, y)"
+        )
+        aligned = align_replacement_indent(replacement, "        ")
+        assert aligned == (
+            "        model = XGB()\n"
+            "        if use_gpu:\n"
+            "            model = XGB(tree_method='gpu_hist')\n"
+            "        model.fit(X, y)"
+        )
+
+    def test_skips_blank_lines(self) -> None:
+        aligned = align_replacement_indent("model = XGB()\n\nmodel.fit(X, y)", "    ")
+        assert aligned == "    model = XGB()\n\n    model.fit(X, y)"
+
+    def test_empty_replacement_stays_empty(self) -> None:
+        assert align_replacement_indent("", "    ") == ""
 
 
 class TestModelCard:
@@ -357,6 +392,44 @@ class TestTargetCodeBlock:
         block = self._block(raw_code="   \n  ")
         with pytest.raises(ValueError, match="empty"):
             block.replace_in(full, "x = 2")
+
+    def test_replace_in_class_method_with_unindented_replacement(self) -> None:
+        full = (
+            "class Trainer:\n"
+            "    def fit(self):\n"
+            "        model = LogisticRegression()\n"
+            "        model.fit(X, y)\n"
+            "        return model\n"
+        )
+        block = self._block(raw_code="model = LogisticRegression()\nmodel.fit(X, y)")
+        result = block.replace_in(full, "model = XGBClassifier()\nmodel.fit(X, y)")
+        assert result == (
+            "class Trainer:\n"
+            "    def fit(self):\n"
+            "        model = XGBClassifier()\n"
+            "        model.fit(X, y)\n"
+            "        return model\n"
+        )
+
+    def test_replace_in_class_method_with_preindented_replacement(self) -> None:
+        full = (
+            "class Trainer:\n"
+            "    def fit(self):\n"
+            "        model = LogisticRegression()\n"
+            "        model.fit(X, y)\n"
+            "        return model\n"
+        )
+        block = self._block(raw_code="model = LogisticRegression()\nmodel.fit(X, y)")
+        result = block.replace_in(
+            full, "        model = XGBClassifier()\n        model.fit(X, y)"
+        )
+        assert result == (
+            "class Trainer:\n"
+            "    def fit(self):\n"
+            "        model = XGBClassifier()\n"
+            "        model.fit(X, y)\n"
+            "        return model\n"
+        )
 
     def test_json_round_trip(self) -> None:
         block = self._block(start_line=1, end_line=2)

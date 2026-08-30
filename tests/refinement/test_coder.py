@@ -36,6 +36,23 @@ INDENTED_SCRIPT = (
     "    return model\n"
 )
 
+CLASS_SCRIPT = (
+    "class Trainer:\n"
+    "    def fit(self):\n"
+    "        model = LogisticRegression()\n"
+    "        model.fit(X, y)\n"
+    "        return model\n"
+)
+
+NESTED_LOOP_SCRIPT = (
+    "def train():\n"
+    "    for fold in range(5):\n"
+    "        model = LogisticRegression()\n"
+    "        model.fit(X, y)\n"
+    "        score = evaluate(model)\n"
+    "    return score\n"
+)
+
 
 def _block() -> TargetCodeBlock:
     return TargetCodeBlock(
@@ -114,3 +131,54 @@ class TestPatchScript:
     def test_raises_when_patch_produces_invalid_syntax(self) -> None:
         with pytest.raises(ValueError, match="invalid Python"):
             patch_script(SCRIPT, TARGET_BLOCK, "if True:")
+
+    def test_patch_class_method_with_unindented_replacement(self) -> None:
+        patched = patch_script(
+            CLASS_SCRIPT,
+            "model = LogisticRegression()\nmodel.fit(X, y)",
+            "model = XGBClassifier()\nmodel.fit(X, y)",
+        )
+        assert patched == (
+            "class Trainer:\n"
+            "    def fit(self):\n"
+            "        model = XGBClassifier()\n"
+            "        model.fit(X, y)\n"
+            "        return model\n"
+        )
+
+    def test_patch_class_method_with_preindented_replacement(self) -> None:
+        patched = patch_script(
+            CLASS_SCRIPT,
+            "model = LogisticRegression()\nmodel.fit(X, y)",
+            "        model = XGBClassifier()\n        model.fit(X, y)",
+        )
+        assert patched == (
+            "class Trainer:\n"
+            "    def fit(self):\n"
+            "        model = XGBClassifier()\n"
+            "        model.fit(X, y)\n"
+            "        return model\n"
+        )
+
+    def test_patch_nested_block_with_mixed_relative_indent(self) -> None:
+        replacement = (
+            "    model = XGBClassifier()\n"
+            "    if use_eval:\n"
+            "        score = evaluate(model)\n"
+            "    model.fit(X, y)"
+        )
+        patched = patch_script(
+            NESTED_LOOP_SCRIPT,
+            "model = LogisticRegression()\nmodel.fit(X, y)",
+            replacement,
+        )
+        assert patched == (
+            "def train():\n"
+            "    for fold in range(5):\n"
+            "        model = XGBClassifier()\n"
+            "        if use_eval:\n"
+            "            score = evaluate(model)\n"
+            "        model.fit(X, y)\n"
+            "        score = evaluate(model)\n"
+            "    return score\n"
+        )

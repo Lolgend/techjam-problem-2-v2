@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ast
 import re
+import textwrap
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,6 +25,7 @@ __all__ = [
     "RefinementPlan",
     "block_in_script",
     "find_matching_block",
+    "align_replacement_indent",
 ]
 
 
@@ -174,6 +176,28 @@ def find_matching_block(code_block: str, script: str) -> str | None:
     return _match_anchors(code_block, script)
 
 
+def align_replacement_indent(replacement: str, base_indent: str) -> str:
+    """Normalize a replacement block to a target base indentation.
+
+    The replacement may arrive unindented or pre-indented relative to the
+    surrounding code. ``textwrap.dedent`` strips any common leading
+    whitespace, then every non-blank line is re-prefixed with
+    ``base_indent`` (plus its own relative indentation).
+
+    Args:
+        replacement: The replacement code block.
+        base_indent: Leading whitespace of the matched target block.
+
+    Returns:
+        The indentation-aligned replacement block.
+    """
+    dedented = textwrap.dedent(replacement)
+    aligned_lines = [
+        f"{base_indent}{line}" if line.strip() else "" for line in dedented.split("\n")
+    ]
+    return "\n".join(aligned_lines)
+
+
 class AblationVariant(BaseModel):
     """A single isolated ablation experiment.
 
@@ -300,12 +324,16 @@ class TargetCodeBlock(BaseModel):
         if match is None:
             raise ValueError("Target code block not found in full script.")
         matched_text = match.group(0)
-        first_line = matched_text.splitlines()[0]
+        matched_lines = matched_text.splitlines()
+        first_line = matched_lines[0] if matched_lines else ""
         indent = first_line[: len(first_line) - len(first_line.lstrip())]
-        indented_new = "".join(f"{indent}{line}\n" for line in new_code.splitlines())
+        aligned = align_replacement_indent(new_code, indent)
         tail = full_script[match.end() :]
         if tail.startswith("\n"):
             tail = tail[1:]
+            indented_new = f"{aligned}\n" if aligned else ""
+        else:
+            indented_new = aligned
         return full_script[: match.start()] + indented_new + tail
 
     def _build_pattern(self) -> re.Pattern[str]:

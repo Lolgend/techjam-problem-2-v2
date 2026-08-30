@@ -11,7 +11,7 @@ from __future__ import annotations
 import logfire
 from pydantic_ai import Agent
 
-from problem_2_v2.contracts.code_utils import extract_python_code, validate_python_syntax
+from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.enums import ComponentCategory
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 
@@ -39,10 +39,10 @@ _CODER_INSTRUCTIONS = (
 def patch_script(script: str, target_code: str, replacement: str) -> str:
     """Replace ``target_code`` with ``replacement`` inside ``script``.
 
-    Tries an exact substring replacement first; when the block was
-    extracted without its surrounding indentation, falls back to the
-    indentation-tolerant ``TargetCodeBlock.replace_in`` matcher. The
-    resulting script must parse as valid Python.
+    All patching routes through ``TargetCodeBlock.replace_in``: the block
+    is located with indentation-tolerant matching and the replacement is
+    automatically re-aligned to the target's base indentation before
+    substitution. The resulting script must parse as valid Python.
 
     Args:
         script: The full solution script.
@@ -56,22 +56,14 @@ def patch_script(script: str, target_code: str, replacement: str) -> str:
         ValueError: If the block cannot be located or the patched script
             is not valid Python.
     """
-    if target_code in script:
-        candidate = script.replace(target_code, replacement, 1)
-    else:
-        block = TargetCodeBlock(
-            raw_code=target_code,
-            category=ComponentCategory.MODEL_ARCHITECTURE,
-            start_line=None,
-            end_line=None,
-            initial_plan="",
-        )
-        candidate = block.replace_in(script, replacement)
-
-    valid, error = validate_python_syntax(candidate)
-    if not valid:
-        raise ValueError(f"Patched script is invalid Python: {error}")
-    return candidate
+    block = TargetCodeBlock(
+        raw_code=target_code,
+        category=ComponentCategory.MODEL_ARCHITECTURE,
+        start_line=None,
+        end_line=None,
+        initial_plan="",
+    )
+    return block.replace_in(script, replacement)
 
 
 class CoderAgent:

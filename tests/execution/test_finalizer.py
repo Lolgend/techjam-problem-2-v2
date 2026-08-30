@@ -147,3 +147,35 @@ class TestFinalArtifactProducer:
         metrics_file.write_text(json.dumps({"auroc": 0.87, "note": "done"}), encoding="utf-8")
         parsed = producer._load_metrics(metrics_file)
         assert parsed == {"auroc": 0.87}
+
+
+class TestFinalizerSubmissionSchema:
+    """Test that the finalizer enforces the submit.py 4-column submission schema."""
+
+    def test_instructions_mandate_submission_schema(self) -> None:
+        from problem_2_v2.execution.finalizer import _FINALIZER_INSTRUCTIONS
+
+        assert "row_id,user_id,video_id,score" in _FINALIZER_INSTRUCTIONS
+        assert "submit.py" in _FINALIZER_INSTRUCTIONS
+        assert "data.load" in _FINALIZER_INSTRUCTIONS
+
+    def test_build_prompt_mandates_submission_schema(self, finalizer) -> None:
+        prompt = finalizer.build_prompt(WINNING_SOLUTION, _spec())
+        assert "row_id,user_id,video_id,score" in prompt
+        assert "submit.py" in prompt
+        assert "deterministic" in prompt
+        assert "data.load()" in prompt
+
+    def test_sent_prompt_includes_submission_schema(self, finalizer) -> None:
+        captured: dict[str, str] = {}
+
+        def capturing_model(messages, info):
+            captured["prompt"] = messages[-1].parts[0].content
+            return ModelResponse(parts=[TextPart(content=f"```python\n{PRODUCTION_SCRIPT}\n```")])
+
+        with finalizer.agent.override(model=FunctionModel(function=capturing_model)):
+            finalizer.produce(WINNING_SOLUTION, _spec(), run_id="fin_schema")
+        prompt = captured["prompt"]
+        assert "row_id,user_id,video_id,score" in prompt
+        assert "submit.py" in prompt
+        assert "deterministic" in prompt

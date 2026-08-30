@@ -1,8 +1,0 @@
-{
-  "track_id": "refinement_patch_self_heal_20260831",
-  "type": "bug",
-  "status": "new",
-  "created_at": "2026-08-31T00:45:52+08:00",
-  "updated_at": "2026-08-31T00:45:52+08:00",
-  "description": "Fix script patch indentation collisions, add coder agentic self-healing and debugger fallback in inner refinement loops, and enforce a standardized tagged print contract for ablation scripts."
-}

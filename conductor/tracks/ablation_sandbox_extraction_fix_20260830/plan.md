@@ -12,13 +12,13 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Multi-Tier Resilient Code Block Extraction (TDD)
-- [ ] Task: Write failing unit tests for resilient block extraction in `tests/refinement/test_extractor.py` and `tests/contracts/test_search_refinement.py`
-    - [ ] Test `find_matching_block` with mismatched single/double quotes, trailing comments, and indentation
-    - [ ] Test `find_matching_block` with contiguous anchor subset lines ($\ge 2$ lines)
-    - [ ] Test `CodeBlockExtractorAgent.extract` with AST fallback when LLM output differs slightly from solution
-    - [ ] Verify tests fail as expected (Red phase)
-- [ ] Task: Implement `find_matching_block` and AST fallback in `contracts/refinement.py` and `refinement/extractor.py`
-    - [ ] Implement `find_matching_block` in `src/problem_2_v2/contracts/refinement.py`
-    - [ ] Update `CodeBlockExtractorAgent.extract` in `src/problem_2_v2/refinement/extractor.py` to use `find_matching_block` and fallback AST component extraction
-    - [ ] Verify all extractor, refinement, and full test suite tests pass (Green phase)
+- [x] Task: Write failing unit tests for resilient block extraction in `tests/refinement/test_extractor.py` and `tests/contracts/test_search_refinement.py` (`34cb695`)
+    - [x] Test `find_matching_block` with mismatched single/double quotes, trailing comments, and indentation
+    - [x] Test `find_matching_block` with contiguous anchor subset lines ($\ge 2$ lines)
+    - [x] Test `CodeBlockExtractorAgent.extract` with AST fallback when LLM output differs slightly from solution
+    - [x] Verify tests fail as expected (Red phase)
+- [x] Task: Implement `find_matching_block` and AST fallback in `contracts/refinement.py` and `refinement/extractor.py` (`34cb695`)
+    - [x] Implement `find_matching_block` in `src/problem_2_v2/contracts/refinement.py`
+    - [x] Update `CodeBlockExtractorAgent.extract` in `src/problem_2_v2/refinement/extractor.py` to use `find_matching_block` and fallback AST component extraction
+    - [x] Verify all extractor, refinement, and full test suite tests pass (Green phase)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

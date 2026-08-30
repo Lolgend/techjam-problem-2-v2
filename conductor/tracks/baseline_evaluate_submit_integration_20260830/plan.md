@@ -11,8 +11,8 @@
 - [x] Task: Update agent prompts in `evaluator.py`, `coder.py`, and `finalizer.py` to mandate `evaluate.py` and `submit.py` (a570d07)
 - [x] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md) (a570d07)
 
-## Phase 3: CLI Submission Verification & Full Integration
+## Phase 3: CLI Submission Verification & Full Integration `[checkpoint: ea3722f]`
 - [x] Task: Write failing unit tests for CLI automated submission check in `tests/test_cli.py` (67cae2c, pre-existing & verified)
 - [x] Task: Implement automated submission verification with `submit.py --check` in `src/problem_2_v2/cli.py` (67cae2c, 2877dc3, pre-existing & verified)
 - [x] Task: Run full test suite and verify end-to-end integration (verified: 374 passed, real check True)
-- [ ] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md) (ea3722f)

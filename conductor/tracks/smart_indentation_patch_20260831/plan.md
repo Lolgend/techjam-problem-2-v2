@@ -13,12 +13,12 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: In-Step Coder Self-Repair & Debugger Fallback (TDD)
-- [ ] Task: Write failing unit tests for in-step coder repair and debugger fallback in `tests/refinement/test_pipeline.py`
-    - [ ] Test `_inner_step` retries with error feedback when `patch_script` or `coder` produces a syntax error
-    - [ ] Test `_inner_step` falls back to `DebuggerAgent` on persistent syntax errors instead of returning `Score: n/a`
-    - [ ] Verify tests fail as expected (Red phase)
-- [ ] Task: Implement self-healing loop in `CoderAgent` and `RefinementPipeline._inner_step`
-    - [ ] Add `repair()` method to `CoderAgent` in `src/problem_2_v2/refinement/coder.py`
-    - [ ] Update `_inner_step` in `src/problem_2_v2/refinement/pipeline.py` to add in-step coder retry and debugger fallback
-    - [ ] Verify unit tests pass (Green phase)
+- [x] Task: Write failing unit tests for in-step coder repair and debugger fallback in `tests/refinement/test_pipeline.py` (`40e721e`)
+    - [x] Test `_inner_step` retries with error feedback when `patch_script` or `coder` produces a syntax error
+    - [x] Test `_inner_step` falls back to `DebuggerAgent` on persistent syntax errors instead of returning `Score: n/a`
+    - [x] Verify tests fail as expected (Red phase)
+- [x] Task: Implement self-healing loop in `CoderAgent` and `RefinementPipeline._inner_step` (`40e721e`)
+    - [x] Add `repair()` method to `CoderAgent` in `src/problem_2_v2/refinement/coder.py`
+    - [x] Update `_inner_step` in `src/problem_2_v2/refinement/pipeline.py` to add in-step coder retry and debugger fallback
+    - [x] Verify unit tests pass (Green phase)
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

@@ -29,6 +29,11 @@ class SubprocessRunner:
         python_executable: Python interpreter used to run scripts.
         cuda_devices: Comma-separated CUDA device ids exported to the
             sandbox process, if any.
+        workspace_root: Project root injected into the subprocess
+            ``PYTHONPATH``.
+        baseline_dir: Directory holding the official baseline helper
+            modules (``evaluate.py``, ``submit.py``, ``data.py``), also
+            injected into the subprocess ``PYTHONPATH``.
     """
 
     def __init__(
@@ -37,6 +42,8 @@ class SubprocessRunner:
         timeout_seconds: int = 600,
         python_executable: str | None = None,
         cuda_devices: str | None = None,
+        workspace_root: str | None = None,
+        baseline_dir: str | None = None,
     ) -> None:
         """Create a subprocess runner.
 
@@ -46,11 +53,26 @@ class SubprocessRunner:
             python_executable: Interpreter to use; defaults to the current
                 interpreter.
             cuda_devices: Optional ``CUDA_VISIBLE_DEVICES`` value.
+            workspace_root: Project root to inject into the subprocess
+                ``PYTHONPATH``; defaults to the repository root resolved
+                from this package's location.
+            baseline_dir: Directory holding the baseline helper modules;
+                defaults to ``<workspace_root>/src/baseline``.
         """
         self.runs_dir = Path(runs_dir)
         self.timeout_seconds = timeout_seconds
         self.python_executable = python_executable or sys.executable
         self.cuda_devices = cuda_devices
+        self.workspace_root = (
+            Path(workspace_root).resolve()
+            if workspace_root is not None
+            else Path(__file__).resolve().parents[3]
+        )
+        self.baseline_dir = (
+            Path(baseline_dir).resolve()
+            if baseline_dir is not None
+            else (self.workspace_root / "src" / "baseline").resolve()
+        )
 
     def prepare_sandbox(
         self,
@@ -107,6 +129,15 @@ class SubprocessRunner:
         if self.cuda_devices is not None:
             env["CUDA_VISIBLE_DEVICES"] = self.cuda_devices
         env.setdefault("PYTHONDONTWRITEBYTECODE", "1")
+        pythonpath = env.get("PYTHONPATH", "").split(os.pathsep)
+        pythonpath = [p for p in pythonpath if p]
+        pythonpath.extend(
+            [
+                str(self.workspace_root),
+                str(self.baseline_dir),
+            ]
+        )
+        env["PYTHONPATH"] = os.pathsep.join(pythonpath)
 
         started = time.monotonic()
         try:

@@ -51,6 +51,66 @@ class TestSandboxWorkspace:
         assert (sandbox / "input" / "test.csv").read_text(encoding="utf-8") == "a,b\n3,4\n"
 
 
+class TestSandboxBaselineAccess:
+    """Test PYTHONPATH injection for the official baseline helper modules."""
+
+    def test_sandbox_scripts_can_import_baseline_modules(
+        self, runner: SubprocessRunner
+    ) -> None:
+        code = (
+            "import evaluate\n"
+            "import data\n"
+            "import submit\n"
+            "from evaluate import evaluate as eval_fn\n"
+            "print('Final Validation Performance: 0.5')\n"
+        )
+        sandbox = runner.prepare_sandbox(run_id="r", candidate_id="c")
+        result = runner.run_code(code, sandbox_dir=str(sandbox))
+        assert result.success is True
+        assert result.returncode == 0
+
+    def test_run_code_injects_workspace_and_baseline_on_pythonpath(
+        self, runner: SubprocessRunner
+    ) -> None:
+        baseline = str(runner.baseline_dir.resolve())
+        workspace = str(runner.workspace_root.resolve())
+        code = (
+            "import sys\n"
+            f"baseline = r'{baseline}'\n"
+            f"workspace = r'{workspace}'\n"
+            "paths = [p.casefold() for p in sys.path]\n"
+            "assert baseline.casefold() in paths, paths\n"
+            "assert workspace.casefold() in paths, paths\n"
+            "print('Final Validation Performance: 0.5')\n"
+        )
+        sandbox = runner.prepare_sandbox(run_id="r", candidate_id="c")
+        result = runner.run_code(code, sandbox_dir=str(sandbox))
+        assert result.success is True
+        assert result.returncode == 0
+
+    def test_baseline_dirs_default_to_package_layout(self) -> None:
+        runner = SubprocessRunner(timeout_seconds=5, python_executable=sys.executable)
+        assert runner.baseline_dir.is_absolute()
+        assert (runner.baseline_dir / "evaluate.py").is_file()
+        assert (runner.baseline_dir / "submit.py").is_file()
+        assert (runner.workspace_root / "src" / "baseline").resolve() == runner.baseline_dir
+
+    def test_explicit_baseline_dirs_are_honored(self, tmp_path: Path) -> None:
+        baseline = tmp_path / "baseline"
+        baseline.mkdir()
+        workspace = tmp_path / "repo"
+        workspace.mkdir()
+        runner = SubprocessRunner(
+            runs_dir=str(tmp_path / "runs"),
+            timeout_seconds=5,
+            python_executable=sys.executable,
+            workspace_root=str(workspace),
+            baseline_dir=str(baseline),
+        )
+        assert runner.workspace_root == workspace.resolve()
+        assert runner.baseline_dir == baseline.resolve()
+
+
 class TestSubprocessExecution:
     """Test execution capture, timeout, and error handling."""
 

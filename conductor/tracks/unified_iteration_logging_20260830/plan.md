@@ -1,8 +1,8 @@
 # Implementation Plan: Unified End-to-End Iteration Logging
 
 ## Phase 1: Competition Run-Log Contract & Central Logger (TDD)
-- [ ] Task: Write failing unit tests for `IterationLogEntry` schema enforcing hypothesis, code_diff, metrics, and error_recovery_events in `tests/test_iteration_logging.py`
-- [ ] Task: Implement `IterationLogEntry` and `CentralIterationLogger` in `src/problem_2_v2/contracts/iteration.py`
+- [x] Task: Write failing unit tests for `IterationLogEntry` schema enforcing hypothesis, code_diff, metrics, and error_recovery_events in `tests/test_iteration_logging.py` (9dd8d78)
+- [x] Task: Implement `IterationLogEntry` and `CentralIterationLogger` in `src/problem_2_v2/contracts/iteration.py` (9dd8d78)
 - [ ] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Stage 1 (Initialization) & Stage 2 (Refinement) Instrumentation (TDD)

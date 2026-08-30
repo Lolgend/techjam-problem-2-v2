@@ -7,8 +7,8 @@
 - [x] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md) (7b0a207)
 
 ## Phase 2: Finalizer Prompt Alignment & Submission Formatting (TDD)
-- [ ] Task: Write failing unit tests for `FinalArtifactProducer` submission schema instructions in `tests/test_finalizer.py`
-- [ ] Task: Update `_FINALIZER_INSTRUCTIONS` and `build_prompt` in `src/problem_2_v2/execution/finalizer.py` to enforce `row_id,user_id,video_id,score`
+- [x] Task: Write failing unit tests for `FinalArtifactProducer` submission schema instructions in `tests/test_finalizer.py` (3043abd)
+- [x] Task: Update `_FINALIZER_INSTRUCTIONS` and `build_prompt` in `src/problem_2_v2/execution/finalizer.py` to enforce `row_id,user_id,video_id,score` (3043abd)
 - [ ] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: CLI Submission Verification & Integration Testing

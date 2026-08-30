@@ -11,7 +11,7 @@
     - [x] Verify sandbox unit tests pass (Green phase)
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
-## Phase 2: Multi-Tier Resilient Code Block Extraction (TDD)
+## Phase 2: Multi-Tier Resilient Code Block Extraction (TDD) `[checkpoint: 34cb695]`
 - [x] Task: Write failing unit tests for resilient block extraction in `tests/refinement/test_extractor.py` and `tests/contracts/test_search_refinement.py` (`34cb695`)
     - [x] Test `find_matching_block` with mismatched single/double quotes, trailing comments, and indentation
     - [x] Test `find_matching_block` with contiguous anchor subset lines ($\ge 2$ lines)
@@ -21,4 +21,4 @@
     - [x] Implement `find_matching_block` in `src/problem_2_v2/contracts/refinement.py`
     - [x] Update `CodeBlockExtractorAgent.extract` in `src/problem_2_v2/refinement/extractor.py` to use `find_matching_block` and fallback AST component extraction
     - [x] Verify all extractor, refinement, and full test suite tests pass (Green phase)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)

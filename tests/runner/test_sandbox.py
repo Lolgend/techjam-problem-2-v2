@@ -61,7 +61,8 @@ class TestSandboxBaselineAccess:
             "import evaluate\n"
             "import data\n"
             "import submit\n"
-            "from evaluate import evaluate as eval_fn\n"
+            "from evaluate import evaluate\n"
+            "from submit import write_submission, HEADER\n"
             "print('Final Validation Performance: 0.5')\n"
         )
         sandbox = runner.prepare_sandbox(run_id="r", candidate_id="c")

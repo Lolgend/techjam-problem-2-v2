@@ -14,6 +14,7 @@ import re
 import threading
 from datetime import datetime
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
@@ -28,6 +29,17 @@ def branch_index_from_run_id(run_id: str) -> int | None:
     """
     match = _BRANCH_RE.search(run_id)
     return int(match.group(1)) if match else None
+
+
+def root_run_id(run_id: str) -> str:
+    """Strip sub-stage namespace suffixes from a nested run identifier.
+
+    Parallel branches and the production finalizer run under namespaced
+    identifiers such as ``<run_id>/branch_<i>`` or ``<run_id>/final``,
+    using either ``/`` or ``\\`` as the separator. This returns the
+    top-level run id that owns the unified ``runs/<run_id>/iteration_logs.jsonl``.
+    """
+    return run_id.replace("\\", "/").split("/", 1)[0]
 
 
 def declared_baseline(baseline: float | None) -> float | None:
@@ -111,6 +123,9 @@ class CentralIterationLogger:
         logs_path: Absolute path of the ``iteration_logs.jsonl`` file.
     """
 
+    _registry: ClassVar[dict[Path, CentralIterationLogger]] = {}
+    _registry_lock: ClassVar[threading.Lock] = threading.Lock()
+
     def __init__(self, logs_path: str | Path) -> None:
         """Create a logger writing to ``logs_path``.
 
@@ -126,14 +141,27 @@ class CentralIterationLogger:
     def for_run(cls, runs_dir: str | Path, run_id: str) -> CentralIterationLogger:
         """Build a logger for ``runs/<run_id>/iteration_logs.jsonl``.
 
+        Nested stage namespaces (``<run_id>/branch_<i>`` and
+        ``<run_id>/final``) are collapsed to the owning root run id so
+        every pipeline stage streams into a single consolidated log file.
+        Loggers are cached per resolved root path; all concurrent branches
+        sharing a run share one instance and therefore one lock, which
+        serializes appends and prevents interleaved or corrupted lines.
+
         Args:
             runs_dir: Root directory holding per-run sandboxes.
-            run_id: Identifier of the current run.
+            run_id: Identifier of the current run (possibly nested).
 
         Returns:
-            A logger appending to the run's unified iteration log.
+            A shared logger appending to the run's unified iteration log.
         """
-        return cls(Path(runs_dir) / run_id / "iteration_logs.jsonl")
+        logs_path = (Path(runs_dir) / root_run_id(run_id) / "iteration_logs.jsonl").resolve()
+        with cls._registry_lock:
+            logger = cls._registry.get(logs_path)
+            if logger is None:
+                logger = cls(logs_path)
+                cls._registry[logs_path] = logger
+        return logger
 
     def append(self, entry: IterationLogEntry) -> None:
         """Append one entry as a JSON line with an immediate flush.

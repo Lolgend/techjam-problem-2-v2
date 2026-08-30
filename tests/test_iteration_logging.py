@@ -17,6 +17,7 @@ from problem_2_v2.contracts.iteration import (
     IterationLogEntry,
     branch_index_from_run_id,
     declared_baseline,
+    root_run_id,
 )
 
 
@@ -127,12 +128,61 @@ class TestIterationHelpers:
         assert declared_baseline(None) is None
 
 
+class TestRootRunId:
+    """Test root run-id resolution across hierarchical run identifiers."""
+
+    def test_plain_run_id_is_unchanged(self) -> None:
+        assert root_run_id("run_2026") == "run_2026"
+        assert root_run_id("run_2026_0830") == "run_2026_0830"
+
+    def test_posix_branch_suffix_stripped(self) -> None:
+        assert root_run_id("run_2026/branch_0") == "run_2026"
+        assert root_run_id("run_2026/branch_12") == "run_2026"
+
+    def test_final_suffix_stripped(self) -> None:
+        assert root_run_id("run_2026/final") == "run_2026"
+
+    def test_windows_path_separator_suffix_stripped(self) -> None:
+        assert root_run_id(r"run_2026\branch_0") == "run_2026"
+        assert root_run_id(r"run_2026\final") == "run_2026"
+
+    def test_deep_nesting_strips_to_top_level(self) -> None:
+        assert root_run_id("run_2026/branch_0/inner") == "run_2026"
+        assert root_run_id("run_2026/final/deep") == "run_2026"
+
+
 class TestCentralIterationLogger:
     """Test the thread-safe JSONL iteration logger."""
 
     def test_for_run_resolves_logs_path(self, tmp_path: Path) -> None:
         logger = CentralIterationLogger.for_run(str(tmp_path), "run_1")
         assert logger.logs_path == (tmp_path / "run_1" / "iteration_logs.jsonl").resolve()
+
+    def test_for_run_resolves_branch_namespace_to_root(self, tmp_path: Path) -> None:
+        logger = CentralIterationLogger.for_run(str(tmp_path), "run_1/branch_0")
+        assert logger.logs_path == (tmp_path / "run_1" / "iteration_logs.jsonl").resolve()
+
+    def test_for_run_resolves_final_namespace_to_root(self, tmp_path: Path) -> None:
+        logger = CentralIterationLogger.for_run(str(tmp_path), "run_1/final")
+        assert logger.logs_path == (tmp_path / "run_1" / "iteration_logs.jsonl").resolve()
+
+    def test_for_run_resolves_windows_separators_to_root(self, tmp_path: Path) -> None:
+        logger = CentralIterationLogger.for_run(str(tmp_path), "run_1\\branch_0")
+        assert logger.logs_path == (tmp_path / "run_1" / "iteration_logs.jsonl").resolve()
+
+    def test_for_run_returns_shared_instance_per_root_path(self, tmp_path: Path) -> None:
+        branch0 = CentralIterationLogger.for_run(str(tmp_path), "run_1/branch_0")
+        branch1 = CentralIterationLogger.for_run(str(tmp_path), "run_1/branch_1")
+        final = CentralIterationLogger.for_run(str(tmp_path), "run_1/final")
+        root = CentralIterationLogger.for_run(str(tmp_path), "run_1")
+        assert branch0 is branch1
+        assert branch1 is final
+        assert final is root
+
+    def test_for_run_distinct_runs_have_distinct_instances(self, tmp_path: Path) -> None:
+        first = CentralIterationLogger.for_run(str(tmp_path), "run_1/branch_0")
+        second = CentralIterationLogger.for_run(str(tmp_path), "run_2/branch_0")
+        assert first is not second
 
     def test_append_creates_parent_directories(self, tmp_path: Path) -> None:
         logger = CentralIterationLogger(tmp_path / "nested" / "deep" / "iteration_logs.jsonl")
@@ -167,9 +217,7 @@ class TestCentralIterationLogger:
 
         def worker(tid: int) -> None:
             for i in range(per_thread):
-                logger.append(
-                    _entry(iteration_id=f"t{tid}_{i}", success=True)
-                )
+                logger.append(_entry(iteration_id=f"t{tid}_{i}", success=True))
 
         pool = [threading.Thread(target=worker, args=(tid,)) for tid in range(threads)]
         for thread in pool:
@@ -180,3 +228,32 @@ class TestCentralIterationLogger:
         entries = logger.read_all()
         assert len(entries) == threads * per_thread
         assert len({e.iteration_id for e in entries}) == threads * per_thread
+
+    def test_concurrent_appends_across_namespaces_land_in_root(self, tmp_path: Path) -> None:
+        runs_dir = str(tmp_path)
+        threads = 6
+        per_thread = 20
+        namespaces = ["run_1", "run_1/branch_0", "run_1/branch_1", "run_1/final"]
+
+        def worker(tid: int) -> None:
+            for i in range(per_thread):
+                namespace = namespaces[tid % len(namespaces)]
+                logger = CentralIterationLogger.for_run(runs_dir, namespace)
+                logger.append(_entry(iteration_id=f"t{tid}_{i}", success=True))
+
+        pool = [threading.Thread(target=worker, args=(tid,)) for tid in range(threads)]
+        for thread in pool:
+            thread.start()
+        for thread in pool:
+            thread.join()
+
+        root_log = (tmp_path / "run_1" / "iteration_logs.jsonl").resolve()
+        lines = root_log.read_text(encoding="utf-8").splitlines()
+        assert len(lines) == threads * per_thread
+        assert len({json.loads(line)["iteration_id"] for line in lines}) == threads * per_thread
+        for line in lines:
+            IterationLogEntry.model_validate_json(line)
+
+        assert not (tmp_path / "run_1" / "branch_0" / "iteration_logs.jsonl").exists()
+        assert not (tmp_path / "run_1" / "branch_1" / "iteration_logs.jsonl").exists()
+        assert not (tmp_path / "run_1" / "final" / "iteration_logs.jsonl").exists()

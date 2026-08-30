@@ -103,12 +103,28 @@ class EnsemblePipeline:
 
         Returns:
             An ``EnsembleResult`` with the optimal solution artifact.
+
+        Raises:
+            ValueError: When no candidate solutions are provided.
         """
+        if not solutions:
+            raise ValueError("No candidate solutions provided for ensembling.")
+
+        best_individual = max(solutions, key=lambda a: a.validation_score or float("-inf"))
+        if len(solutions) == 1 or self.rounds <= 0:
+            return EnsembleResult(
+                best_artifact=best_individual,
+                best_score=best_individual.validation_score,
+                best_code=best_individual.full_code,
+                best_submission_path=None,
+                logs_path=None,
+                rounds_executed=0,
+            )
+
         logger = CentralIterationLogger.for_run(self.runner.runs_dir, run_id)
         branch_index = branch_index_from_run_id(run_id)
         direction = spec.metric_direction
 
-        best_individual = max(solutions, key=lambda a: a.validation_score or float("-inf"))
         baseline = best_individual.validation_score
         best_code = best_individual.full_code
         best_score = baseline

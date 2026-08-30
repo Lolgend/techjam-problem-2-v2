@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 from pydantic_ai import ModelResponse, TextPart
-from pydantic_ai.models.function import FunctionModel
+from pydantic_ai.messages import ModelRequest
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.iteration import IterationLogEntry
@@ -182,3 +183,58 @@ class TestEnsemblePipeline:
         assert records[0]["hypothesis"] == plan0
         assert records[0]["validation_score"] == pytest.approx(0.85)
         assert records[0]["delta_from_baseline"] == pytest.approx(0.03)
+
+    def test_single_candidate_returns_immediately(self, pipeline: EnsemblePipeline) -> None:
+        calls = {"count": 0}
+
+        def counting_model(
+            messages: list[ModelRequest | ModelResponse], info: AgentInfo
+        ) -> ModelResponse:
+            calls["count"] += 1
+            return ModelResponse(parts=[TextPart(content="print('unexpected call')")])
+
+        solutions = [_artifact("print('Final Validation Performance: 0.80')", 0.80, "branch_0")]
+        with (
+            pipeline.planner.agent.override(model=FunctionModel(function=counting_model)),
+            pipeline.ensembler.agent.override(model=FunctionModel(function=counting_model)),
+        ):
+            result = pipeline.run(_spec(), solutions, run_id="single")
+        assert isinstance(result, EnsembleResult)
+        assert result.rounds_executed == 0
+        assert result.best_score == pytest.approx(0.80)
+        assert "0.80" in result.best_code
+        assert result.best_artifact is solutions[0]
+        assert result.logs_path is None
+        assert calls["count"] == 0
+
+    def test_zero_rounds_returns_best_individual(self, runner: SubprocessRunner) -> None:
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+        pipeline = EnsemblePipeline(
+            planner=EnsemblePlannerAgent(model="test"),
+            ensembler=EnsemblerAgent(debugger=debugger, model="test"),
+            runner=runner,
+            rounds=0,
+        )
+        calls = {"count": 0}
+
+        def counting_model(
+            messages: list[ModelRequest | ModelResponse], info: AgentInfo
+        ) -> ModelResponse:
+            calls["count"] += 1
+            return ModelResponse(parts=[TextPart(content="print('unexpected call')")])
+
+        with (
+            pipeline.planner.agent.override(model=FunctionModel(function=counting_model)),
+            pipeline.ensembler.agent.override(model=FunctionModel(function=counting_model)),
+        ):
+            result = pipeline.run(_spec(), _solutions(), run_id="zero")
+        assert result.rounds_executed == 0
+        assert result.best_score == pytest.approx(0.82)
+        assert "0.82" in result.best_code
+        assert result.best_artifact.iteration_stage == "branch_1"
+        assert result.logs_path is None
+        assert calls["count"] == 0
+
+    def test_empty_solutions_raises(self, pipeline: EnsemblePipeline) -> None:
+        with pytest.raises(ValueError, match="No candidate solutions"):
+            pipeline.run(_spec(), [], run_id="empty")

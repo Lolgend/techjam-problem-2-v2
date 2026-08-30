@@ -17,6 +17,17 @@ SOLUTION = (
     "print('Final Validation Performance: 0.80')\n"
 )
 
+SOLUTION_WITH_DEF = (
+    "import pandas as pd\n"
+    "def train_model():\n"
+    "    X = data.drop(columns=['y'])\n"
+    "    y = data['y']\n"
+    "    model = LogisticRegression()\n"
+    "    model.fit(X, y)\n"
+    "    return model\n"
+    "print('Final Validation Performance: 0.80')\n"
+)
+
 TARGET_BLOCK = "model = LogisticRegression()\nmodel.fit(X, y)"
 
 PLAN_TEXT = (
@@ -67,21 +78,83 @@ class TestCodeBlockExtractorAgent:
                 ablation_summary="Features mattered most.",
                 previous_blocks=[],
             )
-        assert block.raw_code == block_text
+        assert block.raw_code == "    X = data.drop(columns=['y'])\n    y = data['y']"
 
-    def test_raises_when_block_not_in_solution(self) -> None:
+    def test_raises_when_agent_returns_no_items(self) -> None:
         agent = CodeBlockExtractorAgent(model="test")
         with (
-            agent.agent.override(
-                model=TestModel(custom_output_args=[self._item_args("not in the script")])
-            ),
-            pytest.raises(ValueError, match="not found"),
+            agent.agent.override(model=TestModel(custom_output_args=[])),
+            pytest.raises(ValueError, match="no refinement plans"),
         ):
             agent.extract(
                 solution=SOLUTION,
                 ablation_summary="summary",
                 previous_blocks=[],
             )
+
+    def test_accepts_llm_quote_variation(self) -> None:
+        agent = CodeBlockExtractorAgent(model="test")
+        block_text = 'X = train.drop(columns=["label"])\ny = train["label"]'
+        with agent.agent.override(
+            model=TestModel(custom_output_args=[self._item_args(block_text)])
+        ):
+            block, _ = agent.extract(
+                solution=SOLUTION,
+                ablation_summary="Features mattered most.",
+                previous_blocks=[],
+            )
+        assert block.raw_code == "X = train.drop(columns=['label'])\ny = train['label']"
+
+    def test_accepts_llm_trailing_comment_variation(self) -> None:
+        agent = CodeBlockExtractorAgent(model="test")
+        block_text = "model = LogisticRegression()\nmodel.fit(X, y)  # fit on all rows"
+        with agent.agent.override(
+            model=TestModel(custom_output_args=[self._item_args(block_text)])
+        ):
+            block, _ = agent.extract(
+                solution=SOLUTION,
+                ablation_summary="Model mattered most.",
+                previous_blocks=[],
+            )
+        assert block.raw_code == "model = LogisticRegression()\nmodel.fit(X, y)"
+
+    def test_ast_fallback_returns_primary_def_block(self) -> None:
+        agent = CodeBlockExtractorAgent(model="test")
+        block_text = (
+            "def train_model():\n"
+            '    model = LogisticRegression(penalty="l2")\n'
+            "    model.fit(X, y)\n"
+            "    return model"
+        )
+        with agent.agent.override(
+            model=TestModel(custom_output_args=[self._item_args(block_text)])
+        ):
+            block, _ = agent.extract(
+                solution=SOLUTION_WITH_DEF,
+                ablation_summary="Model architecture mattered most.",
+                previous_blocks=[],
+            )
+        assert block.raw_code == (
+            "def train_model():\n"
+            "    X = data.drop(columns=['y'])\n"
+            "    y = data['y']\n"
+            "    model = LogisticRegression()\n"
+            "    model.fit(X, y)\n"
+            "    return model"
+        )
+
+    def test_falls_back_to_solution_when_no_defs_and_no_match(self) -> None:
+        agent = CodeBlockExtractorAgent(model="test")
+        block_text = "model = RandomForest()\nmodel.fit(X, y)"
+        with agent.agent.override(
+            model=TestModel(custom_output_args=[self._item_args(block_text)])
+        ):
+            block, _ = agent.extract(
+                solution=SOLUTION,
+                ablation_summary="Model mattered most.",
+                previous_blocks=[],
+            )
+        assert block.raw_code == SOLUTION
 
     def test_prompt_includes_history_and_previous_blocks(self) -> None:
         agent = CodeBlockExtractorAgent(model="test")

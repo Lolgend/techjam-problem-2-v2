@@ -8,12 +8,66 @@ $p_0$.
 
 from __future__ import annotations
 
+import ast
+
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 
 from problem_2_v2.contracts.enums import ComponentCategory
-from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock, block_in_script
+from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock, find_matching_block
+
+_COMPONENT_KEYWORDS = (
+    "train",
+    "model",
+    "loss",
+    "fit",
+    "predict",
+    "infer",
+    "evaluate",
+    "net",
+    "network",
+    "score",
+)
+
+
+def _component_score(name: str) -> int:
+    """Score a definition name by how strongly it suggests a model component."""
+    lowered = name.lower()
+    return sum(1 for keyword in _COMPONENT_KEYWORDS if keyword in lowered)
+
+
+def _fallback_primary_block(solution: str) -> str:
+    """Extract the primary training/model/loss block from a solution.
+
+    Uses AST to pick the top-level function/class definition with the
+    strongest component-name signal (ties broken by source size). When the
+    script has no definitions, the entire solution is returned so the
+    refinement loop always has a target to refine.
+
+    Args:
+        solution: The current solution script.
+
+    Returns:
+        The verbatim source of the primary component block.
+    """
+    try:
+        tree = ast.parse(solution)
+    except SyntaxError:
+        return solution
+    candidates: list[tuple[int, int, ast.AST]] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            segment = ast.get_source_segment(solution, node)
+            if segment is None:
+                continue
+            candidates.append((_component_score(node.name), len(segment), node))
+    if not candidates:
+        return solution
+    _, _, best = max(candidates, key=lambda item: (item[0], item[1]))
+    segment = ast.get_source_segment(solution, best)
+    return segment if segment is not None else solution
+
 
 _EXTRACTOR_INSTRUCTIONS = (
     "You are a Kaggle grandmaster attending a competition. In order to win "
@@ -95,8 +149,11 @@ class CodeBlockExtractorAgent:
             inner-loop iteration.
 
         Raises:
-            ValueError: If the agent returns no items or the extracted code
-                block cannot be located in the solution script.
+            ValueError: If the agent returns no refinement plans. A block
+                that cannot be located verbatim in the solution is resolved
+                through ``find_matching_block``'s resilient tiers and, as a
+                last resort, AST primary-component extraction -- it never
+                aborts the refinement loop.
         """
         prompt = self.build_prompt(solution, ablation_summary, previous_blocks)
         with logfire.span("extractor.llm"):
@@ -106,11 +163,12 @@ class CodeBlockExtractorAgent:
             raise ValueError("Extractor returned no refinement plans.")
         item = items[0]
 
-        if not block_in_script(item.code_block, solution):
-            raise ValueError("Extracted code block not found in solution script.")
+        matched = find_matching_block(item.code_block, solution)
+        if matched is None:
+            matched = _fallback_primary_block(solution)
 
         block = TargetCodeBlock(
-            raw_code=item.code_block,
+            raw_code=matched,
             category=item.category,
             start_line=None,
             end_line=None,

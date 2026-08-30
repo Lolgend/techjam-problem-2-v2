@@ -7,6 +7,7 @@ highest-impact code block for optimization, and plan its refinement.
 
 from __future__ import annotations
 
+import ast
 import re
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,6 +23,7 @@ __all__ = [
     "TargetCodeBlock",
     "RefinementPlan",
     "block_in_script",
+    "find_matching_block",
 ]
 
 
@@ -45,6 +47,131 @@ def block_in_script(code_block: str, script: str) -> bool:
         return False
     pattern = re.compile(r"(?m)^[ \t]*" + r"\n[ \t]*".join(stripped_lines))
     return pattern.search(script) is not None
+
+
+def _normalize_code_line(line: str) -> str:
+    """Normalize a code line for tolerant matching.
+
+    Strips inline comments, trims whitespace, and unifies single/double
+    quotes so cosmetic LLM formatting differences do not break matching.
+    """
+    stripped = re.sub(r"#.*$", "", line).strip()
+    return stripped.replace("'", '"')
+
+
+def _match_verbatim(code_block: str, script: str) -> str | None:
+    """Tier 1: indentation-tolerant verbatim line-boundary match."""
+    stripped_lines = [re.escape(line.strip()) for line in code_block.splitlines() if line.strip()]
+    if not stripped_lines:
+        return None
+    pattern = re.compile(r"(?m)^[ \t]*" + r"\n[ \t]*".join(stripped_lines))
+    match = pattern.search(script)
+    return match.group(0) if match else None
+
+
+def _match_normalized(code_block: str, script: str) -> str | None:
+    """Tier 2: full-block match on normalized lines.
+
+    Every non-blank block line must appear as a run in the script after
+    comment stripping, quote unification, and whitespace trimming. The
+    verbatim script slice is returned.
+    """
+    block_lines = [line for line in code_block.splitlines() if line.strip()]
+    if len(block_lines) < 2:
+        return None
+    norm_block = [_normalize_code_line(line) for line in block_lines]
+    script_lines = script.splitlines()
+    for start in range(len(script_lines)):
+        j = 0
+        k = start
+        while j < len(norm_block):
+            while k < len(script_lines) and not script_lines[k].strip():
+                k += 1
+            if k >= len(script_lines):
+                break
+            if _normalize_code_line(script_lines[k]) != norm_block[j]:
+                break
+            j += 1
+            k += 1
+        if j == len(norm_block):
+            return "\n".join(script_lines[start:k])
+    return None
+
+
+def _match_ast_definition(code_block: str, script: str) -> str | None:
+    """Tier 4: AST definition fallback for function/class header blocks.
+
+    When the block starts with a ``def`` or ``class`` header, the matching
+    definition node is located in the script's AST and its verbatim source
+    segment is returned.
+    """
+    match = re.search(r"\b(?:def|class)\s+([A-Za-z_]\w*)\s*(?:\(|:)", code_block)
+    if match is None:
+        return None
+    name = match.group(1)
+    try:
+        tree = ast.parse(script)
+    except SyntaxError:
+        return None
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and (
+            node.name == name
+        ):
+            segment = ast.get_source_segment(script, node)
+            if segment is not None:
+                return segment
+    return None
+
+
+def _match_anchors(code_block: str, script: str) -> str | None:
+    """Tier 3: longest contiguous run of >= 2 normalized block lines.
+
+    Finds the longest sequence of consecutive normalized non-blank block
+    lines that also appears contiguously in the script, returning the
+    verbatim script slice.
+    """
+    block_lines = [line for line in code_block.splitlines() if line.strip()]
+    script_lines = script.splitlines()
+    norm_block = [_normalize_code_line(line) for line in block_lines]
+    norm_script = [_normalize_code_line(line) for line in script_lines]
+    for length in range(len(norm_block), 1, -1):
+        for j in range(len(norm_block) - length + 1):
+            anchor = norm_block[j : j + length]
+            for i in range(len(norm_script) - length + 1):
+                if norm_script[i : i + length] == anchor:
+                    return "\n".join(script_lines[i : i + length])
+    return None
+
+
+def find_matching_block(code_block: str, script: str) -> str | None:
+    """Locate ``code_block`` inside ``script`` with resilient multi-tier matching.
+
+    Tiers, in order:
+      1. Verbatim, indentation-tolerant line-boundary regex search.
+      2. Full-block normalized line matching (quotes unified, comments
+         stripped, whitespace trimmed).
+      3. AST definition fallback when the block opens with a function/class
+         header: the matching definition node is returned verbatim.
+      4. Longest contiguous run of >= 2 normalized non-blank lines found in
+         the script.
+
+    The AST fallback runs before anchor matching so a def/class header
+    recovers the full definition rather than a partial line run.
+
+    Returns:
+        The verbatim source segment from ``script``, or ``None`` when no
+        tier produces a match.
+    """
+    matched = _match_verbatim(code_block, script)
+    if matched is not None:
+        return matched
+    matched = _match_normalized(code_block, script)
+    if matched is not None:
+        return matched
+    matched = _match_ast_definition(code_block, script)
+    if matched is not None:
+        return matched
+    return _match_anchors(code_block, script)
 
 
 class AblationVariant(BaseModel):

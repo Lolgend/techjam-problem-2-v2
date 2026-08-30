@@ -10,8 +10,78 @@ from problem_2_v2.contracts.refinement import (
     AblationVariant,
     RefinementPlan,
     TargetCodeBlock,
+    find_matching_block,
 )
 from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
+
+
+class TestFindMatchingBlock:
+    """Test multi-tier resilient code block location."""
+
+    SCRIPT = (
+        "import pandas as pd\n"
+        "def train_model():\n"
+        "    X = data.drop(columns=['y'])\n"
+        "    y = data['y']\n"
+        "    model = LogisticRegression()\n"
+        "    model.fit(X, y)\n"
+        "    return model\n"
+    )
+
+    def test_verbatim_block_matches(self) -> None:
+        block = "    X = data.drop(columns=['y'])\n    y = data['y']"
+        expected = "    X = data.drop(columns=['y'])\n    y = data['y']"
+        assert find_matching_block(block, self.SCRIPT) == expected
+
+    def test_indentation_tolerant_verbatim_match(self) -> None:
+        block = "X = data.drop(columns=['y'])\ny = data['y']"
+        expected = "    X = data.drop(columns=['y'])\n    y = data['y']"
+        assert find_matching_block(block, self.SCRIPT) == expected
+
+    def test_quote_style_difference_matches_verbatim(self) -> None:
+        block = 'X = data.drop(columns=["y"])\ny = data["y"]'
+        expected = "    X = data.drop(columns=['y'])\n    y = data['y']"
+        assert find_matching_block(block, self.SCRIPT) == expected
+
+    def test_trailing_comment_difference_matches_verbatim(self) -> None:
+        script = "model = LogisticRegression()  # baseline\nmodel.fit(X, y)\n"
+        block = "model = LogisticRegression()\nmodel.fit(X, y)"
+        assert find_matching_block(block, script) == (
+            "model = LogisticRegression()  # baseline\nmodel.fit(X, y)"
+        )
+
+    def test_contiguous_anchor_subset_matches(self) -> None:
+        block = (
+            "X = data.drop(columns=['y'])\n"
+            "y = data['y']\n"
+            "model = LinearRegression()\n"
+            "model.fit(X, y)"
+        )
+        assert find_matching_block(block, self.SCRIPT) == (
+            "    X = data.drop(columns=['y'])\n    y = data['y']"
+        )
+
+    def test_ast_definition_fallback_matches(self) -> None:
+        block = (
+            "def train_model():\n"
+            '    model = LogisticRegression(penalty="l2")\n'
+            "    model.fit(X, y)\n"
+            "    return model"
+        )
+        assert find_matching_block(block, self.SCRIPT) == (
+            "def train_model():\n"
+            "    X = data.drop(columns=['y'])\n"
+            "    y = data['y']\n"
+            "    model = LogisticRegression()\n"
+            "    model.fit(X, y)\n"
+            "    return model"
+        )
+
+    def test_returns_none_when_no_match(self) -> None:
+        assert find_matching_block("totally = unrelated", self.SCRIPT) is None
+
+    def test_returns_none_on_empty_block(self) -> None:
+        assert find_matching_block("   \n  ", self.SCRIPT) is None
 
 
 class TestModelCard:

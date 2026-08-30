@@ -1,6 +1,6 @@
 # Implementation Plan: Unified Run-Level Iteration Logging
 
-## Phase 1: Contract & Logger Refactoring (TDD)
+## Phase 1: Contract & Logger Refactoring (TDD) `[checkpoint: 74d3549]`
 - [x] Task: Write failing unit tests for `root_run_id` and single-file path resolution in `tests/test_iteration_logging.py` (`74d3549`)
     - [x] Add test cases for `root_run_id` across POSIX and Windows hierarchical run IDs
     - [x] Add test cases verifying `for_run` resolves nested branch and final namespaces to the root run log file
@@ -11,7 +11,7 @@
     - [x] Update `CentralIterationLogger.for_run` to resolve to the root run path
     - [x] Implement path-keyed instance caching and thread locking
     - [x] Verify all iteration logging unit tests pass (Green phase)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Pipeline Integration & End-to-End Verification
 - [ ] Task: Update and expand end-to-end master logging tests in `tests/test_e2e_master.py`

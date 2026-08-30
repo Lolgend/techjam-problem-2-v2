@@ -1,0 +1,18 @@
+# Implementation Plan: Baseline Evaluation & Submission Integration
+
+## Phase 1: Task Specification & Sandbox Environment Plumbing (TDD)
+- [ ] Task: Write failing unit tests for sandbox PYTHONPATH injection and baseline module accessibility in `tests/test_sandbox.py`
+- [ ] Task: Implement PYTHONPATH injection in `SubprocessRunner.run_code` in `src/problem_2_v2/runner/sandbox.py`
+- [ ] Task: Update `KuaiRand-Pure.md` with explicit `evaluate.py` metric definition and `submit.py` format requirements
+- [ ] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 2: Finalizer Prompt Alignment & Submission Formatting (TDD)
+- [ ] Task: Write failing unit tests for `FinalArtifactProducer` submission schema instructions in `tests/test_finalizer.py`
+- [ ] Task: Update `_FINALIZER_INSTRUCTIONS` and `build_prompt` in `src/problem_2_v2/execution/finalizer.py` to enforce `row_id,user_id,video_id,score`
+- [ ] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 3: CLI Submission Verification & Integration Testing
+- [ ] Task: Write failing unit tests for CLI submission check in `tests/test_cli.py`
+- [ ] Task: Implement automated submission verification with `submit.py --check` in `src/problem_2_v2/cli.py`
+- [ ] Task: Full system integration test with dry-run and mock submission validation
+- [ ] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md)

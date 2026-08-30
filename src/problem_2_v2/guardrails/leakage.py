@@ -50,6 +50,15 @@ _REPAIR_INSTRUCTIONS = (
 )
 
 
+class LeakageEnforcementError(RuntimeError):
+    """Raised when strict leakage enforcement is enabled and repair fails.
+
+    This error signals that data leakage was detected in the solution
+    script and all repair attempts (including retries) were exhausted
+    without resolving the leakage.
+    """
+
+
 class DataLeakageCheckerAgent:
     """Detects and repairs data leakage in solution scripts.
 
@@ -115,8 +124,12 @@ class DataLeakageCheckerAgent:
         corrected = extract_python_code(response.output)
         if not corrected:
             logfire.warn("guardrails.leakage_repair.no_code")
-            return code
-        return self._patch(code, suspicious_block, corrected)
+            patched = self._full_script_rewrite(code)
+        else:
+            patched = self._patch(code, suspicious_block, corrected)
+        if patched != code:
+            logfire.info("guardrails.leakage_repair.succeeded")
+        return patched
 
     def audit(self, code: str) -> tuple[DataLeakageStatus, str]:
         """Check for leakage and repair the script if needed.

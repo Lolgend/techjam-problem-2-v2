@@ -11,7 +11,7 @@ import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
 from problem_2_v2.contracts.task import ExecutionResult, TaskSpecification
-from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
+from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent, LeakageEnforcementError
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
 from problem_2_v2.runner.debugger import DebuggerAgent
 from problem_2_v2.runner.sandbox import SubprocessRunner
@@ -28,6 +28,12 @@ class ExecutionConfig(BaseModel):
         enable_usage_check: Whether to run the data usage guardrail.
         production_timeout_seconds: Extended timeout for full-dataset
             finalization runs.
+        max_leakage_retries: Maximum check→repair→re-check cycles when
+            leakage is detected. ``0`` means a single audit attempt with
+            no retries.
+        strict_leakage: When ``True``, raises ``LeakageEnforcementError``
+            if leakage persists after all retries. When ``False``
+            (default), warns and continues.
     """
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
@@ -40,6 +46,14 @@ class ExecutionConfig(BaseModel):
     production_timeout_seconds: int = Field(
         default=3600,
         description="Extended timeout for full-dataset finalization.",
+    )
+    max_leakage_retries: int = Field(
+        default=5,
+        description="Max check→repair→re-check cycles for leakage.",
+    )
+    strict_leakage: bool = Field(
+        default=False,
+        description="Raise LeakageEnforcementError if leakage persists after retries.",
     )
 
 
@@ -99,6 +113,11 @@ class ExecutionGuardrailPipeline:
     def guard(self, code: str, spec: TaskSpecification) -> str:
         """Apply the leakage and usage passes to a script.
 
+        The leakage pass runs a retry loop of up to
+        ``config.max_leakage_retries`` check→repair→re-check cycles.
+        When ``config.strict_leakage`` is ``True`` and leakage persists
+        after all retries, ``LeakageEnforcementError`` is raised.
+
         Guardrail passes degrade gracefully: when an LLM check fails the
         pass is skipped with a warning and the code is left unchanged.
 
@@ -109,16 +128,15 @@ class ExecutionGuardrailPipeline:
         Returns:
             The guarded script, possibly repaired or augmented by the
             active guardrail checks.
+
+        Raises:
+            LeakageEnforcementError: When ``strict_leakage`` is enabled
+                and leakage persists after all retry attempts.
         """
         guarded = code
         if self.config.enable_leakage_check:
             with logfire.span("execution.leakage_check"):
-                try:
-                    status, guarded = self.leakage.audit(code)
-                    if status.is_leaking:
-                        logfire.warn("execution.leakage_detected")
-                except Exception as exc:
-                    logfire.warn("execution.leakage_check.failed", error=str(exc))
+                guarded = self._leakage_guard_loop(guarded)
         if self.config.enable_usage_check:
             with logfire.span("execution.usage_check"):
                 try:
@@ -128,6 +146,56 @@ class ExecutionGuardrailPipeline:
                 except Exception as exc:
                     logfire.warn("execution.usage_check.failed", error=str(exc))
         self.last_guarded_code = guarded
+        return guarded
+
+    def _leakage_guard_loop(self, code: str) -> str:
+        """Run the check→repair→re-check cycle with retry budget.
+
+        Args:
+            code: The solution script to audit.
+
+        Returns:
+            The best-effort repaired code.
+
+        Raises:
+            LeakageEnforcementError: When ``strict_leakage`` is enabled
+                and leakage persists after all retry attempts.
+        """
+        guarded = code
+        retries_used = 0
+        leaking = False
+
+        try:
+            for attempt in range(1 + self.config.max_leakage_retries):
+                status, guarded = self.leakage.audit(guarded)
+                if not status.is_leaking:
+                    if attempt > 0:
+                        # Leakage was detected on a prior attempt and is
+                        # now resolved after repair.
+                        logfire.info(
+                            "execution.leakage_repaired",
+                            retries_used=attempt,
+                            strict=self.config.strict_leakage,
+                        )
+                    leaking = False
+                    break
+                leaking = True
+                retries_used = attempt + 1
+        except Exception as exc:
+            logfire.warn("execution.leakage_check.failed", error=str(exc))
+            return guarded
+
+        if leaking:
+            logfire.warn(
+                "execution.leakage_unrepaired",
+                retries_used=retries_used,
+                strict=self.config.strict_leakage,
+            )
+            if self.config.strict_leakage:
+                raise LeakageEnforcementError(
+                    f"Data leakage persists after {retries_used} "
+                    f"repair attempt(s). Aborting execution."
+                )
         return guarded
 
     def run(

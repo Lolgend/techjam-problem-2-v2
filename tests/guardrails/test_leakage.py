@@ -1,6 +1,5 @@
 """Unit tests for the data leakage guardrail checker."""
 
-import pytest
 from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel

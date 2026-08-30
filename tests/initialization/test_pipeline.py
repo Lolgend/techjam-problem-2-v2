@@ -231,9 +231,7 @@ class TestInitializationIterationLogging:
         ):
             result = pipeline.run(_MD, dataset_dir="/data", run_id="ilog")
 
-        log_path = (
-            Path(pipeline.merger.debugger.runner.runs_dir) / "ilog" / "iteration_logs.jsonl"
-        )
+        log_path = Path(pipeline.merger.debugger.runner.runs_dir) / "ilog" / "iteration_logs.jsonl"
         assert log_path.is_file()
         records = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
 

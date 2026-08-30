@@ -384,9 +384,7 @@ class TestCLI:
 def _make_submission(directory: Path) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     submission = directory / "submission.csv"
-    submission.write_text(
-        "row_id,user_id,video_id,score\n0,user1,video1,0.5\n", encoding="utf-8"
-    )
+    submission.write_text("row_id,user_id,video_id,score\n0,user1,video1,0.5\n", encoding="utf-8")
     return submission
 
 
@@ -444,9 +442,7 @@ class TestCLISubmissionCheck:
         assert verified is None
         assert "submit.py" in message
 
-    def test_summary_reports_submission_check(
-        self, tmp_path: Path, capsys, monkeypatch
-    ) -> None:
+    def test_summary_reports_submission_check(self, tmp_path: Path, capsys, monkeypatch) -> None:
         task_file, data_dir = _write_task(tmp_path)
         spec = TaskSpecification.from_markdown(_MD, dataset_dir=str(data_dir))
         out_dir = tmp_path / "final_out"
@@ -507,13 +503,11 @@ class TestSubmissionCheckIntegration:
             "video_id,author_id\nv1,a1\n", encoding="utf-8"
         )
         (data_dir / "log_standard_4_08_to_4_21_pure.csv").write_text(
-            "date,user_id,video_id,tab,duration_ms,long_view\n"
-            "20220410,u1,v1,0,1000,1\n",
+            "date,user_id,video_id,tab,duration_ms,long_view\n20220410,u1,v1,0,1000,1\n",
             encoding="utf-8",
         )
         (data_dir / "log_standard_4_22_to_5_08_pure.csv").write_text(
-            "date,user_id,video_id,tab,duration_ms,long_view\n"
-            "20220430,u1,v1,0,1000,1\n",
+            "date,user_id,video_id,tab,duration_ms,long_view\n20220430,u1,v1,0,1000,1\n",
             encoding="utf-8",
         )
 

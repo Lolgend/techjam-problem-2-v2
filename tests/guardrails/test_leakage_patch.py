@@ -5,7 +5,6 @@ fuzzy/normalized matching (via ``find_matching_block``), and full-script
 rewrite fallback, and that ``repair()`` never raises ``ValueError``.
 """
 
-import pytest
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
@@ -56,7 +55,7 @@ SUSPICIOUS_WHITESPACE = (
 # extracted it with single quotes.
 SCRIPT_DOUBLE_QUOTES = (
     "import pandas as pd\n"
-    "train = pd.read_csv(\"./input/train.csv\")\n"
+    'train = pd.read_csv("./input/train.csv")\n'
     "scaler = StandardScaler()\n"
     'X_train = scaler.fit_transform(train.drop(columns=["label"]))\n'
     'X_test = scaler.transform(test.drop(columns=["label"]))\n'
@@ -72,15 +71,11 @@ SUSPICIOUS_SINGLE_QUOTES = (
 # A suspicious block that has no relationship to the script at all
 # (forces full-script rewrite fallback).
 SCRIPT_UNMATCHED = (
-    "import numpy as np\n"
-    "result = np.mean([1, 2, 3])\n"
-    "print('Final Validation Performance: 0.90')\n"
+    "import numpy as np\nresult = np.mean([1, 2, 3])\nprint('Final Validation Performance: 0.90')\n"
 )
 
 SUSPICIOUS_UNMATCHED = (
-    "completely_different_function()\n"
-    "another_unrelated_call()\n"
-    "third_unknown_line()"
+    "completely_different_function()\nanother_unrelated_call()\nthird_unknown_line()"
 )
 
 FULL_SCRIPT_REWRITE = (
@@ -123,9 +118,7 @@ class TestResilientPatch:
         with checker.repair_agent.override(
             model=TestModel(custom_output_text=f"```python\n{FULL_SCRIPT_REWRITE}\n```")
         ):
-            result = checker._patch(
-                SCRIPT_UNMATCHED, SUSPICIOUS_UNMATCHED, "irrelevant_corrected"
-            )
+            result = checker._patch(SCRIPT_UNMATCHED, SUSPICIOUS_UNMATCHED, "irrelevant_corrected")
         assert "# leakage fixed" in result
 
     def test_full_script_rewrite_no_code_returns_original(self) -> None:
@@ -134,9 +127,7 @@ class TestResilientPatch:
         with checker.repair_agent.override(
             model=TestModel(custom_output_text="Sorry, I cannot help.")
         ):
-            result = checker._patch(
-                SCRIPT_UNMATCHED, SUSPICIOUS_UNMATCHED, "irrelevant_corrected"
-            )
+            result = checker._patch(SCRIPT_UNMATCHED, SUSPICIOUS_UNMATCHED, "irrelevant_corrected")
         assert result == SCRIPT_UNMATCHED
 
     def test_repair_no_longer_raises_valueerror(self) -> None:

@@ -159,9 +159,7 @@ class TestFinalizerIterationLogging:
         ):
             artifact = finalizer.produce(WINNING_SOLUTION, _spec(), run_id="finlog")
         assert artifact.success is True
-        log_path = (
-            Path(finalizer.debugger.runner.runs_dir) / "finlog" / "iteration_logs.jsonl"
-        )
+        log_path = Path(finalizer.debugger.runner.runs_dir) / "finlog" / "iteration_logs.jsonl"
         assert log_path.is_file()
         entries = [
             IterationLogEntry.model_validate_json(line)

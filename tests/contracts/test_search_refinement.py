@@ -420,9 +420,7 @@ class TestTargetCodeBlock:
             "        return model\n"
         )
         block = self._block(raw_code="model = LogisticRegression()\nmodel.fit(X, y)")
-        result = block.replace_in(
-            full, "        model = XGBClassifier()\n        model.fit(X, y)"
-        )
+        result = block.replace_in(full, "        model = XGBClassifier()\n        model.fit(X, y)")
         assert result == (
             "class Trainer:\n"
             "    def fit(self):\n"

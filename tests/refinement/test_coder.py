@@ -83,6 +83,11 @@ class TestCoderAgent:
         assert PLAN_TEXT in captured["prompt"]
         assert "subsampling" in captured["prompt"]
 
+    def test_instructions_mandate_official_evaluate_harness(self) -> None:
+        from problem_2_v2.refinement.coder import _CODER_INSTRUCTIONS
+
+        assert "from evaluate import evaluate" in _CODER_INSTRUCTIONS
+
 
 class TestPatchScript:
     """Test AST-safe script patching with whitespace fallback."""

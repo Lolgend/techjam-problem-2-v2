@@ -179,3 +179,12 @@ class TestFinalizerSubmissionSchema:
         assert "row_id,user_id,video_id,score" in prompt
         assert "submit.py" in prompt
         assert "deterministic" in prompt
+
+    def test_instructions_mandate_evaluate_harness(self) -> None:
+        from problem_2_v2.execution.finalizer import _FINALIZER_INSTRUCTIONS
+
+        assert "from evaluate import evaluate" in _FINALIZER_INSTRUCTIONS
+
+    def test_build_prompt_mandates_evaluate_harness(self, finalizer) -> None:
+        prompt = finalizer.build_prompt(WINNING_SOLUTION, _spec())
+        assert "from evaluate import evaluate" in prompt

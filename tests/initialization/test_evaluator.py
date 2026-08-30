@@ -116,6 +116,21 @@ class TestCandidateEvaluatorAgent:
         assert "30000" in captured["prompt"] or "30,000" in captured["prompt"]
 
 
+class TestEvaluatorBaselineHarness:
+    """Test that the evaluator mandates the official ``evaluate.py`` harness."""
+
+    def test_instructions_mandate_official_evaluate_harness(self) -> None:
+        from problem_2_v2.initialization.evaluator import _EVALUATOR_INSTRUCTIONS
+
+        assert "from evaluate import evaluate" in _EVALUATOR_INSTRUCTIONS
+
+    def test_prompt_mandates_official_evaluate_harness(
+        self, evaluator: CandidateEvaluatorAgent
+    ) -> None:
+        prompt = evaluator._build_prompt(_spec(), _card("LightGBM"))
+        assert "from evaluate import evaluate" in prompt
+
+
 class TestCandidateRanking:
     """Test descending permutation ranking under both directions."""
 

@@ -16,7 +16,11 @@ from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
 from problem_2_v2.contracts.guardrails import EnsembleStrategy
-from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
+from problem_2_v2.contracts.iteration import (
+    CentralIterationLogger,
+    IterationLogEntry,
+    branch_index_from_run_id,
+)
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.ensembling.ensembler import EnsemblerAgent
 from problem_2_v2.ensembling.planner import EnsemblePlannerAgent
@@ -101,6 +105,7 @@ class EnsemblePipeline:
             An ``EnsembleResult`` with the optimal solution artifact.
         """
         logger = CentralIterationLogger.for_run(self.runner.runs_dir, run_id)
+        branch_index = branch_index_from_run_id(run_id)
         direction = spec.metric_direction
 
         best_individual = max(solutions, key=lambda a: a.validation_score or float("-inf"))
@@ -146,7 +151,7 @@ class EnsemblePipeline:
                                 error_recovery_events=[str(exc)],
                                 success=False,
                                 target_component=f"ENSEMBLE_{strategy.method.value}",
-                                branch_index=None,
+                                branch_index=branch_index,
                                 duration_seconds=None,
                             )
                         )
@@ -169,7 +174,7 @@ class EnsemblePipeline:
                         stage="ENSEMBLING",
                         hypothesis=strategy.natural_language_plan,
                         code_diff=compute_code_diff(best_individual.full_code, run.code),
-                        metrics={},
+                        metrics=({"primary": run.score} if run.score is not None else {}),
                         validation_score=run.score,
                         delta_from_baseline=round_delta,
                         error_recovery_events=(
@@ -179,7 +184,7 @@ class EnsemblePipeline:
                         ),
                         success=run.success,
                         target_component=f"ENSEMBLE_{strategy.method.value}",
-                        branch_index=None,
+                        branch_index=branch_index,
                         duration_seconds=(
                             run.result.duration_seconds if run.result is not None else None
                         ),

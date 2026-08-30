@@ -10,11 +10,37 @@ to ``runs/<run_id>/iteration_logs.jsonl`` through the thread-safe
 
 from __future__ import annotations
 
+import re
 import threading
 from datetime import datetime
 from pathlib import Path
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+
+_BRANCH_RE = re.compile(r"branch_(\d+)")
+
+
+def branch_index_from_run_id(run_id: str) -> int | None:
+    """Extract the parallel branch index embedded in a run identifier.
+
+    Branch namespaces are ``<run_id>/branch_<i>``; ``None`` is returned
+    when no branch marker is present.
+    """
+    match = _BRANCH_RE.search(run_id)
+    return int(match.group(1)) if match else None
+
+
+def declared_baseline(baseline: float | None) -> float | None:
+    """Return the baseline anchor when one is explicitly declared.
+
+    ``TaskSpecification.baseline_score`` defaults to ``0.0`` when a problem
+    does not declare a ``**Baseline Score:**`` header; that sentinel is
+    treated as "not declared" so logs avoid a misleading ``score - 0.0``
+    delta.
+    """
+    if baseline is None or baseline == 0.0:
+        return None
+    return baseline
 
 
 class IterationLogEntry(BaseModel):

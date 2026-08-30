@@ -16,7 +16,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from problem_2_v2.console import announce, format_score
 from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
-from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
+from problem_2_v2.contracts.iteration import (
+    CentralIterationLogger,
+    IterationLogEntry,
+    branch_index_from_run_id,
+    declared_baseline,
+)
 from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.ingestion.extractor import TaskExtractor
@@ -110,9 +115,10 @@ class InitializationPipeline:
         """
         with logfire.span("initialization.run", run_id=run_id):
             logger = CentralIterationLogger.for_run(self.merger.debugger.runner.runs_dir, run_id)
+            branch_index = branch_index_from_run_id(run_id)
             with logfire.span("initialization.extract"):
                 spec = self.extractor.extract(md_text, dataset_dir=dataset_dir)
-            baseline = spec.baseline_score
+            baseline = declared_baseline(spec.baseline_score)
             direction = spec.metric_direction
             announce(
                 f"[Search] Retrieving candidates via {self.retriever.provider.provider_name}..."
@@ -137,7 +143,9 @@ class InitializationPipeline:
                     spec, candidates.candidates, run_id=run_id
                 )
             for index, evaluation in enumerate(evaluations):
-                logger.append(self._candidate_entry(index, evaluation, baseline, direction))
+                logger.append(
+                    self._candidate_entry(index, evaluation, baseline, direction, branch_index)
+                )
             for index, evaluation in enumerate(evaluations):
                 if evaluation.score is None:
                     reason = (
@@ -159,7 +167,9 @@ class InitializationPipeline:
                 outcome = self.merger.merge(spec, ranked, run_id=run_id)
             previous_code = ""
             for step in outcome.steps:
-                logger.append(self._merge_entry(step, previous_code, baseline, direction))
+                logger.append(
+                    self._merge_entry(step, previous_code, baseline, direction, branch_index)
+                )
                 previous_code = step.merged_code
             announce(
                 f"[Merge] Sequential merging completed. Initial s0 Score: "
@@ -200,6 +210,7 @@ class InitializationPipeline:
         evaluation: CandidateEvaluation,
         baseline: float | None,
         direction: MetricDirection,
+        branch_index: int | None,
     ) -> IterationLogEntry:
         """Build the unified log record for one candidate evaluation."""
         errors: list[str] = []
@@ -219,7 +230,7 @@ class InitializationPipeline:
                 f"validation set and measure its score."
             ),
             code_diff=compute_code_diff("", evaluation.code),
-            metrics={},
+            metrics=({"primary": evaluation.score} if evaluation.score is not None else {}),
             validation_score=evaluation.score,
             delta_from_baseline=(
                 direction.delta(evaluation.score, baseline)
@@ -229,7 +240,7 @@ class InitializationPipeline:
             error_recovery_events=errors,
             success=evaluation.score is not None,
             target_component="CANDIDATE_EVALUATION",
-            branch_index=None,
+            branch_index=branch_index,
             duration_seconds=(
                 evaluation.result.duration_seconds if evaluation.result is not None else None
             ),
@@ -241,6 +252,7 @@ class InitializationPipeline:
         previous_code: str,
         baseline: float | None,
         direction: MetricDirection,
+        branch_index: int | None,
     ) -> IterationLogEntry:
         """Build the unified log record for one greedy merge attempt."""
         errors: list[str] = []
@@ -260,7 +272,7 @@ class InitializationPipeline:
                 f"{step.rank}): {step.reason}."
             ),
             code_diff=compute_code_diff(previous_code, step.merged_code),
-            metrics={},
+            metrics=({"primary": step_score} if step_score is not None else {}),
             validation_score=step_score,
             delta_from_baseline=(
                 direction.delta(step_score, baseline)
@@ -270,7 +282,7 @@ class InitializationPipeline:
             error_recovery_events=errors,
             success=step.accepted,
             target_component="MODEL_MERGER",
-            branch_index=None,
+            branch_index=branch_index,
             duration_seconds=(step.result.duration_seconds if step.result is not None else None),
         )
 

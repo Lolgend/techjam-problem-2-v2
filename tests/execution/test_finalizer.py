@@ -176,6 +176,8 @@ class TestFinalizerIterationLogging:
         assert entry.metrics == {"auroc": 0.87}
         assert entry.code_diff != ""
         assert entry.target_component == "FINAL_PRODUCTION"
+        assert entry.delta_from_baseline is None
+        assert entry.branch_index is None
 
 
 class TestFinalizerSubmissionSchema:

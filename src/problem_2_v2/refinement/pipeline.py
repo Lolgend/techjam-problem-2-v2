@@ -15,7 +15,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
-from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
+from problem_2_v2.contracts.iteration import (
+    CentralIterationLogger,
+    IterationLogEntry,
+    branch_index_from_run_id,
+)
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.execution.pipeline import ExecutionConfig, ExecutionGuardrailPipeline
@@ -155,6 +159,7 @@ class RefinementPipeline:
             A ``RefinementResult`` with the best solution and lineage.
         """
         logger = CentralIterationLogger.for_run(self.runner.runs_dir, run_id)
+        branch_index = branch_index_from_run_id(run_id)
 
         direction = spec.metric_direction
         current_code = initial_code
@@ -199,7 +204,7 @@ class RefinementPipeline:
                             error_recovery_events=[],
                             success=True,
                             target_component="ABLATION_STUDY",
-                            branch_index=None,
+                            branch_index=branch_index,
                             duration_seconds=None,
                         )
                     )
@@ -243,6 +248,7 @@ class RefinementPipeline:
                                 initial_score=initial_score,
                                 direction=direction,
                                 logger=logger,
+                                branch_index=branch_index,
                             )
                         attempts.append((plan.natural_language_plan, record.validation_score))
                         announce(
@@ -327,6 +333,7 @@ class RefinementPipeline:
         initial_score: float | None,
         direction: MetricDirection,
         logger: CentralIterationLogger,
+        branch_index: int | None,
     ) -> tuple[IterationLogEntry, str | None]:
         """Run code -> patch -> guardrails -> evaluate for one attempt.
 
@@ -341,6 +348,7 @@ class RefinementPipeline:
             initial_score: Score of the input solution ($h(s_0)$).
             direction: Metric direction for delta computation.
             logger: Central iteration logger to append the record to.
+            branch_index: Parallel branch index, if any.
 
         Returns:
             The log entry and the candidate code (``None`` on failure).
@@ -383,7 +391,7 @@ class RefinementPipeline:
             stage="REFINEMENT",
             hypothesis=plan.natural_language_plan,
             code_diff=code_diff,
-            metrics={},
+            metrics=({"primary": score} if score is not None else {}),
             validation_score=score,
             delta_from_baseline=(
                 direction.delta(score, initial_score)
@@ -393,7 +401,7 @@ class RefinementPipeline:
             error_recovery_events=errors,
             success=success,
             target_component=block.category.value,
-            branch_index=None,
+            branch_index=branch_index,
             duration_seconds=duration_seconds,
         )
         logger.append(record)

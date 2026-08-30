@@ -246,7 +246,9 @@ class TestInitializationIterationLogging:
         assert all(r["success"] is True for r in candidates)
         assert all(r["validation_score"] == pytest.approx(0.55) for r in candidates)
         assert all(r["delta_from_baseline"] == pytest.approx(0.05) for r in candidates)
+        assert all(r["metrics"] == {"primary": 0.55} for r in candidates)
         assert candidates[0]["code_diff"] != ""
+        assert all(r["branch_index"] is None for r in candidates)
 
         assert len(merges) == len(result.outcome.steps)
         assert merges[0]["iteration_id"] == "merge_1"

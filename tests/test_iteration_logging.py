@@ -12,7 +12,12 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
+from problem_2_v2.contracts.iteration import (
+    CentralIterationLogger,
+    IterationLogEntry,
+    branch_index_from_run_id,
+    declared_baseline,
+)
 
 
 def _entry(**overrides: object) -> IterationLogEntry:
@@ -106,6 +111,20 @@ class TestIterationLogEntrySchema:
         data = json.loads(legacy.model_dump_json())
         assert data["hypothesis"] == "merge the two models"
         assert data["error_recovery_events"] == ["merge rejected: score regression"]
+
+
+class TestIterationHelpers:
+    """Test branch-index parsing and baseline declaration helpers."""
+
+    def test_branch_index_from_run_id(self) -> None:
+        assert branch_index_from_run_id("run_2026/branch_0") == 0
+        assert branch_index_from_run_id("run_2026/branch_12") == 12
+        assert branch_index_from_run_id("run_2026") is None
+
+    def test_declared_baseline_treats_zero_as_undeclared(self) -> None:
+        assert declared_baseline(0.6016) == pytest.approx(0.6016)
+        assert declared_baseline(0.0) is None
+        assert declared_baseline(None) is None
 
 
 class TestCentralIterationLogger:

@@ -22,7 +22,12 @@ from problem_2_v2.contracts.code_utils import (
     extract_python_code,
     validate_python_syntax,
 )
-from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
+from problem_2_v2.contracts.iteration import (
+    CentralIterationLogger,
+    IterationLogEntry,
+    branch_index_from_run_id,
+    declared_baseline,
+)
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.execution.pipeline import ExecutionConfig
 from problem_2_v2.runner.debugger import DebuggerAgent
@@ -188,6 +193,7 @@ class FinalArtifactProducer:
             errors.append(f"debugger applied {outcome.debug_rounds} repair round(s)")
         if result.stderr:
             errors.append(result.stderr[-500:])
+        anchor = declared_baseline(spec.baseline_score)
         CentralIterationLogger.for_run(self.debugger.runner.runs_dir, run_id).append(
             IterationLogEntry(
                 iteration_id="final_prod",
@@ -201,14 +207,14 @@ class FinalArtifactProducer:
                 metrics=metrics,
                 validation_score=result.validation_score,
                 delta_from_baseline=(
-                    result.validation_score - spec.baseline_score
-                    if result.validation_score is not None and spec.baseline_score is not None
+                    spec.metric_direction.delta(result.validation_score, anchor)
+                    if result.validation_score is not None and anchor is not None
                     else None
                 ),
                 error_recovery_events=errors,
                 success=result.validation_score is not None,
                 target_component="FINAL_PRODUCTION",
-                branch_index=None,
+                branch_index=branch_index_from_run_id(run_id),
                 duration_seconds=result.duration_seconds,
             )
         )

@@ -6,10 +6,10 @@
 - [x] Task: Verify task specification dry-run with updated `KuaiRand-Pure.md` (86b34f9)
 - [x] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md) (86b34f9)
 
-## Phase 2: Agent Prompt Alignment & Submission Formatting (TDD)
+## Phase 2: Agent Prompt Alignment & Submission Formatting (TDD) `[checkpoint: a570d07]`
 - [x] Task: Write failing unit tests for `FinalArtifactProducer` and `CandidateEvaluatorAgent` prompts in `tests/test_finalizer.py` and `tests/test_evaluator.py` (a570d07)
 - [x] Task: Update agent prompts in `evaluator.py`, `coder.py`, and `finalizer.py` to mandate `evaluate.py` and `submit.py` (a570d07)
-- [ ] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md) (a570d07)
 
 ## Phase 3: CLI Submission Verification & Full Integration
 - [ ] Task: Write failing unit tests for CLI automated submission check in `tests/test_cli.py`

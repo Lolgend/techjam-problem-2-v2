@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 import sys
 from importlib import metadata
 from pathlib import Path
@@ -19,6 +20,7 @@ from problem_2_v2.orchestrator import MLEStarPipeline, MLEStarResult, configure_
 
 _PROVIDERS = ("duckduckgo", "tavily", "google", "mock")
 _BANNER_WIDTH = 78
+_SUBMIT_CHECK_TIMEOUT = 600
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -221,7 +223,13 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
 
     if result.final_artifact is not None:
         _copy_final_output(result.final_artifact.output_dir, args.output)
-    _print_summary(result, args.output)
+    submission_verified, submission_message = _verify_submission(args.output, args.data)
+    _print_summary(
+        result,
+        args.output,
+        submission_verified=submission_verified,
+        submission_message=submission_message,
+    )
     return 0 if result.success else 1
 
 
@@ -242,7 +250,12 @@ def _print_banner(spec: TaskSpecification, config: MLEStarConfig) -> None:
     announce("=" * _BANNER_WIDTH)
 
 
-def _print_summary(result: MLEStarResult, output_dir: str) -> None:
+def _print_summary(
+    result: MLEStarResult,
+    output_dir: str,
+    submission_verified: bool | None = None,
+    submission_message: str | None = None,
+) -> None:
     """Render the final summary box with duration, scores, and artifacts."""
     announce("=" * _BANNER_WIDTH)
     announce(f"Run complete in {result.duration_seconds:.1f}s")
@@ -250,6 +263,12 @@ def _print_summary(result: MLEStarResult, output_dir: str) -> None:
         f"Baseline: {result.baseline_score:.4f} | "
         f"Final: {format_score(result.final_score)} | Delta: {format_delta(result.score_delta)}"
     )
+    if submission_verified is True:
+        announce(f"Submission check: PASSED - {submission_message}")
+    elif submission_verified is False:
+        announce(f"Submission check: FAILED - {submission_message}")
+    else:
+        announce("Submission check: not applicable")
     artifact_dir = Path(output_dir)
     files = (
         sorted(p.name for p in artifact_dir.iterdir() if p.is_file())
@@ -286,3 +305,76 @@ def _copy_final_output(source: str, destination: str) -> None:
         if target.exists() and target.resolve() == item.resolve():
             continue
         shutil.copy2(item, target)
+
+
+def _submit_script_path() -> Path | None:
+    """Resolve the official baseline ``src/baseline/submit.py`` script.
+
+    The script is located by walking upward from this package to the
+    repository root, supporting editable and installed layouts.
+    """
+    start = Path(__file__).resolve()
+    for parent in (start, *start.parents):
+        candidate = parent / "src" / "baseline" / "submit.py"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _verify_submission(output_dir: str, data_dir: str) -> tuple[bool | None, str]:
+    """Verify a produced ``submission.csv`` with ``submit.py --check``.
+
+    Args:
+        output_dir: Directory holding the copied production artifacts.
+        data_dir: Dataset directory passed to ``submit.py --data_dir`` so
+            row alignment is checked against the official test split.
+
+    Returns:
+        A tuple ``(verified, message)`` where ``verified`` is ``True`` when
+        the check passes, ``False`` when it fails, and ``None`` when the
+        check is not applicable (missing submission or submit script).
+    """
+    submission = Path(output_dir) / "submission.csv"
+    if not submission.is_file():
+        return None, "submission.csv not found"
+    submit_script = _submit_script_path()
+    if submit_script is None:
+        return None, "submit.py not found"
+    import os
+
+    env = os.environ.copy()
+    existing = env.get("PYTHONPATH", "")
+    pythonpath = [str(submit_script.parent)]
+    if existing:
+        pythonpath.append(existing)
+    env["PYTHONPATH"] = os.pathsep.join(pythonpath)
+    env["PYTHONIOENCODING"] = "utf-8"
+    command = [
+        sys.executable,
+        str(submit_script),
+        str(submission),
+        "--check",
+        "--data_dir",
+        str(data_dir),
+    ]
+    try:
+        # S603: intentional — official baseline submit.py check with
+        # list-form args (no shell), fixed data_dir, and a timeout.
+        completed = subprocess.run(  # noqa: S603
+            command,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=_SUBMIT_CHECK_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"submit.py --check timed out after {_SUBMIT_CHECK_TIMEOUT}s"
+    except OSError as exc:
+        return False, f"submit.py --check failed to run: {exc}"
+    if completed.returncode == 0:
+        message = (completed.stdout or completed.stderr or "").strip()
+        return True, message or "format and alignment verified"
+    detail = (completed.stderr or completed.stdout or "verification failed").strip()
+    return False, detail

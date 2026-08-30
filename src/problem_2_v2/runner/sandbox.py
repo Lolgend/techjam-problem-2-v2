@@ -19,6 +19,20 @@ import logfire
 from problem_2_v2.contracts.task import ExecutionResult
 
 
+def _resolve_workspace_root() -> Path:
+    """Resolve the repository root containing ``src/baseline``.
+
+    Walks upward from this package until a directory holding the official
+    baseline modules is found, falling back to a fixed package-depth guess
+    so the default works under non-editable installs.
+    """
+    start = Path(__file__).resolve()
+    for parent in (start.parent, *start.parent.parents):
+        if (parent / "src" / "baseline" / "evaluate.py").is_file():
+            return parent
+    return Path(__file__).resolve().parents[3]
+
+
 class SubprocessRunner:
     """Executes Python scripts in isolated sandbox directories.
 
@@ -66,7 +80,7 @@ class SubprocessRunner:
         self.workspace_root = (
             Path(workspace_root).resolve()
             if workspace_root is not None
-            else Path(__file__).resolve().parents[3]
+            else _resolve_workspace_root()
         )
         self.baseline_dir = (
             Path(baseline_dir).resolve()

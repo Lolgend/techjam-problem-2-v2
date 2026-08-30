@@ -19,10 +19,10 @@ The primary evaluation metric is the arithmetic mean of Group AUC (GAUC) and nor
 `primary = (GAUC + nDCG@5) / 2.0`
 
 This metric is computed by the official evaluation harness `src/baseline/evaluate.py`
-(`evaluate.evaluate(user_ids, labels, scores, k=5)`), which returns the dict
-`{"GAUC", "nDCG@5", "primary", "users", "rows"}`. Do **not** reimplement the metric —
-import `evaluate` in your sandboxed script (the module is importable because the
-workspace root and `src/baseline` are injected into the subprocess `PYTHONPATH`).
+(`evaluate.evaluate(user_ids, labels, scores, k=5)`), which returns a dict with
+keys `GAUC`, `nDCG@5`, `primary`, `users`, and `rows`. Do **not** reimplement the
+metric — import `evaluate` in your sandboxed script (the module is importable because
+the workspace root and `src/baseline` are injected into the subprocess `PYTHONPATH`).
 The exact calculation rules (write-in-stone, per `evaluate.py`):
 
 1. **GAUC (Group AUC):** Computed with the Mann-Whitney U statistic (tie-corrected,

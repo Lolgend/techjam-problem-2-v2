@@ -386,7 +386,7 @@ def _verify_submission(output_dir: str, data_dir: str) -> tuple[bool | None, str
         return False, f"submit.py --check failed to run: {exc}"
     if completed.returncode == 0:
         message = (completed.stdout or completed.stderr or "").strip()
-        match = re.search(r"校验通过[:：]\s*([\d,]+)\s*行", message)
+        match = re.search(r"(?:校验通过[:：]|verified[:\s]*)\s*([\d,]+)\s*(?:行|rows)", message)
         if match:
             return True, f"format and alignment verified ({match.group(1)} rows)"
         return True, "format and alignment verified"

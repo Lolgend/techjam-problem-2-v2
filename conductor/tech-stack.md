@@ -81,3 +81,13 @@
 > (`sandbox_path_resolution_fix_20260830`): `prepare_sandbox` and
 > `run_code` now resolve sandbox and `solution.py` paths to absolute via
 > `.resolve()`, eliminating `[Errno 2]` when `runs_dir` is relative.
+>
+> **2026-08-31:** Hardened the data leakage guardrail and execution pipeline
+> (`leakage_guardrail_fix_20260831`): `DataLeakageCheckerAgent` now utilizes a
+> multi-tier patching strategy (exact match → fuzzy matching via
+> `find_matching_block` with indentation alignment → full-script rewrite
+> fallback). `ExecutionGuardrailPipeline` now runs a check→repair→re-check retry
+> loop up to `max_leakage_retries` (default 5), supports strict abortion mode via
+> `strict_leakage: bool = False` raising `LeakageEnforcementError`, and emits
+> unambiguous Logfire events (`execution.leakage_repaired`,
+> `execution.leakage_unrepaired`, `guardrails.leakage_repair.succeeded`).

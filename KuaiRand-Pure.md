@@ -10,28 +10,26 @@
 **Dataset Files:** log_standard_4_08_to_4_21_pure.csv, log_standard_4_22_to_5_08_pure.csv, video_features_basic_pure.csv, user_features_pure.csv, video_features_statistic_pure.csv
 
 **Description:**
-The goal of this task is within-user ranking over video impression logs from the KuaiRand-Pure dataset.
+The goal of this task is within-user ranking over logged video impressions from the KuaiRand-Pure dataset.
 Each user only has their impressions ranked in the evaluation split (no full-catalog retrieval is needed).
 The relevance target label is `long_view` (binary 0 or 1).
 
-### Evaluation Metrics
-The primary evaluation metric is the arithmetic mean of Group AUC (GAUC) and normalized Discounted Cumulative Gain at rank 5 (nDCG@5):
+### Evaluation Protocol & Metric Tooling (MANDATORY)
+All models, candidates, and ensembling stages must strictly evaluate validation performance using the official `evaluate.py` evaluation harness:
+```python
+from evaluate import evaluate
+
+# user_ids: sequence of validation user IDs
+# labels: sequence of validation binary labels (0 or 1)
+# scores: continuous real-valued prediction scores from model
+val_res = evaluate(val_user_ids, val_labels, val_predictions)
+print(f"Final Validation Performance: {val_res['primary']:.6f}")
+```
+
+The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized Discounted Cumulative Gain at rank 5 (nDCG@5):
 `primary = (GAUC + nDCG@5) / 2.0`
-
-This metric is computed by the official evaluation harness `src/baseline/evaluate.py`
-(`evaluate.evaluate(user_ids, labels, scores, k=5)`), which returns a dict with
-keys `GAUC`, `nDCG@5`, `primary`, `users`, and `rows`. Do **not** reimplement the
-metric — import `evaluate` in your sandboxed script (the module is importable because
-the workspace root and `src/baseline` are injected into the subprocess `PYTHONPATH`).
-The exact calculation rules (write-in-stone, per `evaluate.py`):
-
-1. **GAUC (Group AUC):** Computed with the Mann-Whitney U statistic (tie-corrected,
-   equivalent to `sklearn.metrics.roc_auc_score`). Only users with
-   `0 < positive_count < impression_count` contribute, weighted by the number of
-   positive impressions per user. If no eligible user exists, GAUC defaults to `0.5`.
-2. **nDCG@5:** Computed per user with gain `2^rel - 1` (equivalent to identity under
-   binary labels). All-negative users (27.1% of the dataset) receive an nDCG score of
-   `0.0` and are included in the mean. All-positive users (9.2%) receive `1.0`.
+- **GAUC:** Evaluated strictly on discriminative users where `0 < positive_count < impression_count`, weighted by positive impressions.
+- **nDCG@5:** Evaluated per user with gain `2^rel - 1`. All-negative users (27.1% of dataset) receive 0.0 and are included in the mean.
 
 ### Baseline Ladder & Oracle Headroom
 - **Random Baseline (Lower Bound):** Validation primary = 0.4834 | Test primary = 0.4753
@@ -60,23 +58,9 @@ The exact calculation rules (write-in-stone, per `evaluate.py`):
   - Do not use external datasets.
   - Subsample training data to at most 30,000 samples during iterative experimentation. Full training is reserved for final artifact production.
   - Guard against target leakage in categorical and target encodings (use out-of-fold / leave-one-out with shrinkage).
-- **Submission File Format:**
-  - Must be a CSV file with exact header: `row_id,user_id,video_id,score`
-    (the exact 4-column schema `["row_id", "user_id", "video_id", "score"]`
-    required by `src/baseline/submit.py`, `submit.HEADER`).
-  - `row_id`: 0-indexed contiguous integer matching the exact deterministic row
-    order of `data.load()["test"]` from `src/baseline/data.py` — which reads
-    `log_standard_4_08_to_4_21_pure.csv` first, then
-    `log_standard_4_22_to_5_08_pure.csv`, filters rows by the test date range, and
-    preserves the original file order.
-  - `user_id` and `video_id`: Redundant validation fields strictly aligned with test
-    set rows. `(user_id, video_id)` pairs are not unique (3.06% duplicate pairs in
-    test), making `row_id` necessary as the true primary key.
-  - `score`: Continuous real-valued model prediction (no NaN or Inf).
-  - Submissions are verified with the official harness
-    `python src/baseline/submit.py --check submission.csv --data_dir <data>`; it
-    rejects misaligned rows, non-contiguous `row_id`, wrong field counts, and
-    non-finite scores.
+- **Mandatory Evaluation & Submission Standards:**
+  - Every solution script must evaluate validation predictions with `evaluate()` from `evaluate.py`.
+  - The final production script must write `./final/submission.csv` with exact columns: `row_id,user_id,video_id,score` and must pass verification with `python3 submit.py --check ./final/submission.csv`.
 - **Convergence Rule:**
   - Convergence is defined as validation improvement delta <= epsilon = 0.002 over N = 3 consecutive iterations.
 - **Output Validation Score Standard:**

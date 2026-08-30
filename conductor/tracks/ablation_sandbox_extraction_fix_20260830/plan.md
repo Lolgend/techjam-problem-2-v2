@@ -1,6 +1,6 @@
 # Implementation Plan: Ablation Sandbox Collision & Code Extraction Resiliency Fix
 
-## Phase 1: Sandbox Preparation Hard-Link Idempotency (TDD)
+## Phase 1: Sandbox Preparation Hard-Link Idempotency (TDD) `[checkpoint: 135f490]`
 - [x] Task: Write failing unit tests for `prepare_sandbox` hard-link idempotency in `tests/runner/test_sandbox.py` (`135f490`)
     - [x] Test repeated `prepare_sandbox` calls with identical dataset files does not raise `SameFileError`
     - [x] Test `prepare_sandbox` properly replaces modified target files without collisions
@@ -9,7 +9,7 @@
     - [x] Update `SubprocessRunner.prepare_sandbox` in `src/problem_2_v2/runner/sandbox.py` to handle existing files, samefile checks, and `SameFileError`
     - [x] Update `AblationSummarizerAgent.summarize` in `src/problem_2_v2/refinement/ablation.py` and `src/problem_2_v2/refinement/pipeline.py` to scope ablation sandboxes (`sandbox_ablation_t{t}`)
     - [x] Verify sandbox unit tests pass (Green phase)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Multi-Tier Resilient Code Block Extraction (TDD)
 - [ ] Task: Write failing unit tests for resilient block extraction in `tests/refinement/test_extractor.py` and `tests/contracts/test_search_refinement.py`

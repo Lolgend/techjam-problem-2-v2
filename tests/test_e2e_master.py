@@ -259,49 +259,46 @@ class TestEndToEndMaster:
             await pipeline.run_async(str(task_file), str(data_dir), run_id="e2e_logs")
 
         runs_dir = tmp_path / "runs" / "e2e_logs"
-        expected = [
-            runs_dir / "branch_0" / "iteration_logs.jsonl",
-            runs_dir / "branch_1" / "iteration_logs.jsonl",
-            runs_dir / "iteration_logs.jsonl",
-            runs_dir / "final" / "iteration_logs.jsonl",
-        ]
-        for path in expected:
-            assert path.is_file(), f"missing log {path}"
-            lines = path.read_text(encoding="utf-8").splitlines()
-            assert lines, f"empty log {path}"
-            for line in lines:
-                entry = IterationLogEntry.model_validate_json(line)
-                assert entry.stage in {
-                    "INITIALIZATION",
-                    "REFINEMENT",
-                    "ENSEMBLING",
-                    "FINALIZATION",
-                }
+        unified = runs_dir / "iteration_logs.jsonl"
+        assert unified.is_file(), f"missing unified log {unified}"
+        lines = unified.read_text(encoding="utf-8").splitlines()
+        assert lines, f"empty unified log {unified}"
 
-        branch0 = [
-            IterationLogEntry.model_validate_json(line)
-            for line in (runs_dir / "branch_0" / "iteration_logs.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines()
-        ]
-        assert any(e.stage == "INITIALIZATION" for e in branch0)
-        assert any(e.stage == "REFINEMENT" for e in branch0)
+        entries = [IterationLogEntry.model_validate_json(line) for line in lines]
+        stages = [entry.stage for entry in entries]
+        for stage in ("INITIALIZATION", "REFINEMENT", "ENSEMBLING", "FINALIZATION"):
+            assert stage in stages, f"missing {stage} entries in unified log"
 
-        ensembling = [
-            IterationLogEntry.model_validate_json(line)
-            for line in (runs_dir / "iteration_logs.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines()
-        ]
-        assert all(e.stage == "ENSEMBLING" for e in ensembling)
+        refinement_idx = [i for i, s in enumerate(stages) if s == "REFINEMENT"]
+        ensembling_idx = [i for i, s in enumerate(stages) if s == "ENSEMBLING"]
+        finalization_idx = [i for i, s in enumerate(stages) if s == "FINALIZATION"]
+        assert refinement_idx and ensembling_idx and finalization_idx
+        assert max(refinement_idx) < min(ensembling_idx) < max(finalization_idx)
 
-        finalizer = [
-            IterationLogEntry.model_validate_json(line)
-            for line in (runs_dir / "final" / "iteration_logs.jsonl")
-            .read_text(encoding="utf-8")
-            .splitlines()
-        ]
-        assert any(e.iteration_id == "final_prod" for e in finalizer)
+        for entry in entries:
+            assert entry.stage in {
+                "INITIALIZATION",
+                "REFINEMENT",
+                "ENSEMBLING",
+                "FINALIZATION",
+            }
+
+        branch_indices = {
+            entry.branch_index
+            for entry in entries
+            if entry.stage in ("INITIALIZATION", "REFINEMENT")
+        }
+        assert branch_indices == {0, 1}
+        for stage in ("ENSEMBLING", "FINALIZATION"):
+            assert all(entry.branch_index is None for entry in entries if entry.stage == stage)
+
+        log_files = list(runs_dir.rglob("iteration_logs.jsonl"))
+        assert len(log_files) == 1, f"expected exactly one log file, found {log_files}"
+        assert log_files[0].resolve() == unified.resolve()
+        for nested in ("branch_0", "branch_1", "final"):
+            assert not (runs_dir / nested / "iteration_logs.jsonl").exists(), (
+                f"unexpected nested log {runs_dir / nested / 'iteration_logs.jsonl'}"
+            )
 
     def test_cli_run_copies_artifacts_to_output(self, tmp_path: Path, capsys, monkeypatch) -> None:
         task_file, data_dir = _write_task(tmp_path)

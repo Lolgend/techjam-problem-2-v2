@@ -231,7 +231,7 @@ class TestMLEStarConfig:
         config = MLEStarConfig()
         assert config.model == "openai:gpt-4o"
         assert config.search_provider == "duckduckgo"
-        assert config.num_candidates == 4
+        assert config.num_candidates == 3
         assert config.num_branches == 2
         assert config.outer_loops == 3
         assert config.inner_loops == 3
@@ -307,7 +307,7 @@ class TestMLEStarPipeline:
         init, refine = pipeline._build_branch(0)
         assert isinstance(init, InitializationPipeline)
         assert isinstance(refine, RefinementPipeline)
-        assert init.retriever.num_candidates == 4
+        assert init.retriever.num_candidates == 3
 
     def test_dry_run_validation(self, tmp_path: Path) -> None:
         task_file, data_dir = _write_task(tmp_path)

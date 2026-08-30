@@ -14,6 +14,7 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
+from problem_2_v2.contracts.iteration import IterationLogEntry
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.execution.finalizer import FinalArtifact, FinalArtifactProducer
 from problem_2_v2.execution.pipeline import ExecutionConfig
@@ -147,6 +148,34 @@ class TestFinalArtifactProducer:
         metrics_file.write_text(json.dumps({"auroc": 0.87, "note": "done"}), encoding="utf-8")
         parsed = producer._load_metrics(metrics_file)
         assert parsed == {"auroc": 0.87}
+
+
+class TestFinalizerIterationLogging:
+    """Test Stage 4 finalizer records in the unified iteration log."""
+
+    def test_produce_logs_finalization_entry(self, finalizer: FinalArtifactProducer) -> None:
+        with finalizer.agent.override(
+            model=TestModel(custom_output_text=f"```python\n{PRODUCTION_SCRIPT}\n```")
+        ):
+            artifact = finalizer.produce(WINNING_SOLUTION, _spec(), run_id="finlog")
+        assert artifact.success is True
+        log_path = (
+            Path(finalizer.debugger.runner.runs_dir) / "finlog" / "iteration_logs.jsonl"
+        )
+        assert log_path.is_file()
+        entries = [
+            IterationLogEntry.model_validate_json(line)
+            for line in log_path.read_text(encoding="utf-8").splitlines()
+        ]
+        assert len(entries) == 1
+        entry = entries[0]
+        assert entry.iteration_id == "final_prod"
+        assert entry.stage == "FINALIZATION"
+        assert entry.success is True
+        assert entry.validation_score == pytest.approx(0.87)
+        assert entry.metrics == {"auroc": 0.87}
+        assert entry.code_diff != ""
+        assert entry.target_component == "FINAL_PRODUCTION"
 
 
 class TestFinalizerSubmissionSchema:

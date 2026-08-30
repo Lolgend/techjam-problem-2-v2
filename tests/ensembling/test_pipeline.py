@@ -9,10 +9,10 @@ from pydantic_ai import ModelResponse, TextPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
+from problem_2_v2.contracts.iteration import IterationLogEntry
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.ensembling.ensembler import EnsemblerAgent
 from problem_2_v2.ensembling.pipeline import (
-    EnsembleIterationLogRecord,
     EnsemblePipeline,
     EnsembleResult,
 )
@@ -156,7 +156,7 @@ class TestEnsemblePipeline:
         assert result.best_score == pytest.approx(0.82)
         assert result.rounds_executed == 2
         records = [
-            EnsembleIterationLogRecord.model_validate_json(line)
+            IterationLogEntry.model_validate_json(line)
             for line in Path(result.logs_path or "").read_text(encoding="utf-8").splitlines()
         ]
         assert all(record.success is False for record in records)
@@ -176,8 +176,9 @@ class TestEnsemblePipeline:
             for line in Path(result.logs_path or "").read_text(encoding="utf-8").splitlines()
         ]
         assert len(records) == 2
-        assert records[0]["round_index"] == 0
-        assert records[1]["round_index"] == 1
-        assert records[0]["method"] == "SIMPLE_AVERAGE"
+        assert records[0]["iteration_id"] == "ens_r0"
+        assert records[0]["stage"] == "ENSEMBLING"
+        assert records[0]["target_component"] == "ENSEMBLE_SIMPLE_AVERAGE"
+        assert records[0]["hypothesis"] == plan0
         assert records[0]["validation_score"] == pytest.approx(0.85)
         assert records[0]["delta_from_baseline"] == pytest.approx(0.03)

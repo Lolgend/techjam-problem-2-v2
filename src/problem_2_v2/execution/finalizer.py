@@ -17,7 +17,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 
 from problem_2_v2.console import announce, format_score
-from problem_2_v2.contracts.code_utils import extract_python_code, validate_python_syntax
+from problem_2_v2.contracts.code_utils import (
+    compute_code_diff,
+    extract_python_code,
+    validate_python_syntax,
+)
+from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.execution.pipeline import ExecutionConfig
 from problem_2_v2.runner.debugger import DebuggerAgent
@@ -174,12 +179,45 @@ class FinalArtifactProducer:
         announce(
             f"[Finalizer] Production run complete. Score: {format_score(result.validation_score)}"
         )
+
+        model_paths = self._model_paths(final_dir)
+        metrics = self._load_metrics(final_dir / "metrics.json")
+        submission_path = self._submission_path(final_dir)
+        errors: list[str] = []
+        if outcome.debug_rounds > 0:
+            errors.append(f"debugger applied {outcome.debug_rounds} repair round(s)")
+        if result.stderr:
+            errors.append(result.stderr[-500:])
+        CentralIterationLogger.for_run(self.debugger.runner.runs_dir, run_id).append(
+            IterationLogEntry(
+                iteration_id="final_prod",
+                stage="FINALIZATION",
+                hypothesis=(
+                    "Full-dataset training and production artifact generation. "
+                    f"Serialized models: {', '.join(model_paths) or 'none'}. "
+                    f"Submission: {submission_path or 'none'}."
+                ),
+                code_diff=compute_code_diff(code, outcome.code),
+                metrics=metrics,
+                validation_score=result.validation_score,
+                delta_from_baseline=(
+                    result.validation_score - spec.baseline_score
+                    if result.validation_score is not None and spec.baseline_score is not None
+                    else None
+                ),
+                error_recovery_events=errors,
+                success=result.validation_score is not None,
+                target_component="FINAL_PRODUCTION",
+                branch_index=None,
+                duration_seconds=result.duration_seconds,
+            )
+        )
         return FinalArtifact(
             code=outcome.code,
             output_dir=str(final_dir),
-            model_paths=self._model_paths(final_dir),
-            metrics=self._load_metrics(final_dir / "metrics.json"),
-            submission_path=self._submission_path(final_dir),
+            model_paths=model_paths,
+            metrics=metrics,
+            submission_path=submission_path,
             validation_score=result.validation_score,
             success=result.validation_score is not None,
         )

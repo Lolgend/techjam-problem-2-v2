@@ -16,6 +16,7 @@ from pydantic_ai.models.test import TestModel
 
 from problem_2_v2 import main
 from problem_2_v2.config import MLEStarConfig
+from problem_2_v2.contracts.iteration import IterationLogEntry
 from problem_2_v2.execution.finalizer import FinalArtifact
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
@@ -249,6 +250,58 @@ class TestEndToEndMaster:
         assert (output / "model.joblib").exists()
         assert result.final_artifact.submission_path is not None
         assert result.final_artifact.metrics == {"auroc": 0.90}
+
+    async def test_master_run_streams_unified_iteration_logs(self, tmp_path: Path) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        pipeline = _pipeline(tmp_path)
+
+        with _override_agents(pipeline):
+            await pipeline.run_async(str(task_file), str(data_dir), run_id="e2e_logs")
+
+        runs_dir = tmp_path / "runs" / "e2e_logs"
+        expected = [
+            runs_dir / "branch_0" / "iteration_logs.jsonl",
+            runs_dir / "branch_1" / "iteration_logs.jsonl",
+            runs_dir / "iteration_logs.jsonl",
+            runs_dir / "final" / "iteration_logs.jsonl",
+        ]
+        for path in expected:
+            assert path.is_file(), f"missing log {path}"
+            lines = path.read_text(encoding="utf-8").splitlines()
+            assert lines, f"empty log {path}"
+            for line in lines:
+                entry = IterationLogEntry.model_validate_json(line)
+                assert entry.stage in {
+                    "INITIALIZATION",
+                    "REFINEMENT",
+                    "ENSEMBLING",
+                    "FINALIZATION",
+                }
+
+        branch0 = [
+            IterationLogEntry.model_validate_json(line)
+            for line in (runs_dir / "branch_0" / "iteration_logs.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        assert any(e.stage == "INITIALIZATION" for e in branch0)
+        assert any(e.stage == "REFINEMENT" for e in branch0)
+
+        ensembling = [
+            IterationLogEntry.model_validate_json(line)
+            for line in (runs_dir / "iteration_logs.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        assert all(e.stage == "ENSEMBLING" for e in ensembling)
+
+        finalizer = [
+            IterationLogEntry.model_validate_json(line)
+            for line in (runs_dir / "final" / "iteration_logs.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        assert any(e.iteration_id == "final_prod" for e in finalizer)
 
     def test_cli_run_copies_artifacts_to_output(self, tmp_path: Path, capsys, monkeypatch) -> None:
         task_file, data_dir = _write_task(tmp_path)

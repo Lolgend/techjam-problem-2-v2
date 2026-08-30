@@ -9,46 +9,19 @@ best single candidate).
 
 from __future__ import annotations
 
-from datetime import datetime
-from pathlib import Path
-
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
 from problem_2_v2.console import announce, format_delta, format_score
+from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
 from problem_2_v2.contracts.guardrails import EnsembleStrategy
+from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.ensembling.ensembler import EnsemblerAgent
 from problem_2_v2.ensembling.planner import EnsemblePlannerAgent
 from problem_2_v2.execution.pipeline import ExecutionGuardrailPipeline
 from problem_2_v2.runner.sandbox import SubprocessRunner
-
-
-class EnsembleIterationLogRecord(BaseModel):
-    """Structured log record streamed per ensemble round.
-
-    Attributes:
-        round_index: Ensemble round index (r).
-        method: Ensembling method applied.
-        plan: Natural-language plan text.
-        validation_score: Score of the merged script, if any.
-        delta_from_baseline: Signed delta over the best individual score.
-        success: Whether the round produced a score.
-        errors: Error events encountered.
-        timestamp: When the round finished.
-    """
-
-    model_config = ConfigDict(extra="forbid", validate_assignment=True)
-
-    round_index: int = Field(description="Ensemble round index.")
-    method: str = Field(description="Ensembling method.")
-    plan: str = Field(description="Plan text.")
-    validation_score: float | None = Field(default=None, description="Merged score.")
-    delta_from_baseline: float | None = Field(default=None, description="Delta over baseline.")
-    success: bool = Field(description="Whether the round produced a score.")
-    errors: list[str] = Field(default_factory=list, description="Error events.")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now().astimezone())
 
 
 class EnsembleResult(BaseModel):
@@ -127,8 +100,7 @@ class EnsemblePipeline:
         Returns:
             An ``EnsembleResult`` with the optimal solution artifact.
         """
-        logs_path = Path(self.runner.runs_dir) / run_id / "iteration_logs.jsonl"
-        logs_path.parent.mkdir(parents=True, exist_ok=True)
+        logger = CentralIterationLogger.for_run(self.runner.runs_dir, run_id)
         direction = spec.metric_direction
 
         best_individual = max(solutions, key=lambda a: a.validation_score or float("-inf"))
@@ -162,17 +134,21 @@ class EnsemblePipeline:
                         )
                     except Exception as exc:
                         logfire.warn("ensembling.ensembler.failed", r=r, error=str(exc))
-                        self._append_log(
-                            logs_path,
-                            EnsembleIterationLogRecord(
-                                round_index=r,
-                                method=strategy.method.value,
-                                plan=strategy.natural_language_plan,
+                        logger.append(
+                            IterationLogEntry(
+                                iteration_id=f"ens_r{r}",
+                                stage="ENSEMBLING",
+                                hypothesis=strategy.natural_language_plan,
+                                code_diff="",
+                                metrics={},
                                 validation_score=None,
                                 delta_from_baseline=None,
+                                error_recovery_events=[str(exc)],
                                 success=False,
-                                errors=[str(exc)],
-                            ),
+                                target_component=f"ENSEMBLE_{strategy.method.value}",
+                                branch_index=None,
+                                duration_seconds=None,
+                            )
                         )
                         continue
                 attempts.append((strategy, run.score))
@@ -187,21 +163,27 @@ class EnsemblePipeline:
                     f"'{strategy.method.value}' -> "
                     f"Score: {format_score(run.score)} (Δ {format_delta(round_delta)})"
                 )
-                self._append_log(
-                    logs_path,
-                    EnsembleIterationLogRecord(
-                        round_index=r,
-                        method=strategy.method.value,
-                        plan=strategy.natural_language_plan,
+                logger.append(
+                    IterationLogEntry(
+                        iteration_id=f"ens_r{r}",
+                        stage="ENSEMBLING",
+                        hypothesis=strategy.natural_language_plan,
+                        code_diff=compute_code_diff(best_individual.full_code, run.code),
+                        metrics={},
                         validation_score=run.score,
                         delta_from_baseline=round_delta,
-                        success=run.success,
-                        errors=(
+                        error_recovery_events=(
                             [run.result.stderr[-500:]]
                             if not run.success and run.result is not None and run.result.stderr
                             else []
                         ),
-                    ),
+                        success=run.success,
+                        target_component=f"ENSEMBLE_{strategy.method.value}",
+                        branch_index=None,
+                        duration_seconds=(
+                            run.result.duration_seconds if run.result is not None else None
+                        ),
+                    )
                 )
                 if run.score is not None and self._accepts(run.score, best_score, direction):
                     best_score = run.score
@@ -226,7 +208,7 @@ class EnsemblePipeline:
             best_score=best_score,
             best_code=best_code,
             best_submission_path=best_submission,
-            logs_path=str(logs_path),
+            logs_path=str(logger.logs_path),
             rounds_executed=rounds_executed,
         )
 
@@ -242,9 +224,3 @@ class EnsemblePipeline:
         if best is None:
             return True
         return candidate == best or direction.is_better(candidate, best)
-
-    @staticmethod
-    def _append_log(logs_path: Path, record: EnsembleIterationLogRecord) -> None:
-        """Append a JSON line to the iteration log file."""
-        with logs_path.open("a", encoding="utf-8") as handle:
-            handle.write(record.model_dump_json() + "\n")

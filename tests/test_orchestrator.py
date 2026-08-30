@@ -17,6 +17,7 @@ from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.config import MLEStarConfig
 from problem_2_v2.contracts.task import TaskSpecification
+from problem_2_v2.execution.finalizer import FinalArtifact
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
 from problem_2_v2.ingestion.extractor import TaskExtractor
@@ -268,6 +269,10 @@ class TestMLEStarConfig:
         with pytest.raises(ValidationError):
             MLEStarConfig(num_branches=0)
 
+    def test_zero_ensemble_rounds_accepted(self) -> None:
+        config = MLEStarConfig(ensemble_rounds=0)
+        assert config.ensemble_rounds == 0
+
 
 class TestMLEStarPipeline:
     """Test the 5-stage master coordination."""
@@ -414,3 +419,82 @@ class TestMLEStarPipeline:
         assert result.ensemble_result is None
         assert result.final_artifact is None
         assert result.score_delta is None
+
+    async def test_single_branch_skips_ensembling(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        pipeline = MLEStarPipeline(
+            config=MLEStarConfig(
+                runs_dir=str(tmp_path / "runs"),
+                num_branches=1,
+                ensemble_rounds=2,
+                timeout_seconds=5,
+            ),
+            branch_builder=_branch_factory(tmp_path),
+            search_provider=MockSearchProvider(),
+        )
+        captured: dict[str, str] = {}
+        original = pipeline.finalizer.produce
+
+        def spy_produce(
+            code: str, spec: TaskSpecification, run_id: str = "finalize"
+        ) -> FinalArtifact:
+            captured["code"] = code
+            captured["run_id"] = run_id
+            return original(code, spec, run_id)
+
+        monkeypatch.setattr(pipeline.finalizer, "produce", spy_produce)
+
+        with _override_agents(pipeline):
+            result = await pipeline.run_async(str(task_file), str(data_dir), run_id="single1")
+
+        out = capsys.readouterr().out
+        assert result.success is True
+        assert result.ensemble_result is None
+        assert result.final_artifact is not None
+        assert result.final_score == pytest.approx(0.90)
+        assert "Adaptive Ensembling skipped (single candidate" in out
+        assert "seed0" in captured["code"]
+        assert captured["run_id"] == "single1/final"
+
+    async def test_zero_ensemble_rounds_skips_ensembling(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        pipeline = MLEStarPipeline(
+            config=MLEStarConfig(
+                runs_dir=str(tmp_path / "runs"),
+                num_branches=2,
+                ensemble_rounds=0,
+                timeout_seconds=5,
+            ),
+            branch_builder=_branch_factory(tmp_path),
+            search_provider=MockSearchProvider(),
+        )
+        captured: dict[str, str] = {}
+        original = pipeline.finalizer.produce
+
+        def spy_produce(
+            code: str, spec: TaskSpecification, run_id: str = "finalize"
+        ) -> FinalArtifact:
+            captured["code"] = code
+            return original(code, spec, run_id)
+
+        monkeypatch.setattr(pipeline.finalizer, "produce", spy_produce)
+
+        with _override_agents(pipeline):
+            result = await pipeline.run_async(str(task_file), str(data_dir), run_id="zero_rounds")
+
+        out = capsys.readouterr().out
+        assert result.success is True
+        assert result.ensemble_result is None
+        assert result.final_artifact is not None
+        assert "Adaptive Ensembling skipped (ensemble_rounds=0" in out
+        assert "seed1" in captured["code"]

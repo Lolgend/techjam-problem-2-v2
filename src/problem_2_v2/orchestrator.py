@@ -242,7 +242,7 @@ class MLEStarPipeline:
             )
 
             ensemble_result: EnsembleResult | None = None
-            if artifacts:
+            if len(artifacts) > 1 and self.config.ensemble_rounds > 0:
                 announce(
                     f"[Stage 3/4] Adaptive Ensembling ({self.config.ensemble_rounds} rounds)..."
                 )
@@ -250,9 +250,17 @@ class MLEStarPipeline:
                     ensemble_result = await asyncio.to_thread(
                         self.ensemble_pipeline.run, spec, artifacts, run_id
                     )
+            elif len(artifacts) == 1:
+                announce(
+                    "[Stage 3/4] Adaptive Ensembling skipped "
+                    "(single candidate; forwarding to finalizer)..."
+                )
+            elif len(artifacts) > 1 and self.config.ensemble_rounds == 0:
+                announce(
+                    "[Stage 3/4] Adaptive Ensembling skipped "
+                    "(ensemble_rounds=0; selecting best candidate)..."
+                )
             else:
-                import sys
-
                 print(
                     "[MLE-STAR] Warning: No candidate solutions were produced "
                     "across parallel branches.",
@@ -260,11 +268,14 @@ class MLEStarPipeline:
                 )
 
             final_artifact: FinalArtifact | None = None
-            best_code = (
-                ensemble_result.best_code
-                if ensemble_result is not None
-                else (artifacts[0].full_code if artifacts else None)
-            )
+            if ensemble_result is not None:
+                best_code: str | None = ensemble_result.best_code
+            elif artifacts:
+                best_code = max(
+                    artifacts, key=lambda artifact: artifact.validation_score or float("-inf")
+                ).full_code
+            else:
+                best_code = None
             if best_code:
                 announce(
                     "[Stage 4/4] Production Finalization "

@@ -42,7 +42,7 @@ class MLEStarConfig(BaseModel):
     num_branches: int = Field(default=2, gt=0, description="Parallel branches (L).")
     outer_loops: int = Field(default=3, gt=0, description="Outer iterations (T).")
     inner_loops: int = Field(default=3, gt=0, description="Inner iterations (K).")
-    ensemble_rounds: int = Field(default=3, gt=0, description="Ensemble rounds (R).")
+    ensemble_rounds: int = Field(default=3, ge=0, description="Ensemble rounds (R).")
     seeds: list[int] | None = Field(
         default=None,
         description="Per-branch random seeds (e.g. [42, 123]); None means range(num_branches).",

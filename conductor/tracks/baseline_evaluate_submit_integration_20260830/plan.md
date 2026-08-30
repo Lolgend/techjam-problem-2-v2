@@ -12,7 +12,7 @@
 - [x] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md) (a570d07)
 
 ## Phase 3: CLI Submission Verification & Full Integration
-- [ ] Task: Write failing unit tests for CLI automated submission check in `tests/test_cli.py`
-- [ ] Task: Implement automated submission verification with `submit.py --check` in `src/problem_2_v2/cli.py`
-- [ ] Task: Run full test suite and verify end-to-end integration
+- [x] Task: Write failing unit tests for CLI automated submission check in `tests/test_cli.py` (67cae2c, pre-existing & verified)
+- [x] Task: Implement automated submission verification with `submit.py --check` in `src/problem_2_v2/cli.py` (67cae2c, 2877dc3, pre-existing & verified)
+- [x] Task: Run full test suite and verify end-to-end integration (verified: 374 passed, real check True)
 - [ ] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md)

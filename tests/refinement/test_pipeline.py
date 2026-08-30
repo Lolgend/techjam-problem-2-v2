@@ -5,6 +5,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from pydantic_ai import ModelResponse, TextPart
+from pydantic_ai.messages import ModelRequest
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.iteration import IterationLogEntry
@@ -201,8 +204,6 @@ class TestRefinementPipeline:
         def exploding_model(messages, info):
             raise RuntimeError("LLM backend down")
 
-        from pydantic_ai.models.function import FunctionModel
-
         with (
             pipeline.ablation.agent.override(
                 model=TestModel(custom_output_text="print('ablation done')")
@@ -232,8 +233,6 @@ class TestRefinementPipeline:
         def exploding_model(messages, info):
             raise RuntimeError("LLM backend down")
 
-        from pydantic_ai.models.function import FunctionModel
-
         with (
             pipeline.ablation.agent.override(
                 model=TestModel(custom_output_text="print('ablation done')")
@@ -252,3 +251,81 @@ class TestRefinementPipeline:
             )
         assert result.final_score == pytest.approx(0.80)
         assert result.final_code == INITIAL_CODE
+
+    def test_inner_step_repairs_syntax_error_with_error_feedback(
+        self, pipeline: RefinementPipeline
+    ) -> None:
+        pipeline.inner_loops = 1
+        calls = {"count": 0}
+
+        def flaky_coder(
+            messages: list[ModelRequest | ModelResponse], info: AgentInfo
+        ) -> ModelResponse:
+            calls["count"] += 1
+            if calls["count"] == 1:
+                return ModelResponse(parts=[TextPart(content="```python\nif True:\n```")])
+            return ModelResponse(parts=[TextPart(content=f"```python\n{REFINED_BLOCK}\n```")])
+
+        with (
+            pipeline.ablation.agent.override(
+                model=TestModel(custom_output_text="print('ablation done')")
+            ),
+            pipeline.summarizer.agent.override(model=TestModel(custom_output_args=_report_args())),
+            pipeline.extractor.agent.override(
+                model=TestModel(custom_output_args=_extractor_args())
+            ),
+            pipeline.planner.agent.override(
+                model=TestModel(custom_output_text="improve the model")
+            ),
+            pipeline.coder.agent.override(model=FunctionModel(function=flaky_coder)),
+            pipeline.leakage.check_agent.override(
+                model=TestModel(custom_output_args=_leak_clean_args())
+            ),
+            pipeline.usage.agent.override(
+                model=TestModel(custom_output_text="All the provided information is used.")
+            ),
+        ):
+            result = pipeline.refine(_spec(), INITIAL_CODE, initial_score=0.80, run_id="repair")
+        assert result.final_score == pytest.approx(0.85)
+        assert result.final_code == IMPROVED_SCRIPT
+        assert calls["count"] >= 2
+
+    def test_inner_step_falls_back_to_debugger_on_persistent_errors(
+        self, pipeline: RefinementPipeline
+    ) -> None:
+        pipeline.inner_loops = 1
+        repair_calls = {"count": 0}
+
+        def always_bad_coder(
+            messages: list[ModelRequest | ModelResponse], info: AgentInfo
+        ) -> ModelResponse:
+            repair_calls["count"] += 1
+            return ModelResponse(parts=[TextPart(content="```python\nif True:\n```")])
+
+        with (
+            pipeline.ablation.agent.override(
+                model=TestModel(custom_output_text="print('ablation done')")
+            ),
+            pipeline.summarizer.agent.override(model=TestModel(custom_output_args=_report_args())),
+            pipeline.extractor.agent.override(
+                model=TestModel(custom_output_args=_extractor_args())
+            ),
+            pipeline.planner.agent.override(
+                model=TestModel(custom_output_text="improve the model")
+            ),
+            pipeline.coder.agent.override(model=FunctionModel(function=always_bad_coder)),
+            pipeline.leakage.check_agent.override(
+                model=TestModel(custom_output_args=_leak_clean_args())
+            ),
+            pipeline.usage.agent.override(
+                model=TestModel(custom_output_text="All the provided information is used.")
+            ),
+            pipeline.debugger.agent.override(
+                model=TestModel(custom_output_text=f"```python\n{IMPROVED_SCRIPT}\n```")
+            ),
+        ):
+            result = pipeline.refine(
+                _spec(), INITIAL_CODE, initial_score=0.80, run_id="debugfallback"
+            )
+        assert result.final_score == pytest.approx(0.85)
+        assert repair_calls["count"] >= 2

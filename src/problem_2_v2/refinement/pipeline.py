@@ -26,7 +26,7 @@ from problem_2_v2.execution.pipeline import ExecutionConfig, ExecutionGuardrailP
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent
 from problem_2_v2.guardrails.usage import DataUsageCheckerAgent
 from problem_2_v2.refinement.ablation import AblationAgent, AblationSummarizerAgent
-from problem_2_v2.refinement.coder import CoderAgent, patch_script
+from problem_2_v2.refinement.coder import CoderAgent, patch_script, patch_script_best_effort
 from problem_2_v2.refinement.extractor import CodeBlockExtractorAgent
 from problem_2_v2.refinement.planner import RefinementPlannerAgent
 from problem_2_v2.runner.debugger import DebuggerAgent
@@ -366,7 +366,24 @@ class RefinementPipeline:
 
         try:
             refined = self.coder.refine(block, plan)
-            patched = patch_script(base_code, block.raw_code, refined)
+            try:
+                patched = patch_script(base_code, block.raw_code, refined)
+            except ValueError as exc:
+                errors.append(str(exc))
+                try:
+                    repaired = self.coder.repair(block, plan, refined, str(exc))
+                except Exception as repair_exc:
+                    repaired = refined
+                    errors.append(f"coder repair failed: {repair_exc}")
+                try:
+                    patched = patch_script(base_code, block.raw_code, repaired)
+                except ValueError as exc2:
+                    errors.append(f"in-step repair failed: {exc2}")
+                    try:
+                        patched = patch_script_best_effort(base_code, block.raw_code, repaired)
+                    except ValueError as exc3:
+                        errors.append(f"best-effort stitch failed: {exc3}")
+                        patched = base_code
             candidate_code = patched
 
             result = self.execution.run(
@@ -385,8 +402,6 @@ class RefinementPipeline:
                 errors.append(result.stderr[-500:])
             if guarded != patched:
                 errors.append("guardrails modified the candidate")
-        except ValueError as exc:
-            errors.append(str(exc))
         except Exception as exc:
             errors.append(f"inner step failed: {exc}")
 

@@ -318,6 +318,28 @@ class TargetCodeBlock(BaseModel):
             raise ValueError(f"Replacement produced invalid Python: {error}")
         return candidate
 
+    def stitch_unchecked(self, full_script: str, new_code: str) -> str:
+        """Substitute the block without syntax validation (best-effort).
+
+        Performs the same indentation-aligned substitution as
+        ``replace_in`` but skips the final syntax check so a
+        partially-correct candidate can be handed to the debugger for
+        full-script repair.
+
+        Args:
+            full_script: The complete solution script.
+            new_code: The replacement code block (possibly invalid).
+
+        Returns:
+            The best-effort stitched script (possibly invalid Python).
+
+        Raises:
+            ValueError: If the block cannot be located.
+        """
+        if self.start_line is not None and self.end_line is not None:
+            return self._replace_by_lines(full_script, new_code)
+        return self._replace_by_substring(full_script, new_code)
+
     def _replace_by_substring(self, full_script: str, new_code: str) -> str:
         pattern = self._build_pattern()
         match = pattern.search(full_script)

@@ -66,6 +66,35 @@ def patch_script(script: str, target_code: str, replacement: str) -> str:
     return block.replace_in(script, replacement)
 
 
+def patch_script_best_effort(script: str, target_code: str, replacement: str) -> str:
+    """Stitch ``replacement`` into ``script`` without syntax validation.
+
+    Uses the same indentation-tolerant matching and alignment as
+    :func:`patch_script` but skips the final syntax check so a
+    partially-correct candidate can be handed to the debugger for
+    full-script repair.
+
+    Args:
+        script: The full solution script.
+        target_code: The code block to replace.
+        replacement: The replacement code block (possibly invalid).
+
+    Returns:
+        The best-effort stitched script (possibly invalid Python).
+
+    Raises:
+        ValueError: If the target block cannot be located.
+    """
+    block = TargetCodeBlock(
+        raw_code=target_code,
+        category=ComponentCategory.MODEL_ARCHITECTURE,
+        start_line=None,
+        end_line=None,
+        initial_plan="",
+    )
+    return block.stitch_unchecked(script, replacement)
+
+
 class CoderAgent:
     """Transforms an extracted target block into a refined block.
 
@@ -104,5 +133,37 @@ class CoderAgent:
             f"block. Do not remove subsampling if exists."
         )
         with logfire.span("coder.refine", plan_id=plan.plan_id):
+            response = self.agent.run_sync(prompt)
+        return extract_python_code(response.output)
+
+    def repair(
+        self,
+        target_block: TargetCodeBlock,
+        plan: RefinementPlan,
+        invalid_code: str,
+        error_message: str,
+    ) -> str:
+        """Re-prompt the LLM to fix a refined block that failed validation.
+
+        Args:
+            target_block: The original extracted block.
+            plan: The refinement plan being implemented.
+            invalid_code: The refined block that failed validation.
+            error_message: The exact syntax/indentation error feedback.
+
+        Returns:
+            The cleaned repaired code block (markdown fences stripped).
+        """
+        prompt = (
+            f"# Code block\n{target_block.raw_code}\n"
+            f"# Improvement plan\n{plan.natural_language_plan}\n"
+            f"# Your previous refined block\n{invalid_code}\n"
+            f"# Error feedback\n{error_message}\n"
+            f"# Your task\nYour previous refined block failed validation "
+            f"with the error above. Fix the syntax and indentation errors "
+            f"so the block is valid Python, matching the indentation of the "
+            f"original code block. Do not remove subsampling if exists."
+        )
+        with logfire.span("coder.repair", plan_id=plan.plan_id):
             response = self.agent.run_sync(prompt)
         return extract_python_code(response.output)

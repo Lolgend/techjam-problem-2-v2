@@ -6,7 +6,6 @@ with zero delay, and score/delta formatters render ``None`` gracefully.
 
 from __future__ import annotations
 
-
 _VERBOSE: bool = False
 
 

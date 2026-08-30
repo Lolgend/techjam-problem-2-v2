@@ -192,14 +192,10 @@ class SubprocessRunner:
 
         if is_verbose():
             if result.stdout.strip():
-                print(
-                    f"\n--- [Sandbox Output ({sandbox.name})] ---\n{result.stdout.strip()}\n----------------------------------------",
-                    flush=True,
-                )
+                header = f"--- [Sandbox Output ({sandbox.name})] ---"
+                print(f"\n{header}\n{result.stdout.strip()}\n{'=' * len(header)}", flush=True)
             if result.stderr.strip():
-                print(
-                    f"\n--- [Sandbox Stderr ({sandbox.name})] ---\n{result.stderr.strip()}\n----------------------------------------",
-                    flush=True,
-                )
+                header = f"--- [Sandbox Stderr ({sandbox.name})] ---"
+                print(f"\n{header}\n{result.stderr.strip()}\n{'=' * len(header)}", flush=True)
 
         return result

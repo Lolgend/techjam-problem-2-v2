@@ -155,8 +155,8 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
             token=os.environ.get("LOGFIRE_TOKEN"),
         )
         logfire.instrument_pydantic_ai()
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"Warning: logfire telemetry unavailable: {exc}", file=sys.stderr)
 
     if args.base_url:
         os.environ["OPENAI_BASE_URL"] = args.base_url

@@ -202,7 +202,8 @@ class TestEndToEndEnsembling:
         assert "0.90" in result.best_code
         logs_path = Path(result.logs_path or "")
         records = [json.loads(line) for line in logs_path.read_text(encoding="utf-8").splitlines()]
-        assert len(records) == 2
+        ensembling_records = [r for r in records if r["stage"] == "ENSEMBLING"]
+        assert len(ensembling_records) == 2
 
 
 def _spec():

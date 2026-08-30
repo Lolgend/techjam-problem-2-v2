@@ -15,7 +15,7 @@ Each user only has their impressions ranked in the evaluation split (no full-cat
 The relevance target label is `long_view` (binary 0 or 1).
 
 ### Evaluation Protocol & Metric Tooling (MANDATORY)
-All models, candidates, and ensembling stages must strictly evaluate validation performance using the official `evaluate.py` evaluation harness:
+All models, candidates, and ensembling stages must strictly evaluate validation performance using the official `evaluate.py` evaluation harness, it is model-agnostic — it takes only (user_ids, labels, scores), so any model can be scored with it:
 ```python
 from evaluate import evaluate
 
@@ -54,6 +54,8 @@ The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized D
   - Train period: `20220408` to `20220421` (from `log_standard_4_08_to_4_21_pure.csv`).
   - Validation period: `20220422` to `20220428` (from `log_standard_4_22_to_5_08_pure.csv`).
   - Test period: `20220429` to `20220508` (from `log_standard_4_22_to_5_08_pure.csv`).
+  - Develop on train + validation only; the hidden test set is scored once. 
+  - Splitting by date rather than by row count avoids any tie-breaking ambiguity on equal timestamps.
 - **Data Leakage & Subsampling:**
   - Do not use external datasets.
   - Subsample training data to at most 30,000 samples during iterative experimentation. Full training is reserved for final artifact production.

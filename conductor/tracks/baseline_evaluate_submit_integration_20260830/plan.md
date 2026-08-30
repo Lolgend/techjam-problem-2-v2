@@ -7,8 +7,8 @@
 - [x] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md) (86b34f9)
 
 ## Phase 2: Agent Prompt Alignment & Submission Formatting (TDD)
-- [ ] Task: Write failing unit tests for `FinalArtifactProducer` and `CandidateEvaluatorAgent` prompts in `tests/test_finalizer.py` and `tests/test_evaluator.py`
-- [ ] Task: Update agent prompts in `evaluator.py`, `coder.py`, and `finalizer.py` to mandate `evaluate.py` and `submit.py`
+- [x] Task: Write failing unit tests for `FinalArtifactProducer` and `CandidateEvaluatorAgent` prompts in `tests/test_finalizer.py` and `tests/test_evaluator.py` (a570d07)
+- [x] Task: Update agent prompts in `evaluator.py`, `coder.py`, and `finalizer.py` to mandate `evaluate.py` and `submit.py` (a570d07)
 - [ ] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: CLI Submission Verification & Full Integration

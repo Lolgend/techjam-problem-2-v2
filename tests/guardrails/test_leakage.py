@@ -100,15 +100,15 @@ class TestDataLeakageCheckerAgent:
             repaired = checker.repair(LEAKY_CODE, SUSPICIOUS_BLOCK)
         assert repaired == LEAKY_CODE
 
-    def test_repair_raises_when_block_not_found(self) -> None:
+    def test_repair_falls_through_when_block_not_found(self) -> None:
         checker = DataLeakageCheckerAgent(model="test")
-        with (
-            checker.repair_agent.override(
-                model=TestModel(custom_output_text="```python\nx = 1\n```")
-            ),
-            pytest.raises(ValueError, match="not found"),
+        with checker.repair_agent.override(
+            model=TestModel(custom_output_text="```python\nx = 1\n```")
         ):
-            checker.repair(CLEAN_CODE, "block that is not there")
+            # Previously raised ValueError; now falls through to full-script
+            # rewrite and returns whatever the repair agent produces.
+            result = checker.repair(CLEAN_CODE, "block that is not there")
+        assert isinstance(result, str)
 
     def test_audit_fixes_leaky_code(self) -> None:
         checker = DataLeakageCheckerAgent(model="test")

@@ -11,9 +11,8 @@ import logfire
 from pydantic_ai import Agent
 
 from problem_2_v2.contracts.code_utils import extract_python_code
-from problem_2_v2.contracts.enums import ComponentCategory
 from problem_2_v2.contracts.guardrails import DataLeakageStatus
-from problem_2_v2.contracts.refinement import TargetCodeBlock, block_in_script
+from problem_2_v2.contracts.refinement import align_replacement_indent, find_matching_block
 
 _CHECK_INSTRUCTIONS = (
     "You audit Python machine learning code for data leakage.\n"
@@ -98,16 +97,17 @@ class DataLeakageCheckerAgent:
     def repair(self, code: str, suspicious_block: str) -> str:
         """Repair a leaky preprocessing block and patch it into the script.
 
+        Uses a multi-tier patching strategy (exact match → fuzzy match →
+        full-script rewrite) so that formatting differences between the
+        flagged block and the actual script never cause silent failures.
+
         Args:
             code: The full solution script.
             suspicious_block: The exact block flagged as leaky.
 
         Returns:
-            The patched solution script with the corrected block.
-
-        Raises:
-            ValueError: If the corrected block cannot be located in the
-                solution (e.g. the flagged block is stale).
+            The patched solution script with the corrected block, or the
+            original script unchanged when all repair tiers are exhausted.
         """
         with logfire.span("guardrails.leakage_repair"):
             prompt = f"# Python code\n{code}\n# Your task\nRefine the code to prevent data leakage."
@@ -132,24 +132,68 @@ class DataLeakageCheckerAgent:
         status = self.check(code)
         if not status.is_leaking or not status.suspicious_code_block:
             return status, code
-        try:
-            repaired = self.repair(code, status.suspicious_code_block)
-        except ValueError:
-            logfire.warn("guardrails.leakage_repair.failed")
-            return status, code
+        repaired = self.repair(code, status.suspicious_code_block)
         return status, repaired
 
-    @staticmethod
-    def _patch(code: str, original: str, corrected: str) -> str:
-        """Replace the original block with the corrected one, AST-safe."""
+    def _patch(self, code: str, original: str, corrected: str) -> str:
+        """Replace the original block with the corrected one using multi-tier matching.
+
+        Tiers:
+          1. Exact ``str.replace`` when the suspicious block is verbatim.
+          2. Fuzzy match via ``find_matching_block()`` with whitespace
+             normalization, quote unification, and AST fallback, then
+             replace the matched segment with indentation-aligned correction.
+          3. Full-script rewrite: ask the repair agent to rewrite the
+             entire script with leakage fixed.
+
+        Args:
+            code: The full solution script.
+            original: The suspicious block to locate.
+            corrected: The corrected replacement block.
+
+        Returns:
+            The patched script. Falls back to the original code only when
+            the full-script rewrite also fails to produce extractable code.
+        """
+        # Tier 1: exact string match.
         if original in code:
             return code.replace(original, corrected, 1)
 
-        if not block_in_script(original, code):
-            raise ValueError("Suspicious block not found in solution script.")
-        target = TargetCodeBlock(
-            raw_code=original,
-            category=ComponentCategory.DATA_PREPROCESSING,
-            initial_plan="",
+        # Tier 2: fuzzy/normalized match via find_matching_block.
+        matched = find_matching_block(original, code)
+        if matched is not None:
+            first_line = matched.splitlines()[0] if matched.splitlines() else ""
+            indent = first_line[: len(first_line) - len(first_line.lstrip())]
+            aligned = align_replacement_indent(corrected, indent)
+            return code.replace(matched, aligned, 1)
+
+        # Tier 3: full-script rewrite fallback.
+        return self._full_script_rewrite(code)
+
+    def _full_script_rewrite(self, code: str) -> str:
+        """Ask the repair agent to rewrite the entire script with leakage fixed.
+
+        This is the last-resort fallback when block-level patching fails
+        because the suspicious block cannot be located in the script.
+
+        Args:
+            code: The full solution script.
+
+        Returns:
+            The rewritten script, or the original code unchanged when the
+            repair agent produces no extractable Python code.
+        """
+        prompt = (
+            "# Python code\n"
+            f"{code}\n"
+            "# Your task\n"
+            "Rewrite the ENTIRE script below to prevent data leakage. "
+            "Return the full corrected script as a single markdown code block."
         )
-        return target.replace_in(code, corrected)
+        with logfire.span("guardrails.leakage_repair.full_rewrite"):
+            response = self.repair_agent.run_sync(prompt)
+        rewritten = extract_python_code(response.output)
+        if not rewritten:
+            logfire.warn("guardrails.leakage_repair.failed")
+            return code
+        return rewritten

@@ -1,10 +1,10 @@
 # Implementation Plan: Baseline Evaluation & Submission Integration
 
-## Phase 1: Task Specification & Sandbox Environment Plumbing (TDD)
+## Phase 1: Task Specification & Sandbox Environment Plumbing (TDD) `[checkpoint: 7b0a207]`
 - [x] Task: Write failing unit tests for sandbox PYTHONPATH injection and baseline module accessibility in `tests/test_sandbox.py` (7b0a207)
 - [x] Task: Implement PYTHONPATH injection in `SubprocessRunner.run_code` in `src/problem_2_v2/runner/sandbox.py` (7b0a207)
 - [x] Task: Update `KuaiRand-Pure.md` with explicit `evaluate.py` metric definition and `submit.py` format requirements (7b0a207)
-- [ ] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md) (7b0a207)
 
 ## Phase 2: Finalizer Prompt Alignment & Submission Formatting (TDD)
 - [ ] Task: Write failing unit tests for `FinalArtifactProducer` submission schema instructions in `tests/test_finalizer.py`

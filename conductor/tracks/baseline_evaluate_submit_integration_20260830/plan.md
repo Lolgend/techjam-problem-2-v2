@@ -11,8 +11,8 @@
 - [x] Task: Update `_FINALIZER_INSTRUCTIONS` and `build_prompt` in `src/problem_2_v2/execution/finalizer.py` to enforce `row_id,user_id,video_id,score` (3043abd)
 - [x] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md) (3043abd)
 
-## Phase 3: CLI Submission Verification & Integration Testing
+## Phase 3: CLI Submission Verification & Integration Testing `[checkpoint: 67cae2c]`
 - [x] Task: Write failing unit tests for CLI submission check in `tests/test_cli.py` (67cae2c)
 - [x] Task: Implement automated submission verification with `submit.py --check` in `src/problem_2_v2/cli.py` (67cae2c)
-- [x] Task: Full system integration test with dry-run and mock submission validation (67cae2c)
-- [ ] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Full system integration test with dry-run and mock submission validation (67cae2c, 2877dc3)
+- [x] Task: Phase 3 Verification & Checkpoint (Refer to workflow.md) (67cae2c)

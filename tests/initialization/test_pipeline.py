@@ -1,5 +1,6 @@
 """Integration tests for the end-to-end initialization pipeline."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -215,3 +216,40 @@ class TestMergerFallback:
             outcome = merger.merge(spec, [empty_eval, good_eval], run_id="m")
         assert outcome.final_code == good_eval.code
         assert outcome.final_score == pytest.approx(0.55)
+
+
+class TestInitializationIterationLogging:
+    """Test Stage 1 candidate and merge records in the unified iteration log."""
+
+    def test_run_logs_candidate_and_merge_entries(
+        self, pipeline: InitializationPipeline, tmp_path: Path
+    ) -> None:
+        with (
+            pipeline.retriever.agent.override(model=TestModel(custom_output_args=_CARD_ARGS)),
+            pipeline.evaluator.agent.override(model=TestModel(custom_output_text=_FINAL_SCORE)),
+            pipeline.merger.agent.override(model=FunctionModel(function=_merger_model)),
+        ):
+            result = pipeline.run(_MD, dataset_dir="/data", run_id="ilog")
+
+        log_path = (
+            Path(pipeline.merger.debugger.runner.runs_dir) / "ilog" / "iteration_logs.jsonl"
+        )
+        assert log_path.is_file()
+        records = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+
+        candidates = [r for r in records if r["target_component"] == "CANDIDATE_EVALUATION"]
+        merges = [r for r in records if r["target_component"] == "MODEL_MERGER"]
+
+        assert len(candidates) == len(result.evaluations)
+        assert all(r["stage"] == "INITIALIZATION" for r in candidates)
+        assert candidates[0]["iteration_id"] == "cand_1"
+        assert all(r["success"] is True for r in candidates)
+        assert all(r["validation_score"] == pytest.approx(0.55) for r in candidates)
+        assert all(r["delta_from_baseline"] == pytest.approx(0.05) for r in candidates)
+        assert candidates[0]["code_diff"] != ""
+
+        assert len(merges) == len(result.outcome.steps)
+        assert merges[0]["iteration_id"] == "merge_1"
+        assert merges[0]["stage"] == "INITIALIZATION"
+        assert merges[0]["success"] is True
+        assert "Model2" in merges[0]["hypothesis"]

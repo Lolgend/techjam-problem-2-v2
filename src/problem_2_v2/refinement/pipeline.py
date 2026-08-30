@@ -9,15 +9,13 @@ a finalized ``PipelineArtifact`` lineage.
 
 from __future__ import annotations
 
-from datetime import datetime
-from pathlib import Path
-
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
 from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.code_utils import compute_code_diff
 from problem_2_v2.contracts.enums import MetricDirection
+from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 from problem_2_v2.contracts.task import PipelineArtifact, TaskSpecification
 from problem_2_v2.execution.pipeline import ExecutionConfig, ExecutionGuardrailPipeline
@@ -29,36 +27,6 @@ from problem_2_v2.refinement.extractor import CodeBlockExtractorAgent
 from problem_2_v2.refinement.planner import RefinementPlannerAgent
 from problem_2_v2.runner.debugger import DebuggerAgent
 from problem_2_v2.runner.sandbox import SubprocessRunner
-
-
-class IterationLogRecord(BaseModel):
-    """Structured log record streamed for every inner-loop attempt.
-
-    Attributes:
-        outer_iteration: Outer loop index (t).
-        inner_iteration: Inner loop index (k).
-        target_component: Targeted component category name.
-        plan: The refinement plan text.
-        code_diff: Unified diff applied to the solution.
-        validation_score: Score achieved by the candidate, if any.
-        delta_from_baseline: Signed delta over the input solution score.
-        success: Whether the candidate executed with a score.
-        errors: Error or recovery events encountered.
-        timestamp: When the attempt finished.
-    """
-
-    model_config = ConfigDict(extra="forbid", validate_assignment=True)
-
-    outer_iteration: int = Field(description="Outer loop index.")
-    inner_iteration: int = Field(description="Inner loop index.")
-    target_component: str = Field(description="Targeted component.")
-    plan: str = Field(description="Refinement plan text.")
-    code_diff: str = Field(description="Unified diff applied.")
-    validation_score: float | None = Field(default=None, description="Achieved score.")
-    delta_from_baseline: float | None = Field(default=None, description="Delta over baseline.")
-    success: bool = Field(description="Whether the attempt produced a score.")
-    errors: list[str] = Field(default_factory=list, description="Error events.")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now().astimezone())
 
 
 class RefinementResult(BaseModel):
@@ -186,8 +154,7 @@ class RefinementPipeline:
         Returns:
             A ``RefinementResult`` with the best solution and lineage.
         """
-        logs_path = Path(self.runner.runs_dir) / run_id / "iteration_logs.jsonl"
-        logs_path.parent.mkdir(parents=True, exist_ok=True)
+        logger = CentralIterationLogger.for_run(self.runner.runs_dir, run_id)
 
         direction = spec.metric_direction
         current_code = initial_code
@@ -220,6 +187,22 @@ class RefinementPipeline:
                         logfire.warn("refinement.outer.failed", t=t, error=str(exc))
                         continue
                     ablation_history.append(summary)
+                    logger.append(
+                        IterationLogEntry(
+                            iteration_id=f"t{t}_ablation",
+                            stage="REFINEMENT",
+                            hypothesis=summary[:1000],
+                            code_diff="",
+                            metrics={},
+                            validation_score=None,
+                            delta_from_baseline=None,
+                            error_recovery_events=[],
+                            success=True,
+                            target_component="ABLATION_STUDY",
+                            branch_index=None,
+                            duration_seconds=None,
+                        )
+                    )
 
                     try:
                         block, initial_plan = self.extractor.extract(
@@ -259,7 +242,7 @@ class RefinementPipeline:
                                 k=k,
                                 initial_score=initial_score,
                                 direction=direction,
-                                logs_path=logs_path,
+                                logger=logger,
                             )
                         attempts.append((plan.natural_language_plan, record.validation_score))
                         announce(
@@ -300,7 +283,7 @@ class RefinementPipeline:
             final_code=final_code,
             final_score=final_score,
             lineage=lineage,
-            logs_path=str(logs_path),
+            logs_path=str(logger.logs_path),
             outer_iterations=self.outer_loops,
             inner_iterations=self.inner_loops,
         )
@@ -343,8 +326,8 @@ class RefinementPipeline:
         k: int,
         initial_score: float | None,
         direction: MetricDirection,
-        logs_path: Path,
-    ) -> tuple[IterationLogRecord, str | None]:
+        logger: CentralIterationLogger,
+    ) -> tuple[IterationLogEntry, str | None]:
         """Run code -> patch -> guardrails -> evaluate for one attempt.
 
         Args:
@@ -357,15 +340,16 @@ class RefinementPipeline:
             k: Inner iteration index.
             initial_score: Score of the input solution ($h(s_0)$).
             direction: Metric direction for delta computation.
-            logs_path: Iteration log file to append to.
+            logger: Central iteration logger to append the record to.
 
         Returns:
-            The log record and the candidate code (``None`` on failure).
+            The log entry and the candidate code (``None`` on failure).
         """
         errors: list[str] = []
         score: float | None = None
         success = False
         code_diff = ""
+        duration_seconds: float | None = None
         candidate_code: str | None = None
 
         try:
@@ -383,6 +367,7 @@ class RefinementPipeline:
             candidate_code = guarded
             score = result.validation_score
             success = score is not None
+            duration_seconds = result.duration_seconds
             code_diff = compute_code_diff(base_code, guarded)
             if not success and result.stderr:
                 errors.append(result.stderr[-500:])
@@ -393,29 +378,26 @@ class RefinementPipeline:
         except Exception as exc:
             errors.append(f"inner step failed: {exc}")
 
-        record = IterationLogRecord(
-            outer_iteration=t,
-            inner_iteration=k,
-            target_component=block.category.value,
-            plan=plan.natural_language_plan,
+        record = IterationLogEntry(
+            iteration_id=f"t{t}_k{k}",
+            stage="REFINEMENT",
+            hypothesis=plan.natural_language_plan,
             code_diff=code_diff,
+            metrics={},
             validation_score=score,
             delta_from_baseline=(
                 direction.delta(score, initial_score)
                 if score is not None and initial_score is not None
                 else None
             ),
+            error_recovery_events=errors,
             success=success,
-            errors=errors,
+            target_component=block.category.value,
+            branch_index=None,
+            duration_seconds=duration_seconds,
         )
-        self._append_log(logs_path, record)
+        logger.append(record)
         return record, candidate_code
-
-    @staticmethod
-    def _append_log(logs_path: Path, record: IterationLogRecord) -> None:
-        """Append a JSON line to the iteration log file."""
-        with logs_path.open("a", encoding="utf-8") as handle:
-            handle.write(record.model_dump_json() + "\n")
 
     @staticmethod
     def _accepts(

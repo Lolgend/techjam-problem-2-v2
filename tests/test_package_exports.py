@@ -30,7 +30,6 @@ SUBMODULE_EXPORTS: dict[str, list[str]] = {
     "problem_2_v2.refinement": [
         "RefinementPipeline",
         "RefinementResult",
-        "IterationLogRecord",
         "AblationAgent",
         "AblationSummarizerAgent",
         "CodeBlockExtractorAgent",

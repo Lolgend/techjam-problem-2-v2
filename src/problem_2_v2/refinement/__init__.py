@@ -8,11 +8,7 @@ adaptive planning, and code refinement.
 from problem_2_v2.refinement.ablation import AblationAgent, AblationSummarizerAgent
 from problem_2_v2.refinement.coder import CoderAgent
 from problem_2_v2.refinement.extractor import CodeBlockExtractorAgent
-from problem_2_v2.refinement.pipeline import (
-    IterationLogRecord,
-    RefinementPipeline,
-    RefinementResult,
-)
+from problem_2_v2.refinement.pipeline import RefinementPipeline, RefinementResult
 from problem_2_v2.refinement.planner import RefinementPlannerAgent
 
 __all__ = [
@@ -20,7 +16,6 @@ __all__ = [
     "AblationSummarizerAgent",
     "CodeBlockExtractorAgent",
     "CoderAgent",
-    "IterationLogRecord",
     "RefinementPipeline",
     "RefinementPlannerAgent",
     "RefinementResult",

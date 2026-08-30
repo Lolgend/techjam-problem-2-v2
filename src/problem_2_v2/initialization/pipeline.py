@@ -14,11 +14,14 @@ import logfire
 from pydantic import BaseModel, ConfigDict, Field
 
 from problem_2_v2.console import announce, format_score
+from problem_2_v2.contracts.code_utils import compute_code_diff
+from problem_2_v2.contracts.enums import MetricDirection
+from problem_2_v2.contracts.iteration import CentralIterationLogger, IterationLogEntry
 from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.ingestion.extractor import TaskExtractor
 from problem_2_v2.initialization.evaluator import CandidateEvaluation, CandidateEvaluatorAgent
-from problem_2_v2.initialization.merger import MergeOutcome, ModelMergerAgent
+from problem_2_v2.initialization.merger import MergeOutcome, MergeStep, ModelMergerAgent
 from problem_2_v2.search.retriever import RetrieverAgent
 
 
@@ -106,8 +109,11 @@ class InitializationPipeline:
             candidates, evaluations, and the merged initial solution.
         """
         with logfire.span("initialization.run", run_id=run_id):
+            logger = CentralIterationLogger.for_run(self.merger.debugger.runner.runs_dir, run_id)
             with logfire.span("initialization.extract"):
                 spec = self.extractor.extract(md_text, dataset_dir=dataset_dir)
+            baseline = spec.baseline_score
+            direction = spec.metric_direction
             announce(
                 f"[Search] Retrieving candidates via {self.retriever.provider.provider_name}..."
             )
@@ -131,6 +137,8 @@ class InitializationPipeline:
                     spec, candidates.candidates, run_id=run_id
                 )
             for index, evaluation in enumerate(evaluations):
+                logger.append(self._candidate_entry(index, evaluation, baseline, direction))
+            for index, evaluation in enumerate(evaluations):
                 if evaluation.score is None:
                     reason = (
                         evaluation.result.stderr[-200:]
@@ -149,6 +157,10 @@ class InitializationPipeline:
             ranked = self.evaluator.ranking(evaluations, spec.metric_direction)
             with logfire.span("initialization.merge", num_candidates=len(ranked)):
                 outcome = self.merger.merge(spec, ranked, run_id=run_id)
+            previous_code = ""
+            for step in outcome.steps:
+                logger.append(self._merge_entry(step, previous_code, baseline, direction))
+                previous_code = step.merged_code
             announce(
                 f"[Merge] Sequential merging completed. Initial s0 Score: "
                 f"{format_score(outcome.final_score)}"
@@ -181,6 +193,86 @@ class InitializationPipeline:
             if path.is_file():
                 return path.read_text(encoding="utf-8", errors="replace")
         return None
+
+    @staticmethod
+    def _candidate_entry(
+        index: int,
+        evaluation: CandidateEvaluation,
+        baseline: float | None,
+        direction: MetricDirection,
+    ) -> IterationLogEntry:
+        """Build the unified log record for one candidate evaluation."""
+        errors: list[str] = []
+        if evaluation.debug_rounds > 0:
+            errors.append(f"debugger applied {evaluation.debug_rounds} repair round(s)")
+        if (
+            evaluation.result is not None
+            and not evaluation.result.success
+            and evaluation.result.stderr
+        ):
+            errors.append(evaluation.result.stderr[-500:])
+        return IterationLogEntry(
+            iteration_id=f"cand_{index + 1}",
+            stage="INITIALIZATION",
+            hypothesis=(
+                f"Evaluate candidate '{evaluation.model_name}' on the hold-out "
+                f"validation set and measure its score."
+            ),
+            code_diff=compute_code_diff("", evaluation.code),
+            metrics={},
+            validation_score=evaluation.score,
+            delta_from_baseline=(
+                direction.delta(evaluation.score, baseline)
+                if evaluation.score is not None and baseline is not None
+                else None
+            ),
+            error_recovery_events=errors,
+            success=evaluation.score is not None,
+            target_component="CANDIDATE_EVALUATION",
+            branch_index=None,
+            duration_seconds=(
+                evaluation.result.duration_seconds if evaluation.result is not None else None
+            ),
+        )
+
+    @staticmethod
+    def _merge_entry(
+        step: MergeStep,
+        previous_code: str,
+        baseline: float | None,
+        direction: MetricDirection,
+    ) -> IterationLogEntry:
+        """Build the unified log record for one greedy merge attempt."""
+        errors: list[str] = []
+        if (
+            not step.accepted
+            and step.reason == "rejected_error"
+            and step.result is not None
+            and step.result.stderr
+        ):
+            errors.append(step.result.stderr[-500:])
+        step_score = step.result.validation_score if step.result is not None else None
+        return IterationLogEntry(
+            iteration_id=f"merge_{step.rank}",
+            stage="INITIALIZATION",
+            hypothesis=(
+                f"Greedy merge of candidate '{step.candidate_name}' (rank "
+                f"{step.rank}): {step.reason}."
+            ),
+            code_diff=compute_code_diff(previous_code, step.merged_code),
+            metrics={},
+            validation_score=step_score,
+            delta_from_baseline=(
+                direction.delta(step_score, baseline)
+                if step_score is not None and baseline is not None
+                else None
+            ),
+            error_recovery_events=errors,
+            success=step.accepted,
+            target_component="MODEL_MERGER",
+            branch_index=None,
+            duration_seconds=(step.result.duration_seconds if step.result is not None else None),
+        )
 
     @staticmethod
     def _baseline_card(code: str) -> ModelCard:

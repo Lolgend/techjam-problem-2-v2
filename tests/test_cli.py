@@ -412,12 +412,12 @@ class TestCLISubmissionCheck:
         _make_submission(tmp_path)
 
         def fake_run(cmd, *args, **kwargs):
-            return SimpleNamespace(returncode=1, stdout="", stderr="第 2 行 对齐错误")
+            return SimpleNamespace(returncode=1, stdout="", stderr="alignment mismatch at row 2")
 
         monkeypatch.setattr("problem_2_v2.cli.subprocess.run", fake_run)
         verified, message = _verify_submission(str(tmp_path), str(tmp_path / "data"))
         assert verified is False
-        assert "对齐错误" in message
+        assert "alignment mismatch" in message
 
     def test_verify_submission_timeout(self, tmp_path: Path, monkeypatch) -> None:
         _make_submission(tmp_path)
@@ -527,7 +527,7 @@ class TestSubmissionCheckIntegration:
         )
         verified, message = _verify_submission(str(out_dir), str(data_dir))
         assert verified is True
-        assert "校验通过" in message
+        assert "format and alignment verified" in message
 
     def test_real_submit_check_rejects_misaligned_submission(self, tmp_path: Path) -> None:
         data_dir = tmp_path / "data"
@@ -539,4 +539,5 @@ class TestSubmissionCheckIntegration:
         )
         verified, message = _verify_submission(str(out_dir), str(data_dir))
         assert verified is False
-        assert "对齐错误" in message
+        assert "ValueError" in message
+        assert "(u2,v9)" in message

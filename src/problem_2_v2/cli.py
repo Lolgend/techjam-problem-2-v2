@@ -7,6 +7,7 @@ Provides the ``run`` subcommand (full pipeline or ``--dry-run``) and the
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -321,6 +322,16 @@ def _submit_script_path() -> Path | None:
     return None
 
 
+def _ascii_safe(text: str) -> str:
+    """Return a console-safe ASCII copy of ``text``.
+
+    The baseline ``submit.py`` reports success/errors in non-ASCII text
+    (e.g. ``✓`` and Chinese), which cannot be encoded to a cp1252 console.
+    Non-ASCII characters are replaced with ``?`` so summaries never crash.
+    """
+    return text.encode("ascii", "replace").decode("ascii")
+
+
 def _verify_submission(output_dir: str, data_dir: str) -> tuple[bool | None, str]:
     """Verify a produced ``submission.csv`` with ``submit.py --check``.
 
@@ -375,6 +386,10 @@ def _verify_submission(output_dir: str, data_dir: str) -> tuple[bool | None, str
         return False, f"submit.py --check failed to run: {exc}"
     if completed.returncode == 0:
         message = (completed.stdout or completed.stderr or "").strip()
-        return True, message or "format and alignment verified"
+        match = re.search(r"校验通过[:：]\s*([\d,]+)\s*行", message)
+        if match:
+            return True, f"format and alignment verified ({match.group(1)} rows)"
+        return True, "format and alignment verified"
     detail = (completed.stderr or completed.stdout or "verification failed").strip()
-    return False, detail
+    tail = next((ln for ln in reversed(detail.splitlines()) if ln.strip()), detail)
+    return False, _ascii_safe(tail) or "verification failed"

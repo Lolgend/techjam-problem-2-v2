@@ -1,6 +1,6 @@
 # Task Specification: KuaiRand-Pure Recommender Ranking
 
-**Task Name:** KuaiRand-Pure Recommender Ranking
+**Task Name:** Recommender Systems
 **Task Type:** RECOMMENDER_RANKING
 **Metric Name:** primary (mean(GAUC, nDCG@5))
 **Metric Direction:** MAXIMIZE
@@ -31,6 +31,18 @@ The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized D
 - **GAUC:** Evaluated strictly on discriminative users where `0 < positive_count < impression_count`, weighted by positive impressions.
 - **nDCG@5:** Evaluated per user with gain `2^rel - 1`. All-negative users (27.1% of dataset) receive 0.0 and are included in the mean.
 
+### CRITICAL: DATA SPLITTING & DATE BOUNDARIES
+You MUST split the dataset strictly based on the date column. DO NOT use random splitting or train_test_split.
+
+- **Source Files Available:** 
+  - `log_standard_4_08_to_4_21_pure.csv`
+  - `log_standard_4_22_to_5_08_pure.csv`
+
+- **Split Rules (Based on Date Column `date` / `timestamp`):**
+  - **Train Set:** Dates `20220408` to `20220421` (inclusive).
+  - **Validation Set:** Dates `20220422` to `20220428` (inclusive).
+  - **Hidden Test Set:** Dates `20220429` to `20220508` (used ONLY during final submission generation).
+
 ### Baseline Ladder & Oracle Headroom
 - **Random Baseline (Lower Bound):** Validation primary = 0.4834 | Test primary = 0.4753
 - **Item Popularity Baseline:** Validation primary = 0.5807 | Test primary = 0.5715
@@ -50,12 +62,6 @@ The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized D
   - **Distribution Shift & Temporal Dynamics:** Temporal features (`date`, `hour`, recency) between train and test periods.
 
 **Constraints:**
-- **Data Splits (Deterministic chronological split):**
-  - Train period: `20220408` to `20220421` (from `log_standard_4_08_to_4_21_pure.csv`).
-  - Validation period: `20220422` to `20220428` (from `log_standard_4_22_to_5_08_pure.csv`).
-  - Test period: `20220429` to `20220508` (from `log_standard_4_22_to_5_08_pure.csv`).
-  - Develop on train + validation only; the hidden test set is scored once. 
-  - Splitting by date rather than by row count avoids any tie-breaking ambiguity on equal timestamps.
 - **Data Leakage & Subsampling:**
   - Do not use external datasets.
   - Subsample training data to at most 30,000 samples during iterative experimentation. Full training is reserved for final artifact production.
@@ -68,3 +74,5 @@ The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized D
 - **Output Validation Score Standard:**
   - All executable solution scripts must output the validation score to stdout in the exact format:
     `Final Validation Performance: {final_validation_score}`
+
+

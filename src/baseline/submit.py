@@ -71,7 +71,7 @@ def read_submission(path, rows):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("path")
-    ap.add_argument("--data_dir", default="./KuaiRand-Pure/data")
+    ap.add_argument("--data_dir", default="./src/KuaiRand-Pure-dataset/data")
     ap.add_argument("--split", default="test", choices=["valid", "test"])
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--make", action="store_true", help="用官方 FM baseline 生成示例提交")

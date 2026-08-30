@@ -15,6 +15,7 @@
 - [End-to-End System Architecture](#-end-to-end-system-architecture)
 - [Pipeline Execution by Stages](#-pipeline-execution-by-stages)
 - [Specialized AI Agent Roster](#-specialized-ai-agent-roster)
+- [Inter-Agent Interaction Dynamics & Sequence Flows](#-inter-agent-interaction-dynamics--sequence-flows)
 - [Safety Guardrails & Self-Healing](#-safety-guardrails--self-healing)
 - [Installation & Setup](#-installation--setup)
 - [CLI Usage & Options](#-cli-usage--options)
@@ -103,24 +104,143 @@ flowchart TD
 
 ## 🤖 Specialized AI Agent Roster
 
-MLE-STAR employs a network of 14 specialized, domain-focused LLM agents:
+MLE-STAR coordinates a network of 14 specialized, domain-focused LLM agents built with [Pydantic AI](https://ai.pydantic.dev/):
 
-| Agent Name | Symbol | Primary Function |
-| :--- | :---: | :--- |
-| **Task Extractor** | $A_{\text{extractor}}$ | Parses free-form markdown problem statements into structured task specifications. |
-| **Web Retriever** | $A_{\text{retriever}}$ | Searches for state-of-the-art architectures and extracts structured `ModelCard` definitions. |
-| **Candidate Evaluator** | $A_{\text{init}}$ | Writes self-contained Python scripts for initial candidate model architectures. |
-| **Sequential Merger** | $A_{\text{merger}}$ | Generates hybrid architectures combining the best features of top-ranked models. |
-| **Ablation Agent** | $A_{\text{abl}}$ | Generates component-ablated scripts to measure empirical performance drops. |
-| **Ablation Summarizer** | $A_{\text{summarize}}$ | Analyzes ablation drops and ranks components by optimization headroom. |
-| **Component Extractor** | $A_{\text{block}}$ | Isolates the highest-headroom code block for targeted inner-loop refinement. |
-| **Refinement Planner** | $A_{\text{planner}}$ | Formulates targeted hypotheses based on past trial scores and error logs. |
-| **Coder Agent** | $A_{\text{coder}}$ | Writes precise Python code mutations for the targeted component block. |
-| **Debugger Agent** | $A_{\text{debugger}}$ | Analyzes sandbox tracebacks (`stderr`) and repairs runtime/syntax bugs. |
-| **Data Leakage Checker** | $A_{\text{leakage}}$ | Static analysis guardrail detecting test label leakage or invalid split mixing. |
-| **Data Usage Checker** | $A_{\text{data}}$ | Verifies that all required dataset tables and feature columns are ingested. |
-| **Ensemble Planner** | $A_{\text{ens\_planner}}$ | Selects optimal ensembling strategies (blending vs stacking) for branch outputs. |
-| **Finalizer Agent** | $A_{\text{finalizer}}$ | Rewrites experimental scripts into full-dataset production code and submission exporters. |
+| Agent Name | Symbol | Source Module | Input / Prompt Schema | Output Schema | Primary Function |
+| :--- | :---: | :--- | :--- | :--- | :--- |
+| **Task Extractor** | $A_{\text{extractor}}$ | [`ingestion/extractor.py`](./src/problem_2_v2/ingestion/extractor.py) | Markdown text + dataset path | [`TaskSpecification`](./src/problem_2_v2/contracts/task.py) | Parses problem description into structured task specification. |
+| **Web Retriever** | $A_{\text{retriever}}$ | [`search/retriever.py`](./src/problem_2_v2/search/retriever.py) | Search query + snippet context | `list[`[`ModelCard`](./src/problem_2_v2/contracts/search.py)`]` | Searches for state-of-the-art architectures and extracts model cards. |
+| **Candidate Evaluator** | $A_{\text{init}}$ | [`initialization/evaluator.py`](./src/problem_2_v2/initialization/evaluator.py) | `TaskSpecification` + `ModelCard` | Python script (`str`) | Writes self-contained Python scripts for initial candidate models. |
+| **Sequential Merger** | $A_{\text{merger}}$ | [`initialization/merger.py`](./src/problem_2_v2/initialization/merger.py) | Base solution + Reference solution | Merged Python script (`str`) | Generates hybrid architectures combining top-ranked models. |
+| **Ablation Agent** | $A_{\text{abl}}$ | [`refinement/ablation.py`](./src/problem_2_v2/refinement/ablation.py) | Solution script + Ablation history | Standalone ablation script (`str`) | Generates ablated scripts disabling 2-3 parts of the training pipeline. |
+| **Ablation Summarizer** | $A_{\text{summarize}}$ | [`refinement/ablation.py`](./src/problem_2_v2/refinement/ablation.py) | Ablation code + Process stdout/stderr | [`AblationReport`](./src/problem_2_v2/contracts/refinement.py) | Executes ablation and ranks components by optimization headroom. |
+| **Component Extractor** | $A_{\text{block}}$ | [`refinement/extractor.py`](./src/problem_2_v2/refinement/extractor.py) | Solution code + `AblationReport` | [`TargetCodeBlock`](./src/problem_2_v2/contracts/refinement.py) + [`RefinementPlan`](./src/problem_2_v2/contracts/refinement.py) | Isolates highest-headroom code block and drafts initial plan $p_0$. |
+| **Refinement Planner** | $A_{\text{planner}}$ | [`refinement/planner.py`](./src/problem_2_v2/refinement/planner.py) | `TargetCodeBlock` + Attempt history | [`RefinementPlan`](./src/problem_2_v2/contracts/refinement.py) | Formulates targeted hypotheses conditioned on previous trials. |
+| **Coder Agent** | $A_{\text{coder}}$ | [`refinement/coder.py`](./src/problem_2_v2/refinement/coder.py) | `TargetCodeBlock` + `RefinementPlan` | Refined code block (`str`) | Writes precise Python code mutations for the targeted block. |
+| **Debugger Agent** | $A_{\text{debugger}}$ | [`runner/debugger.py`](./src/problem_2_v2/runner/debugger.py) | Broken code + Exception traceback | [`DebugOutcome`](./src/problem_2_v2/runner/debugger.py) (Repaired script) | Analyzes tracebacks (`stderr`) and repairs runtime/syntax bugs. |
+| **Data Leakage Checker** | $A_{\text{leakage}}$ | [`guardrails/leakage.py`](./src/problem_2_v2/guardrails/leakage.py) | Full solution Python script | [`DataLeakageStatus`](./src/problem_2_v2/contracts/guardrails.py) + Repaired code | Static audit detecting test label leakage or invalid split mixing. |
+| **Data Usage Checker** | $A_{\text{data}}$ | [`guardrails/usage.py`](./src/problem_2_v2/guardrails/usage.py) | Solution script + `TaskSpecification` | [`DataUsageStatus`](./src/problem_2_v2/contracts/guardrails.py) + Improved code | Verifies that all required dataset tables and features are ingested. |
+| **Ensemble Planner** | $A_{\text{ens\_planner}}$ | [`ensembling/planner.py`](./src/problem_2_v2/ensembling/planner.py) | Branch artifacts + Attempt history | [`EnsembleStrategy`](./src/problem_2_v2/contracts/guardrails.py) | Selects optimal ensembling strategy (averaging vs stacking). |
+| **Ensembler Agent** | $A_{\text{ensembler}}$ | [`ensembling/ensembler.py`](./src/problem_2_v2/ensembling/ensembler.py) | Candidate artifacts + `EnsembleStrategy` | Full ensemble script (`str`) | Synthesizes a unified single-file Python ensemble script. |
+| **Finalizer Agent** | $A_{\text{finalizer}}$ | [`execution/finalizer.py`](./src/problem_2_v2/execution/finalizer.py) | Winning solution + `TaskSpecification` | [`FinalArtifact`](./src/problem_2_v2/execution/finalizer.py) | Strips subsampling, retrains on 100% data, and exports deliverables. |
+
+---
+
+## 🔄 Inter-Agent Interaction Dynamics & Sequence Flows
+
+### 1. Refinement Loop & Guardrail Feedback Sequence (Algorithm 2)
+
+During each outer cycle $t \in [1..T]$, the system identifies the most promising component via empirical ablation, extracts the code block, and conducts $K$ inner mutation iterations with safety guardrails and self-healing debugging:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Orchestrator as RefinementPipeline
+    participant AblAgent as AblationAgent (A_abl)
+    participant AblSum as AblationSummarizer (A_summarize)
+    participant Extractor as CodeBlockExtractor (A_block)
+    participant Planner as RefinementPlanner (A_planner)
+    participant Coder as CoderAgent (A_coder)
+    participant Leakage as DataLeakageChecker (A_leakage)
+    participant Usage as DataUsageChecker (A_data)
+    participant Sandbox as SubprocessRunner (Sandbox)
+    participant Debugger as DebuggerAgent (A_debugger)
+    participant Logger as CentralIterationLogger
+
+    Note over Orchestrator,Logger: Outer Exploration Loop (T=3): Identify Headroom
+    Orchestrator->>AblAgent: generate_ablation(current_code, history)
+    AblAgent-->>Orchestrator: ablation_code
+    Orchestrator->>AblSum: summarize(ablation_code, run_id)
+    AblSum->>Sandbox: run_code(ablation_code)
+    Sandbox-->>AblSum: ExecutionResult (stdout/stderr)
+    AblSum-->>Orchestrator: AblationReport (highest_impact_component)
+    Orchestrator->>Extractor: extract(solution, AblationReport, previous_blocks)
+    Extractor-->>Orchestrator: TargetCodeBlock + initial RefinementPlan (p0)
+
+    Note over Orchestrator,Logger: Inner Optimization Loop (K=3): Targeted Mutations
+    loop Inner Iteration (k = 1..K)
+        alt k == 0
+            Note over Orchestrator: Use initial plan p0 from Extractor
+        else k > 0
+            Orchestrator->>Planner: next_plan(TargetCodeBlock, previous_attempts)
+            Planner-->>Orchestrator: RefinementPlan (pk)
+        end
+        Orchestrator->>Coder: refine(TargetCodeBlock, RefinementPlan)
+        Coder-->>Orchestrator: refined_block_code
+        Note over Orchestrator: patch_script(current_code, target_block, refined_block)
+        
+        Note over Orchestrator,Usage: ExecutionGuardrailPipeline Pass
+        Orchestrator->>Leakage: audit(patched_code)
+        alt Data Leakage Detected
+            Leakage-->>Orchestrator: DataLeakageStatus(is_leaking=True) + auto_repaired_code
+        else Clean
+            Leakage-->>Orchestrator: DataLeakageStatus(is_leaking=False)
+        end
+
+        Orchestrator->>Usage: audit(spec, guarded_code)
+        alt Missing Data Sources
+            Usage-->>Orchestrator: DataUsageStatus + improved_code
+        else All Data Used
+            Usage-->>Orchestrator: DataUsageStatus(all_data_used=True)
+        end
+
+        Note over Orchestrator,Debugger: Subprocess Execution & Self-Healing
+        Orchestrator->>Sandbox: run_code(final_guarded_code)
+        Sandbox-->>Orchestrator: ExecutionResult
+        opt returncode != 0 or score is None
+            loop up to 3 repair rounds
+                Orchestrator->>Debugger: debug(broken_code, stderr_traceback)
+                Debugger->>Sandbox: run_code(repaired_code)
+                Sandbox-->>Debugger: ExecutionResult
+            end
+            Debugger-->>Orchestrator: DebugOutcome(code, result, recovered)
+        end
+
+        Orchestrator->>Logger: append(IterationLogEntry [hypothesis, diff, metrics, errors])
+        Note over Orchestrator: Evaluate greedy score improvement: h(s_cand) > h(s_best)
+    end
+```
+
+### 2. Model Initialization & Sequential Merging Sequence (Algorithm 1)
+
+Before refinement, candidates retrieved from web search and the official baseline starter are ranked and greedily merged into a unified starting point $s_0$:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Pipeline as InitializationPipeline
+    participant Retriever as RetrieverAgent
+    participant Evaluator as CandidateEvaluator
+    participant Merger as ModelMergerAgent
+    participant Debugger as DebuggerAgent
+    participant Sandbox as SubprocessRunner
+
+    Pipeline->>Retriever: retrieve(spec)
+    Retriever-->>Pipeline: ModelCards [c1, c2, c3, c4] + Official Baseline
+    Pipeline->>Evaluator: evaluate_all(spec, ModelCards)
+    loop Each Candidate Card
+        Evaluator->>Sandbox: run_code(candidate_script)
+        Sandbox-->>Evaluator: ExecutionResult (Validation Score)
+    end
+    Evaluator-->>Pipeline: Ranked Candidates [c1 (0.7412), c2 (0.6850), c3 (0.6120)]
+
+    Note over Pipeline,Merger: Greedy Sequential Merging
+    Pipeline->>Merger: merge(spec, ranked_candidates)
+    Note over Merger: s0 = c1 (top candidate)
+    loop k = 2 to M
+        Merger->>Merger: Prompt LLM to integrate c[k] into s0
+        Merger->>Debugger: debug(merged_script)
+        Debugger->>Sandbox: run_code(merged_script)
+        Sandbox-->>Debugger: ExecutionResult (merged_score)
+        Debugger-->>Merger: DebugOutcome
+        alt merged_score >= current_best_score
+            Note over Merger: Accept merge, s0 = s_merged, continue
+        else merged_score < current_best_score or Error
+            Note over Merger: Reject merge, abort greedy loop
+        end
+    end
+    Merger-->>Pipeline: MergeOutcome (Final consolidated s0)
+```
 
 ---
 

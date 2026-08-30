@@ -1,6 +1,6 @@
 # Implementation Plan: Single-Branch Ensembling Bypass
 
-## Phase 1: Ensemble Pipeline Fast-Path (TDD)
+## Phase 1: Ensemble Pipeline Fast-Path (TDD) `[checkpoint: d47265d]`
 - [x] Task: Write failing unit tests for single-candidate ensemble handling in `tests/ensembling/test_pipeline.py` (`d47265d`)
     - [x] Test `EnsemblePipeline.run` with a single candidate artifact returns immediately with 0 rounds executed and zero LLM calls
     - [x] Test `EnsemblePipeline.run` with `rounds=0` returns best individual candidate artifact directly
@@ -10,7 +10,7 @@
     - [x] Add input validation and instant-return logic in `EnsemblePipeline.run`
     - [x] Ensure `EnsembleResult` returned has `rounds_executed=0`, `best_code`, and `optimal_solution` populated
     - [x] Verify all ensembling pipeline tests pass (Green phase)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Master Orchestrator Integration & E2E Verification (TDD)
 - [ ] Task: Write tests for single-branch ensembling bypass in `tests/test_orchestrator.py`

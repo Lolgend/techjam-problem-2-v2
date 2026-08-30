@@ -1,36 +1,36 @@
 # Plan: Leakage Guardrail Repair & Enforcement Fix
 
-## Phase 1: Resilient Patching (`_patch()`)
+## Phase 1: Resilient Patching (`_patch()`) [checkpoint: c4e522c]
 
 > Rewire `_patch()` to use `find_matching_block()` and add full-script rewrite fallback.
 
-- [ ] Task: Write failing tests for resilient patching (Red Phase)
-  - [ ] Test `_patch()` succeeds with exact string match (existing behavior baseline)
-  - [ ] Test `_patch()` succeeds when suspicious block has minor whitespace/indent differences (fuzzy match via `find_matching_block`)
-  - [ ] Test `_patch()` succeeds when suspicious block has quote style differences (single vs double)
-  - [ ] Test `_patch()` succeeds via full-script rewrite fallback when fuzzy match also fails
-  - [ ] Test `_patch()` returns original code when full-script rewrite produces no extractable code
-  - [ ] Test `repair()` no longer raises `ValueError` — exhausts all tiers gracefully
+- [x] Task: Write failing tests for resilient patching (Red Phase) c4e522c
+  - [x] Test `_patch()` succeeds with exact string match (existing behavior baseline)
+  - [x] Test `_patch()` succeeds when suspicious block has minor whitespace/indent differences (fuzzy match via `find_matching_block`)
+  - [x] Test `_patch()` succeeds when suspicious block has quote style differences (single vs double)
+  - [x] Test `_patch()` succeeds via full-script rewrite fallback when fuzzy match also fails
+  - [x] Test `_patch()` returns original code when full-script rewrite produces no extractable code
+  - [x] Test `repair()` no longer raises `ValueError` — exhausts all tiers gracefully
 
-- [ ] Task: Implement resilient `_patch()` (Green Phase)
-  - [ ] Import `find_matching_block` and `align_replacement_indent` in `leakage.py`
-  - [ ] Refactor `_patch()`: Tier 1 exact match → Tier 2 `find_matching_block()` + `align_replacement_indent()` → Tier 3 full-script rewrite via repair agent
-  - [ ] Add `_full_script_rewrite()` method that calls repair agent with full-script prompt
-  - [ ] Update `repair()` to pass `self` context for Tier 3 fallback
-  - [ ] Update `audit()` — remove `except ValueError` catch since `_patch()` no longer raises
+- [x] Task: Implement resilient `_patch()` (Green Phase) c4e522c
+  - [x] Import `find_matching_block` and `align_replacement_indent` in `leakage.py`
+  - [x] Refactor `_patch()`: Tier 1 exact match → Tier 2 `find_matching_block()` + `align_replacement_indent()` → Tier 3 full-script rewrite via repair agent
+  - [x] Add `_full_script_rewrite()` method that calls repair agent with full-script prompt
+  - [x] Update `repair()` to pass `self` context for Tier 3 fallback
+  - [x] Update `audit()` — remove `except ValueError` catch since `_patch()` no longer raises
 
-- [ ] Task: Refactor and verify (Refactor Phase)
-  - [ ] Remove dead `block_in_script` import if no longer used directly
-  - [ ] Ensure all new tests pass
-  - [ ] Run `uv run pytest --cov=src/problem_2_v2/guardrails --cov-report=term-missing`
+- [x] Task: Refactor and verify (Refactor Phase) c4e522c
+  - [x] Remove dead `block_in_script` import if no longer used directly
+  - [x] Ensure all new tests pass
+  - [x] Run `uv run pytest --cov=src/problem_2_v2/guardrails --cov-report=term-missing`
 
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) c4e522c
 
 ## Phase 2: Retry Loop & Config Fields
 
 > Add `max_leakage_retries` and the check→repair→re-check loop in `guard()`.
 
-- [ ] Task: Write failing tests for retry config and loop (Red Phase)
+- [~] Task: Write failing tests for retry config and loop (Red Phase)
   - [ ] Test `ExecutionConfig` accepts `max_leakage_retries` with default `5`
   - [ ] Test retry loop exits early when re-check confirms code is clean after 1st repair
   - [ ] Test retry loop runs up to `max_leakage_retries` times when leakage persists

@@ -14,9 +14,9 @@
   - [x] Run `uv run pytest tests/initialization/` and verify all tests pass.
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [675affb]
 
-## Phase 3: End-to-End Verification & Quality Gates
-- [ ] Task: Quality Gates & Full Verification
-  - [ ] Run uv run ruff check src and uv run ruff format --check src.
-  - [ ] Run uv run mypy src.
-  - [ ] Run uv run pytest --cov=src --cov-report=term-missing and verify >90% project coverage.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 3: End-to-End Verification & Quality Gates [checkpoint: 8b735b5]
+- [x] Task: Quality Gates & Full Verification [8b735b5]
+  - [x] Run `uv run ruff check src` and `uv run ruff format --check src`.
+  - [x] Run `uv run mypy src`.
+  - [x] Run `uv run pytest --cov=src --cov-report=term-missing` and verify >90% project coverage.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [8b735b5]

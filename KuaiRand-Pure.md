@@ -2,7 +2,7 @@
 
 **Task Name:** Recommender Systems
 **Task Type:** RECOMMENDER_RANKING
-**Metric Name:** primary (mean(GAUC, nDCG@5))
+**Metric Name:** mean(GAUC, nDCG@5)
 **Metric Direction:** MAXIMIZE
 **Target Variable:** long_view
 **Baseline Score:** 0.6016
@@ -15,7 +15,7 @@ Each user only has their impressions ranked in the evaluation split (no full-cat
 The relevance target label is `long_view` (binary 0 or 1).
 
 ### Evaluation Protocol & Metric Tooling (MANDATORY)
-All models, candidates, and ensembling stages must strictly evaluate validation performance using the official `evaluate.py` evaluation harness, it is model-agnostic — it takes only (user_ids, labels, scores), so any model can be scored with it:
+All models, candidates, and ensembling stages must strictly evaluate validation performance using the official `evaluate.py` evaluation harness, it is model-agnostic — `evaluate(user_ids: Any, labels: Any, scores: Any) -> dict[str, Any]`, so any model can be scored with it:
 ```python
 from evaluate import evaluate
 
@@ -108,7 +108,6 @@ Join strictly on 'user_id':
   - Subsample training data to at most 30,000 samples during iterative experimentation. Full training is reserved for final artifact production.
   - Guard against target leakage in categorical and target encodings (use out-of-fold / leave-one-out with shrinkage).
 - **IMPORTANT Mandatory Evaluation & Submission Standards:**
-  - Every `solution.py` script must evaluate validation predictions with `evaluate(user_ids, labels, scores)` by `from evaluate import evaluate`.
   - user_ids: the user ID for each row in the evaluation split
   - labels: the row's long_view value (0/1)
   - scores: the score assigned by your model to each row (any real number; only relative ordering matters)

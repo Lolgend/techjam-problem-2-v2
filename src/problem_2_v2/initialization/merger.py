@@ -23,34 +23,39 @@ from problem_2_v2.contracts.task import ExecutionResult, PipelineArtifact, TaskS
 from problem_2_v2.initialization.evaluator import CandidateEvaluation
 from problem_2_v2.runner.debugger import DebuggerAgent
 
-_MERGER_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition.\n"
-    "You will be given a base solution and an additional reference "
-    "solution, and you need to implement your Python solution by "
-    "integrating the reference solution into the base solution.\n"
+_MERGER_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- We will now provide a base solution and an additional reference solution.\n"
+    "- You need to implement your Python solution by integrating reference solution to the base\n"
+    "solution.\n"
+    "# Base solution\n"
+    "{base_code}\n"
+    "# Reference solution\n"
+    "{reference_code}\n"
     "# Your task\n"
+    "- Implement the solution in Python.\n"
     "- You have to integrate the reference solution to the base solution.\n"
     "- Your code base should be the base solution.\n"
-    "- Try to train an additional model of the reference solution.\n"
-    "- When integrating, try to keep code with similar functionality in "
-    "the same place (e.g., all preprocessing should be done and then all "
-    "training).\n"
+    "- Try to train additional model of the reference solution.\n"
+    "- When integrating, try to keep code with similar functionality in the same place (e.g.,\n"
+    "all preprocessing should be done and then all training).\n"
     "- When integrating, ensemble the models.\n"
     "- The solution design should be relatively simple.\n"
-    "- The code should implement the proposed solution and print the value "
-    "of the evaluation metric computed on a hold-out validation set.\n"
-    "- Only use the provided train data in the ./input directory.\n"
-    "- If there are more than 30,000 training samples, you must subsample "
-    "to 30,000 for a faster run.\n"
+    "- The code should implement the proposed solution and print the value of the evaluation\n"
+    "metric computed on a hold-out validation set.\n"
+    "- Only use the provided train data in the `./input` directory.\n"
+    "- If there are more than 30,000 training samples, you must subsample to 30,000 for a faster\n"
+    "run.\n"
     "# Required\n"
     "- There should be no additional headings or text in your response.\n"
-    "- Print out or return a final performance metric with the exact words: "
-    "'Final Validation Performance: {final_validation_score}'.\n"
-    "- The code should be a single-file Python program that is "
-    "self-contained and can be executed as-is.\n"
+    "- Print out or return a final performance metric in your answer in a clear format with the\n"
+    "exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
+    "- The code should be a single-file Python program that is self-contained and can be\n"
+    "executed as-is.\n"
     "- Your response should only contain a single code block.\n"
     "- Do not use exit() function in the Python code.\n"
-    "- Do not use try: and except: or if else to ignore unintended behavior."
+    "- Do not use try: and except: or if else to ignore unintended behavior\n"
 )
 
 
@@ -122,9 +127,26 @@ class ModelMergerAgent:
             model,
             name="model_merger_agent",
             output_type=str,
-            instructions=_MERGER_INSTRUCTIONS,
             defer_model_check=True,
         )
+
+    @staticmethod
+    def build_prompt(base_code: str, reference_code: str) -> str:
+        """Build the Figure 11 model merging prompt.
+
+        Args:
+            base_code: Python code of the current best base solution.
+            reference_code: Python code of the reference candidate to merge.
+
+        Returns:
+            The formatted model merging prompt string.
+        """
+        return _MERGER_PROMPT_TEMPLATE.format(
+            base_code=base_code,
+            reference_code=reference_code,
+        )
+
+    _build_prompt = build_prompt
 
     def merge(
         self,
@@ -175,11 +197,9 @@ class ModelMergerAgent:
                 candidate=candidate.model_name,
                 current_best=best_score,
             ):
-                prompt = (
-                    f"# Base solution\n{current_code}\n"
-                    f"# Reference solution\n{candidate.code}\n"
-                    f"# Your task\nIntegrate the reference solution into "
-                    f"the base solution and ensemble the models."
+                prompt = self.build_prompt(
+                    base_code=current_code,
+                    reference_code=candidate.code,
                 )
                 response = self.agent.run_sync(prompt)
                 merged_code = extract_python_code(response.output)

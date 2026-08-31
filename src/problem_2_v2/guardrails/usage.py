@@ -14,29 +14,6 @@ from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.guardrails import DataUsageStatus
 from problem_2_v2.contracts.task import TaskSpecification
 
-_USAGE_INSTRUCTIONS = (
-    "You audit a Python solution for a machine learning task to check "
-    "whether it uses all the information provided for training.\n"
-    "# Your task\n"
-    "- If the solution code does not use the information provided, try to "
-    "incorporate all of it.\n"
-    "- Do not bypass using try-except; just occur error so it can be "
-    "debugged!\n"
-    "- See the task description carefully, to know how to extract unused "
-    "information effectively.\n"
-    "- When improving the solution code by incorporating unused "
-    "information, DO NOT FORGET to print out "
-    "'Final Validation Performance: {final_validation_score}' as in the "
-    "original solution code.\n"
-    "# Response format\n"
-    "- Option 1: If the code did not use all the provided information, "
-    "respond with a single markdown code block (wrapped in ```) which is "
-    "the improved code block. There should be no additional headings or "
-    "text in your response.\n"
-    "- Option 2: If the code used all the provided information, simply "
-    "state that 'All the provided information is used.'"
-)
-
 
 class DataUsageCheckerAgent:
     """Verifies full dataset consumption and proposes improved code.
@@ -56,7 +33,6 @@ class DataUsageCheckerAgent:
             model,
             name="data_usage_check_agent",
             output_type=str,
-            instructions=_USAGE_INSTRUCTIONS,
             defer_model_check=True,
         )
 
@@ -82,10 +58,26 @@ class DataUsageCheckerAgent:
 
         with logfire.span("guardrails.usage_check"):
             prompt = (
+                "I have provided Python code for a machine learning task (attached below):\n\n"
                 f"# Solution Code\n{code}\n"
+                "Does above solution code uses all the information provided for training? "
+                "Here is task description and some guide to handle:\n\n"
                 f"# Task description\n{task_description}\n"
-                f"# Your task\nCheck whether all provided information is "
-                f"used, and improve the code if not."
+                "# Your task\n"
+                "- If the above solution code does not use the information provided, try to "
+                "incorporate all. Do not bypass using try-except.\n"
+                "- DO NOT USE TRY and EXCEPT; just occur error so we can debug it!\n"
+                "- See the task description carefully, to know how to extract unused "
+                "information effectively.\n"
+                "- When improving the solution code by incorporating unused information, "
+                "DO NOT FORGET to print out 'Final Validation Performance: "
+                "{{final_validation_score}}' as in original solution code.\n\n"
+                "#Response Format:\n"
+                "Option 1: If the code did not use all the provided information, your response "
+                "should be a single markdown code block (wrapped in ```) which is the improved "
+                "code block. There should be no additional headings or text in your response\n"
+                "Option 2: If the code used all the provided information, simply state that "
+                "'All the provided information is used'."
             )
             response = self.agent.run_sync(prompt)
         output = response.output.strip()

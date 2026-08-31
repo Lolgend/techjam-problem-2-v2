@@ -9,7 +9,6 @@ from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.search.providers import MockSearchProvider, SearchResult
 from problem_2_v2.search.retriever import RetrieverAgent
 
-
 _JSON_CARDS = (
     '[{"model_name": "LightGBM", "rationale": "gradient boosting", '
     '"example_code": "import lightgbm as lgb\\nmodel = lgb.LGBMClassifier()", '
@@ -97,7 +96,11 @@ class TestRetrieverAgent:
         provider = MockSearchProvider(
             results={
                 "ranking": [
-                    SearchResult(title="DeepFM Title", url="https://deepfm.org", snippet="DeepFM is SOTA for ranking"),
+                    SearchResult(
+                        title="DeepFM Title",
+                        url="https://deepfm.org",
+                        snippet="DeepFM is SOTA for ranking",
+                    ),
                 ]
             }
         )
@@ -110,7 +113,12 @@ class TestRetrieverAgent:
             if not any(isinstance(p, ToolReturnPart) for p in getattr(last_msg, "parts", [])):
                 calls.append("tool_call")
                 return ModelResponse(
-                    parts=[ToolCallPart(tool_name="search_web", args={"query": "recommender ranking CTR models"})]
+                    parts=[
+                        ToolCallPart(
+                            tool_name="search_web",
+                            args={"query": "recommender ranking CTR models"},
+                        )
+                    ]
                 )
             calls.append("final_result")
             args = [_card_args("DeepFM"), _card_args("LightGBM")]

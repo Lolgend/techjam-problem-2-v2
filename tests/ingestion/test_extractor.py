@@ -1,7 +1,6 @@
 """Unit tests for the task ingestion extractor agent."""
 
 import pytest
-from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.enums import MetricDirection, TaskType
 from problem_2_v2.ingestion.extractor import TaskExtractor

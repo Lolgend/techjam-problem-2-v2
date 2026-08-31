@@ -173,3 +173,26 @@ class TestModelMergerAgent:
         assert outcome.lineage[0].validation_score is None
         assert outcome.lineage[1].version == 1
         assert outcome.lineage[1].parent_version == 0
+
+    def test_build_prompt_format(self) -> None:
+        prompt = ModelMergerAgent.build_prompt(CODE_A, CODE_B)
+        assert "# Introduction" in prompt
+        assert "- You are a Kaggle grandmaster attending a competition." in prompt
+        assert "base solution and an additional reference solution." in prompt
+        assert "integrating reference solution to the base" in prompt
+        assert "# Base solution" in prompt
+        assert CODE_A in prompt
+        assert "# Reference solution" in prompt
+        assert CODE_B in prompt
+        assert "# Your task" in prompt
+        assert "- Implement the solution in Python." in prompt
+        assert "- You have to integrate the reference solution to the base solution." in prompt
+        assert "- Your code base should be the base solution." in prompt
+        assert "- Try to train additional model of the reference solution." in prompt
+        assert "- When integrating, ensemble the models." in prompt
+        assert "- Only use the provided train data in the `./input` directory." in prompt
+        assert "subsample to 30,000 for a faster" in prompt
+        assert "# Required" in prompt
+        assert "Final Validation Performance: {final_validation_score}" in prompt
+        assert "- Do not use exit() function in the Python code." in prompt
+        assert "- Do not use try: and except: or if else to ignore unintended behavior" in prompt

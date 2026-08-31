@@ -38,7 +38,7 @@ class MLEStarConfig(BaseModel):
 
     model: str = Field(default="openai:gpt-4o", description="LLM model identifier.")
     search_provider: SearchProviderName = Field(default="duckduckgo", description="Search backend.")
-    num_candidates: int = Field(default=1, gt=0, description="Candidate models (M).")
+    num_candidates: int = Field(default=4, gt=0, description="Candidate models (M).")
     num_branches: int = Field(default=2, gt=0, description="Parallel branches (L).")
     outer_loops: int = Field(default=3, gt=0, description="Outer iterations (T).")
     inner_loops: int = Field(default=3, gt=0, description="Inner iterations (K).")

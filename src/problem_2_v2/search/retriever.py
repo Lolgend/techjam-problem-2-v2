@@ -34,7 +34,8 @@ _RETRIEVER_PROMPT_TEMPLATE = (
     "# Competition\n"
     "{task_description}\n\n"
     "# Your task\n"
-    "- List {num_candidates} recent effective models and their example codes to win the above competition.\n\n"
+    "- List {num_candidates} recent effective models and their example codes "
+    "to win the above competition.\n\n"
     "# Requirement\n"
     "- The example code should be concise and simple.\n"
     "- You must provide an example code, i.e., do not just mention GitHubs or papers.\n\n"
@@ -97,7 +98,7 @@ class RetrieverAgent:
             defer_model_check=True,
         )
 
-    def _build_search_tool(self):
+    def _build_search_tool(self) -> Any:
         """Create a callable search_web function tool bound to the search provider."""
         provider = self.provider
 
@@ -111,7 +112,9 @@ class RetrieverAgent:
             Returns:
                 A formatted string of search results or an informative error message.
             """
-            with logfire.span("retriever.search_tool", provider=provider.provider_name, query=query):
+            with logfire.span(
+                "retriever.search_tool", provider=provider.provider_name, query=query
+            ):
                 try:
                     results = provider.search(query, num_results=num_results)
                 except Exception as exc:

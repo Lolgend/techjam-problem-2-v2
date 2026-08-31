@@ -38,9 +38,9 @@ _RETRIEVER_PROMPT_TEMPLATE = (
     "# Requirement\n"
     "- The example code should be concise and simple.\n"
     "- You must provide an example code, i.e., do not just mention GitHubs or papers.\n\n"
-    "Use this JSON schema:\n"
-    "Model = {{'model_name': str, 'example_code': str}}\n"
-    "Return: list[Model]\n"
+    "# OUTPUT JSON schema:\n"
+    "- Model = {{'model_name': str, 'example_code': str}}\n"
+    "- Return: list[Model]\n"
 )
 
 

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from pydantic_ai import ModelResponse, TextPart
+from pydantic_ai.messages import ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
@@ -104,6 +105,39 @@ class TestInitializationPipeline:
         ):
             result = pipeline.run(_MD, dataset_dir="/data", run_id="e2e2")
         assert "NDCG@10" in result.candidates.query_used
+
+    def test_run_with_native_websearch_retriever(self, tmp_path: Path) -> None:
+        runner = SubprocessRunner(
+            runs_dir=str(tmp_path / "runs"),
+            timeout_seconds=5,
+            python_executable=sys.executable,
+        )
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+        extractor = TaskExtractor(use_llm=False)
+        retriever = RetrieverAgent(model="test", num_candidates=2)
+        evaluator = CandidateEvaluatorAgent(debugger=debugger, model="test")
+        merger = ModelMergerAgent(debugger=debugger, model="test")
+        pipeline = InitializationPipeline(
+            extractor=extractor,
+            retriever=retriever,
+            evaluator=evaluator,
+            merger=merger,
+            use_baseline=False,
+        )
+
+        def _retriever_handler(msgs: object, info: object) -> ModelResponse:
+            return ModelResponse(parts=[ToolCallPart(tool_name="final_result", args={"response": _CARD_ARGS})])
+
+        with (
+            retriever.agent.override(model=FunctionModel(_retriever_handler)),
+            evaluator.agent.override(model=TestModel(custom_output_text=_FINAL_SCORE)),
+            merger.agent.override(model=FunctionModel(_merger_model)),
+        ):
+            result = pipeline.run(_MD, dataset_dir="/data", run_id="websearch_e2e")
+
+        assert isinstance(result, InitializationResult)
+        assert len(result.candidates.candidates) == 2
+        assert result.best_score == pytest.approx(0.55)
 
 
 def _pipeline_with(

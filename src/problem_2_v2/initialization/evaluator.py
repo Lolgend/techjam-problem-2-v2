@@ -21,33 +21,44 @@ from problem_2_v2.runner.debugger import DebuggerAgent
 
 _EVALUATOR_INSTRUCTIONS = (
     "You are a Kaggle grandmaster attending a competition.\n"
-    "You will be given a task description and a model description, and you "
-    "need to implement a Python solution using the provided model.\n"
+    "Implement a self-contained single-file Python solution using the provided model description "
+    "and output only executable Python code in a single code block."
+)
+
+_EVALUATOR_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- We will now provide a task description and a model description.\n"
+    "- You need to implement your Python solution using the provided model.\n"
+    "# Task description\n"
+    "{task_description}\n"
+    "# Model description\n"
+    "## Model name\n"
+    "{model_description}\n"
+    "## Example Python code\n"
+    "{example_code}\n"
     "# Your task\n"
-    "- Implement the solution in Python using the model as described.\n"
-    "- This first solution design should be relatively simple, without "
-    "ensembling or hyper-parameter optimization.\n"
-    "- Use the official evaluation harness: import it with 'from evaluate "
-    "import evaluate', then call evaluate(val_user_ids, val_labels, "
-    "val_predictions) on a hold-out validation set and report "
-    "val_res['primary'] (or the task metric key) as the validation "
-    "metric.\n"
-    "- All the provided data is already prepared and available in the "
-    "./input directory. There is no need to unzip any files.\n"
-    "- Do not include other models that are not directly related to the "
-    "model described.\n"
-    "- The code should implement the proposed solution and print the value "
-    "of the evaluation metric computed on a hold-out validation set.\n"
-    "- Only use the provided train data in the ./input directory. Do not "
-    "load test data.\n"
-    "- If there are more than 30,000 training samples, you must subsample "
-    "to 30,000 for a faster run.\n"
+    "- Implement the solution in Python.\n"
+    "- You must use the model as described in the model description.\n"
+    "- This first solution design should be relatively simple, without ensembling or\n"
+    "hyper-parameter optimization.\n"
+    "- Propose an evaluation metric that is reasonable for this task.\n"
+    "- All the provided data is already prepared and available in the `./input` directory. There\n"
+    "is no need to unzip any files.\n"
+    "- Do not include other models that are not directly related to the model described.\n"
+    "- Use PyTorch rather than TensorFlow. Use CUDA if you need. All the necessary libraries are\n"
+    "installed.\n"
+    "- The code should implement the proposed solution and print the value of the evaluation\n"
+    "metric computed on a hold-out validation set.\n"
+    "- Only use the provided train data in the `./input` directory. Do not load test data.\n"
+    "- If there are more than 30,000 training samples, you must subsample to 30,000 for a faster\n"
+    "run.\n"
     "# Required\n"
     "- There should be no additional headings or text in your response.\n"
-    "- Print out or return a final performance metric with the exact words: "
-    "'Final Validation Performance: {final_validation_score}'.\n"
-    "- The code should be a single-file Python program that is "
-    "self-contained and can be executed as-is.\n"
+    "- Print out or return a final performance metric in your answer in a clear format with the\n"
+    "exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
+    "- The code should be a single-file Python program that is self-contained and can be\n"
+    "executed as-is.\n"
     "- Your response should only contain a single code block.\n"
     "- Do not use exit() function in the Python code.\n"
     "- Do not use try: and except: or if else to ignore unintended behavior."
@@ -55,6 +66,7 @@ _EVALUATOR_INSTRUCTIONS = (
 
 
 class CandidateEvaluation(BaseModel):
+
     """Outcome of evaluating a single candidate model.
 
     Attributes:
@@ -206,23 +218,32 @@ class CandidateEvaluatorAgent:
         return scored + failed
 
     @staticmethod
-    def _build_prompt(spec: TaskSpecification, card: ModelCard) -> str:
-        """Build the Figure 10 candidate generation prompt."""
-        return (
-            f"# Task description\n{spec.task_name or ''}\n{spec.description}\n"
-            f"Evaluation metric: {spec.metric_name} "
-            f"({spec.metric_direction.value})\n"
-            f"Target variable: {spec.target_variable}\n"
-            f"Dataset files: {', '.join(spec.dataset_files)}\n"
-            f"# Model description\n## Model name\n{card.model_name}\n"
-            f"## Example Python code\n{card.example_code}\n"
-            f"# Your task\n"
-            f"Implement a self-contained Python solution for the task above "
-            f"using the described model, evaluate it on a hold-out "
-            f"validation set using the official harness 'from evaluate "
-            f"import evaluate' (call evaluate(val_user_ids, val_labels, "
-            f"val_predictions) and use val_res['primary']), subsample to at "
-            f"most {spec.subsample_size} "
-            f"training rows, and print "
-            f"'Final Validation Performance: {{score}}'."
+    def build_prompt(spec: TaskSpecification, card: ModelCard) -> str:
+        """Build the candidate generation prompt."""
+        task_desc_parts: list[str] = []
+        if spec.task_name:
+            task_desc_parts.append(spec.task_name)
+        if spec.task_type:
+            task_desc_parts.append(spec.task_type.value)
+        if spec.description:
+            task_desc_parts.append(spec.description)
+        if spec.metric_name:
+            task_desc_parts.append(f"Evaluation metric: {spec.metric_name} ({spec.metric_direction.value})")
+        if spec.target_variable:
+            task_desc_parts.append(f"Target variable: {spec.target_variable}")
+        if spec.dataset_files:
+            task_desc_parts.append(f"Dataset files: {', '.join(spec.dataset_files)}")
+
+        task_description = "\n".join(task_desc_parts).strip()
+        model_description = card.model_name
+        if card.rationale:
+            model_description = f"{card.model_name}\n{card.rationale}"
+
+        return _EVALUATOR_PROMPT_TEMPLATE.format(
+            task_description=task_description,
+            model_description=model_description,
+            example_code=card.example_code,
         )
+
+    _build_prompt = build_prompt
+

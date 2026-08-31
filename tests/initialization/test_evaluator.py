@@ -110,25 +110,39 @@ class TestCandidateEvaluatorAgent:
 
         with evaluator.agent.override(model=FunctionModel(function=capturing_model)):
             evaluator.evaluate(_spec(), _card("LightGBM"), run_id="r", candidate_id="c")
+        assert "# Introduction" in captured["prompt"]
+        assert "# Task description" in captured["prompt"]
+        assert "# Model description" in captured["prompt"]
+        assert "## Model name" in captured["prompt"]
+        assert "## Example Python code" in captured["prompt"]
+        assert "# Your task" in captured["prompt"]
+        assert "# Required" in captured["prompt"]
         assert "LightGBM" in captured["prompt"]
         assert "AUROC" in captured["prompt"]
         assert "Final Validation Performance" in captured["prompt"]
-        assert "30000" in captured["prompt"] or "30,000" in captured["prompt"]
+        assert "30,000" in captured["prompt"]
+        assert "Use PyTorch rather than TensorFlow" in captured["prompt"]
 
 
-class TestEvaluatorBaselineHarness:
-    """Test that the evaluator mandates the official ``evaluate.py`` harness."""
+class TestEvaluatorPromptTemplate:
+    """Test that the evaluator prompt matches the standardized prompt specification."""
 
-    def test_instructions_mandate_official_evaluate_harness(self) -> None:
-        from problem_2_v2.initialization.evaluator import _EVALUATOR_INSTRUCTIONS
-
-        assert "from evaluate import evaluate" in _EVALUATOR_INSTRUCTIONS
-
-    def test_prompt_mandates_official_evaluate_harness(
+    def test_prompt_template_structure(
         self, evaluator: CandidateEvaluatorAgent
     ) -> None:
-        prompt = evaluator._build_prompt(_spec(), _card("LightGBM"))
-        assert "from evaluate import evaluate" in prompt
+        prompt = evaluator.build_prompt(_spec(), _card("LightGBM"))
+        assert "# Introduction" in prompt
+        assert "- You are a Kaggle grandmaster attending a competition." in prompt
+        assert "# Task description" in prompt
+        assert "# Model description" in prompt
+        assert "## Model name\nLightGBM" in prompt
+        assert "## Example Python code" in prompt
+        assert "import catboost" in prompt
+        assert "# Your task" in prompt
+        assert "Propose an evaluation metric that is reasonable for this task." in prompt
+        assert "# Required" in prompt
+        assert "Final Validation Performance: {final_validation_score}" in prompt
+
 
 
 class TestCandidateRanking:

@@ -25,12 +25,12 @@
   - [x] Run `pytest` on the updated agent test files to confirm green phase.
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (0b5c0e7)
 
-## Phase 3: Pipeline & Orchestrator Integration & Full Verification
-- [ ] Task: Update `InitializationPipeline` and `MLEStarPipeline`
-  - [ ] Update `InitializationPipeline.run()` in `src/problem_2_v2/initialization/pipeline.py` to bypass any LLM ingestion.
-  - [ ] Align `MLEStarConfig.num_candidates` in `src/problem_2_v2/config.py` with test suite defaults (4).
-  - [ ] Update `tests/test_orchestrator.py` and `tests/initialization/test_pipeline.py`.
-- [ ] Task: Run Full Test Suite & Coverage Check
-  - [ ] Run `uv run pytest` across all 466+ tests.
-  - [ ] Run `uv run ruff check src` and `uv run mypy src`.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 3: Pipeline & Orchestrator Integration & Full Verification [checkpoint: ff1f13d]
+- [x] Task: Update `InitializationPipeline` and `MLEStarPipeline` (ff1f13d)
+  - [x] Update `InitializationPipeline.run()` in `src/problem_2_v2/initialization/pipeline.py` to bypass any LLM ingestion.
+  - [x] Align `MLEStarConfig.num_candidates` in `src/problem_2_v2/config.py` with test suite defaults (4).
+  - [x] Update `tests/test_orchestrator.py` and `tests/initialization/test_pipeline.py`.
+- [x] Task: Run Full Test Suite & Coverage Check (ff1f13d)
+  - [x] Run `uv run pytest` across all 463 tests.
+  - [x] Run `uv run ruff check src` and `uv run mypy src`.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (ff1f13d)

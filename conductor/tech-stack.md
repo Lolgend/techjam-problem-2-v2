@@ -91,3 +91,11 @@
 > `strict_leakage: bool = False` raising `LeakageEnforcementError`, and emits
 > unambiguous Logfire events (`execution.leakage_repaired`,
 > `execution.leakage_unrepaired`, `guardrails.leakage_repair.succeeded`).
+>
+> **2026-08-31:** Refactored `RetrieverAgent` to provide web search as an
+> autonomous callable function tool (`search_web`) registered directly on the
+> Pydantic AI `Agent` (`retriever_tool_websearch_20260831`). Centralized the
+> retriever prompt template and system instructions in `retriever.py`, allowing the
+> LLM to formulate search queries and retrieve evidence dynamically across all model
+> providers (OpenAI, DeepSeek, Gemini, Anthropic) without static prompt injection.
+

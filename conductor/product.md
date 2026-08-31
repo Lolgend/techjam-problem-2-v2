@@ -28,7 +28,7 @@ Given a problem description in Markdown format (specifying task objectives, data
 ### 2. Targeted Code Block Extraction & Refinement (Nested Exploration)
 - **Outer Loop ($T$ iterations):**
   - **Ablation Study Agent ($A_{\text{abl}}$):** Generates ablation scripts ($a_t$) isolating 2–3 specific pipeline components (e.g., feature transformations, interaction terms, scaling, imputers, model backbones, loss functions).
-  - **Summarization Module ($A_{\text{summarize}}$):** Extracts clean component-impact summaries from raw execution outputs.
+  - **Summarization Module ($A_{\text{summarize}}$):** Executes the ablation script with autonomous code repair via $A_{\text{debugger}}$ when execution fails (up to max debug rounds), and digests raw outputs into structured component-impact summaries.
   - **Extractor Module ($A_{\text{extractor}}$):** Identifies the single code block ($c_t$) with highest performance impact, avoiding previously modified blocks for exploration diversity, and drafts initial improvement plan ($p_0$).
 - **Inner Loop ($K$ iterations):**
   - **Coder Agent ($A_{\text{coder}}$):** Rewrites target code block $c_t$ into refined block $c_t^k$ according to the plan. All generation, refinement, and ensembling agents are instructed to evaluate validation performance with the official baseline harness (`from evaluate import evaluate` → `evaluate(val_user_ids, val_labels, val_predictions)`), so every score and delta ($\Delta(m)$) strictly matches the competition metric.

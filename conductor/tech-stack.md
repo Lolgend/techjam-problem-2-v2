@@ -106,4 +106,11 @@
 > `DataUsageCheckerAgent`, and `FinalArtifactProducer`, and explicitly mandated the
 > official `evaluate.py` harness (`evaluate(user_ids, labels, scores, k=5)`) in
 > candidate generation prompts.
+>
+> **2026-08-31:** Integrated `DebuggerAgent` into `AblationSummarizerAgent` and
+> `RefinementPipeline` (`ablation_debugger_20260831`). When an ablation study
+> script crashes or returns non-zero exit codes, `AblationSummarizerAgent`
+> automatically invokes `DebuggerAgent` to repair runtime and syntax errors
+> across `max_debug_rounds` (default 3) before summarizing results, with
+> graceful heuristic fallback if debugging is exhausted.
 

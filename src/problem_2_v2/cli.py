@@ -19,7 +19,7 @@ from problem_2_v2.console import announce, format_delta, format_score
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.orchestrator import MLEStarPipeline, MLEStarResult, configure_event_loop_policy
 
-_PROVIDERS = ("duckduckgo", "tavily", "google", "mock")
+_PROVIDERS = ("websearch", "builtin", "duckduckgo", "tavily", "google", "mock")
 _BANNER_WIDTH = 78
 _SUBMIT_CHECK_TIMEOUT = 600
 
@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--search-provider",
         "-s",
         choices=_PROVIDERS,
-        default="duckduckgo",
+        default="websearch",
         help="Search backend.",
     )
     run_parser.add_argument("--branches", "-b", type=int, default=2, help="Parallel branches (L).")

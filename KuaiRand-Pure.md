@@ -31,7 +31,10 @@ The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized D
 - **GAUC:** Evaluated strictly on discriminative users where `0 < positive_count < impression_count`, weighted by positive impressions.
 - **nDCG@5:** Evaluated per user with gain `2^rel - 1`. All-negative users (27.1% of dataset) receive 0.0 and are included in the mean.
 
-### CRITICAL: DATA SPLITTING & DATE BOUNDARIES
+### CRITICAL DATA LEAKAGE, FEATURE USAGE & EVALUATION CONSTRAINTS
+
+**DATASET PARTITIONING & TEMPORAL SPLIT RULES**
+
 You MUST split the dataset strictly based on the date column. DO NOT use random splitting or train_test_split.
 
 - **Source Files Available:** 
@@ -43,36 +46,78 @@ You MUST split the dataset strictly based on the date column. DO NOT use random 
   - **Validation Set:** Dates `20220422` to `20220428` (inclusive).
   - **Hidden Test Set:** Dates `20220429` to `20220508` (used ONLY during final submission generation).
 
+
+**FEATURE ROLE DEFINITIONS & ANTI-LEAKAGE BOUNDARIES**
+
+[GROUP A: PRIMARY TARGET (y)]
+- 'long_view'
+
+[GROUP B: POST-INTERACTION SIGNALS (STRICTLY BANNED FROM INPUT MATRIX X) may only be used as auxiliary MTL loss heads]
+The following columns from 'log_xxx.csv' represent user feedback that occurs DURING or AFTER the video impression.
+They DO NOT EXIST at recommendation time:
+- 'is_click'
+- 'is_like'
+- 'is_follow'
+- 'is_comment'
+- 'is_forward'
+- 'is_hate'
+- 'play_time_ms'
+- 'profile_stay_time'
+- 'comment_stay_time'
+- 'is_profile_enter'
+
+RULE:
+- NEVER include any Group B column in the input feature tensor/matrix X.
+- Group B columns MAY ONLY be used as auxiliary targets for Multi-Task Learning loss heads (e.g., auxiliary BCE on 'is_like' or regression loss on 'play_time_ms') during model training.
+- Predictions for test submission must be based purely on model inference using allowed features (Group C, D, E).
+
+[GROUP C: ALLOWED INTERACTION LOG CONTEXT (X_interaction)]
+- 'user_id'
+- 'video_id'
+- 'tab'
+- 'hourmin'
+- 'is_rand'
+- duration_ms 
+
+[GROUP D (ALL ALLOWED): USER SIDE FEATURES (X_user, from user_features_pure.csv)]
+Join strictly on 'user_id':
+- Categorical / Discrete: 'user_active_degree', 'is_lowactive_period', 'is_live_streamer', 'is_video_author'
+- Numerical / Ranges: 'follow_user_num', 'follow_user_num_range', 'fans_user_num', 'fans_user_num_range', 'friend_user_num', 'friend_user_num_range', 'register_days', 'register_days_range'
+- One-Hot features: 'onehot_feat0' through 'onehot_feat17'
+
+[GROUP E (ALL ALLOWED): VIDEO SIDE FEATURES (X_video)]
+- Basic Metadata (video_features_basic_pure.csv)
+- Prior Statistical Aggregations (video_features_statistic_pure.csv):
+  Different from the basic features, the statistical features are the average statistics of the video each day over one month. For example, in the following table, video 9288071 has 66 counts over this one month (a video can have multiple counts each day on different scenarios, e.g., on April 8, show_cnt=80 on the main page and show_cnt=65 on the recommendation page of the App)
+
 ### Baseline Ladder & Oracle Headroom
 - **Random Baseline (Lower Bound):** Validation primary = 0.4834 | Test primary = 0.4753
 - **Item Popularity Baseline:** Validation primary = 0.5807 | Test primary = 0.5715
 - **Official FM Baseline (Target to Beat):** Validation primary = 0.6016 | Test primary = 0.5946 (std over 5 seeds = 0.0008)
 - **Oracle Theoretical Ceiling:** Validation primary = 0.8484 | Test primary = 0.8645 (nDCG ceiling is 0.7289 due to 27.1% all-negative users)
 
-### Validated Empirical Insights & Search Directions
+### Validated Empirical Insights
 - **Negative Findings (Do not repeat):**
   - Adding static features (e.g. CWM 13 domains) yields no gain (0.5940 vs 0.5950), because `user_id x video_id` already captures most static signals.
   - First-order pure user features contribute zero to within-user ranking since they are constant within each user's candidate list.
   - Increasing FM latent dimension (k=8, 16, 32) does not improve performance.
-- **High-Headroom Directions to Explore:**
-  - **Ranking Loss Functions:** Pairwise (BPR / Margin ranking) or listwise (per-user softmax) objectives aligned with GAUC/nDCG.
-  - **Sequential User History Modeling:** Utilizing user interaction sequences via attention architectures (DIN, SASRec, SIM).
-  - **Auxiliary Multi-Task Learning:** Leveraging auxiliary interactions (`is_click`, `is_like`, `is_follow`, `is_comment`, `is_forward`, `play_time_ms`).
-  - **Censored Watch-Time Modeling:** Modeling duration with survival/censoring regression.
-  - **Distribution Shift & Temporal Dynamics:** Temporal features (`date`, `hour`, recency) between train and test periods.
 
 **Constraints:**
 - **Data Leakage & Subsampling:**
   - Do not use external datasets.
   - Subsample training data to at most 30,000 samples during iterative experimentation. Full training is reserved for final artifact production.
   - Guard against target leakage in categorical and target encodings (use out-of-fold / leave-one-out with shrinkage).
-- **Mandatory Evaluation & Submission Standards:**
-  - Every solution script must evaluate validation predictions with `evaluate()` from `evaluate.py`.
+- **IMPORTANT Mandatory Evaluation & Submission Standards:**
+  - Every `solution.py` script must evaluate validation predictions with `evaluate(user_ids, labels, scores)` by `from evaluate import evaluate`.
+  - user_ids: the user ID for each row in the evaluation split
+  - labels: the row's long_view value (0/1)
+  - scores: the score assigned by your model to each row (any real number; only relative ordering matters)
   - The final production script must write `./final/submission.csv` with exact columns: `row_id,user_id,video_id,score` and must pass verification with `python3 submit.py --check ./final/submission.csv`.
+  - If the primary metric is 1.0 or comes close to 1.0, do verify that evaluation() is being used properly.
 - **Convergence Rule:**
   - Convergence is defined as validation improvement delta <= epsilon = 0.002 over N = 3 consecutive iterations.
 - **Output Validation Score Standard:**
   - All executable solution scripts must output the validation score to stdout in the exact format:
-    `Final Validation Performance: {final_validation_score}`
+    `Final Validation Performance: {final_validation_score}` derived from evaluate() function in evaluate.py
 
 

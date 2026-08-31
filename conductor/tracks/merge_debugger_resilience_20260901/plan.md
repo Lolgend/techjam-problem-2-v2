@@ -1,15 +1,15 @@
 # Implementation Plan: Model Merger Debugger Integration & Ablation Continuity
 
-## Phase 1: Test Suite & Failure Reproduction (TDD Red Phase)
-- [ ] Task: Add failing unit tests for ModelMergerAgent syntax debugging and error resilience
-  - [ ] Add unit test in 	ests/initialization/test_merger.py for syntax repair via DebuggerAgent.
-  - [ ] Add unit test in 	ests/initialization/test_merger.py for LLM exception fallback.
-  - [ ] Verify test suite fails on current implementation.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+## Phase 1: Test Suite & Failure Reproduction (TDD Red Phase) [checkpoint: 455397e]
+- [x] Task: Add failing unit tests for ModelMergerAgent syntax debugging and error resilience [455397e]
+  - [x] Add unit test in 	ests/initialization/test_merger.py for syntax repair via DebuggerAgent.
+  - [x] Add unit test in 	ests/initialization/test_merger.py for LLM exception fallback.
+  - [x] Verify test suite fails on current implementation.
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [455397e]
 
 ## Phase 2: Implementation of Merger Debugger & Continuity (TDD Green Phase)
 - [ ] Task: Update ModelMergerAgent with Debugger Syntax Repair & Exception Fallback
-  - [ ] In src/problem_2_v2/initialization/merger.py, remove premature syntax reak and hand code to self.debugger.debug().
+  - [ ] In src/problem_2_v2/initialization/merger.py, remove premature syntax  reak and hand code to self.debugger.debug().
   - [ ] Wrap LLM calls in exception handling and return MergeOutcome with best candidate fallback.
   - [ ] Run uv run pytest tests/initialization/ and verify all tests pass.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

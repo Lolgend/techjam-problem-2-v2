@@ -157,3 +157,15 @@ class TestAblationSummarizerAgent:
             summarizer.summarize(ABLATION_CODE, run_id="r")
         assert ABLATION_CODE in captured["prompt"]
         assert "Ablation study results" in captured["prompt"]
+
+    def test_summarizer_build_prompt_format(self) -> None:
+        prompt = AblationSummarizerAgent.build_prompt(
+            ablation_code=ABLATION_CODE,
+            raw_output="variant A: 0.85\nvariant B: 0.78",
+        )
+        assert "# Your code for ablation study was:" in prompt
+        assert ABLATION_CODE in prompt
+        assert "# Ablation study results after running the above code:" in prompt
+        assert "variant A: 0.85\nvariant B: 0.78" in prompt
+        assert "# Your task" in prompt
+        assert "Summarize the result of ablation study based on the code" in prompt

@@ -50,6 +50,15 @@ _ABLATION_PROMPT_TEMPLATE = (
     "overall performance."
 )
 
+_SUMMARIZE_PROMPT_TEMPLATE = (
+    "# Your code for ablation study was:\n"
+    "{ablation_code}\n"
+    "# Ablation study results after running the above code:\n"
+    "{raw_output}\n"
+    "# Your task\n"
+    "- Summarize the result of ablation study based on the code and printed output."
+)
+
 _SUMMARIZE_INSTRUCTIONS = (
     "You summarize the result of an ablation study based on the ablation "
     "code and its printed output.\n"
@@ -152,6 +161,24 @@ class AblationSummarizerAgent:
             defer_model_check=True,
         )
 
+    @staticmethod
+    def build_prompt(ablation_code: str, raw_output: str) -> str:
+        """Build the Figure 13 ablation summarization prompt.
+
+        Args:
+            ablation_code: The ablation study script that was executed.
+            raw_output: Raw stdout/stderr execution output.
+
+        Returns:
+            The formatted summarization prompt string.
+        """
+        return _SUMMARIZE_PROMPT_TEMPLATE.format(
+            ablation_code=ablation_code,
+            raw_output=raw_output or "(no output)",
+        )
+
+    _build_prompt = build_prompt
+
     def summarize(
         self,
         ablation_code: str,
@@ -188,13 +215,7 @@ class AblationSummarizerAgent:
 
         try:
             with logfire.span("ablation.summarize_llm"):
-                prompt = (
-                    f"# Your code for ablation study was:\n{ablation_code}\n"
-                    f"# Ablation study results after running the above code:\n"
-                    f"{raw_output or '(no output)'}\n"
-                    f"# Your task\nSummarize the result of the ablation study "
-                    f"based on the code and printed output."
-                )
+                prompt = self.build_prompt(ablation_code=ablation_code, raw_output=raw_output)
                 response = self.agent.run_sync(prompt)
             return response.output
         except Exception:

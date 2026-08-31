@@ -1,6 +1,6 @@
 # Plan: Retire Task Ingestion Agent & Inject Raw Task Description into Prompts
 
-## Phase 1: Ingestion Architecture & `TaskSpecification` Contract Update
+## Phase 1: Ingestion Architecture & `TaskSpecification` Contract Update [checkpoint: e61949f]
 - [x] Task: Write failing unit tests for `TaskSpecification.raw_description` and non-LLM `TaskExtractor` (e61949f)
   - [x] Add tests in `tests/contracts/test_task.py` asserting `TaskSpecification.from_markdown` preserves `raw_description`.
   - [x] Add tests in `tests/ingestion/test_extractor.py` verifying `TaskExtractor` operates deterministically without LLM calls.
@@ -9,7 +9,7 @@
   - [x] Update `from_markdown` to store `md_text.strip()` as `raw_description`.
   - [x] Refactor `TaskExtractor` in `src/problem_2_v2/ingestion/extractor.py` to remove the LLM `Agent` and directly return `TaskSpecification.from_markdown`.
   - [x] Run `pytest tests/contracts/test_task.py tests/ingestion/test_extractor.py` to confirm green phase.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (e61949f)
 
 ## Phase 2: Prompt Injections across Target Agents & Evaluate Harness Mandate
 - [ ] Task: Write failing unit tests for prompt generation with raw task description

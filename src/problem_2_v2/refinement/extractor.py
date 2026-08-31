@@ -69,28 +69,40 @@ def _fallback_primary_block(solution: str) -> str:
     return segment if segment is not None else solution
 
 
-_EXTRACTOR_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition. In order to win "
-    "this competition, you need to extract a code block from the current "
-    "Python solution and improve the extracted block for better "
-    "performance.\n"
-    "- Your suggestion should be based on the ablation study results of the "
-    "current Python solution.\n"
+_EXTRACTOR_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- In order to win this competition, you need to extract a code block from the current\n"
+    "Python solution and improve the extracted block for better performance.\n"
+    "- Your suggestion should be based on the ablation study results of the current Python\n"
+    "solution.\n"
+    "- We will now provide the current Python solution and the ablation study results.\n"
+    "- We also provide code blocks which you have tried to improve previously.\n"
+    "# Python solution\n"
+    "{solution_script}\n"
+    "# Ablation study results\n"
+    "{ablation_summary}\n"
+    "{previous_blocks}"
     "# Your task\n"
-    "- Given the ablation study results, suggest an effective next plan to "
-    "improve the Python script.\n"
-    "- The plan should be a brief outline/sketch of your proposed solution "
-    "in natural language (3-5 sentences).\n"
-    "- Avoid plans which can make the solution's running time too long "
-    "(e.g., searching hyperparameters in a very large search space).\n"
-    "- Try to improve a part which was not considered before.\n"
-    "- Also extract the code block from the Python script that needs to be "
-    "improved according to the proposed plan; try to extract a code block "
-    "which was not improved before.\n"
+    "- Given the ablation study results, suggest an effective next plan to improve the above\n"
+    "Python script.\n"
+    "- The plan should be a brief outline/sketch of your proposed solution in natural language\n"
+    "(3-5 sentences).\n"
+    "- Please avoid plan which can make the solution's running time too long (e.g., searching\n"
+    "hyperparameters in a very large search space).\n"
+    "- Try to improve the other part which was not considered before.\n"
+    "- Also extract the code block from the above Python script that need to be improved\n"
+    "according to the proposed plan. You should try to extract the code block which was not\n"
+    "improved before.\n"
     "# Response format\n"
-    "- The code block must be exactly extracted from the Python script "
+    "- Your response should be a brief outline/sketch of your proposed solution in natural\n"
+    "language (3-5 sentences) and a single markdown code block which is the code block that need\n"
+    "to be improved.\n"
+    "- The code block can be long but should be exactly extracted from the Python script\n"
     "provided above.\n"
-    "- Classify the code block into one of the allowed component categories."
+    "Use this JSON schema:\n"
+    "Refine_Plan = {{'code_block': str, 'plan': str}}\n"
+    "Return: list[Refine_Plan]"
 )
 
 
@@ -103,11 +115,14 @@ class RefinePlanItem(BaseModel):
         category: Functional category of the extracted block.
     """
 
-    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+    model_config = ConfigDict(extra="ignore", validate_assignment=True)
 
     code_block: str = Field(description="Exact extracted code block.")
     plan: str = Field(description="Natural-language refinement plan.")
-    category: ComponentCategory = Field(description="Component category.")
+    category: ComponentCategory = Field(
+        default=ComponentCategory.MODEL_ARCHITECTURE,
+        description="Component category.",
+    )
 
 
 class CodeBlockExtractorAgent:
@@ -127,7 +142,6 @@ class CodeBlockExtractorAgent:
             model,
             name="code_block_extractor_agent",
             output_type=list[RefinePlanItem],
-            instructions=_EXTRACTOR_INSTRUCTIONS,
             defer_model_check=True,
         )
 
@@ -199,13 +213,15 @@ class CodeBlockExtractorAgent:
         Returns:
             The full extraction prompt.
         """
-        history = "\n".join(
-            f"## Code block{{{i}}}\n{block}" for i, block in enumerate(previous_blocks)
+        history_parts = [
+            f"## Code block {{{i}}}\n{block}" for i, block in enumerate(previous_blocks)
+        ]
+        history_joined = "\n".join(history_parts)
+        previous_str = f"{history_joined}\n" if history_parts else ""
+        return _EXTRACTOR_PROMPT_TEMPLATE.format(
+            solution_script=solution,
+            ablation_summary=ablation_summary,
+            previous_blocks=previous_str,
         )
-        return (
-            f"# Introduction\nYou are a Kaggle grandmaster attending a "
-            f"competition.\n# Python solution\n{solution}\n"
-            f"# Ablation study results\n{ablation_summary}\n{history}\n"
-            f"# Your task\nGiven the ablation study results, suggest an "
-            f"effective next plan and extract the code block to improve."
-        )
+
+    _build_prompt = build_prompt

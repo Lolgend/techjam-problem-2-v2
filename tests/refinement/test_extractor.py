@@ -199,4 +199,24 @@ class TestCodeBlockExtractorAgent:
         assert "Imputation mattered most." in prompt
         assert "imputer = SimpleImputer(strategy='mean')" in prompt
         assert "Python solution" in prompt
-        assert "2-3" not in prompt
+
+    def test_build_prompt_format(self) -> None:
+        prompt = CodeBlockExtractorAgent.build_prompt(
+            solution=SOLUTION,
+            ablation_summary="Imputation mattered most.",
+            previous_blocks=["block 0", "block 1"],
+        )
+        assert "# Introduction" in prompt
+        assert "- You are a Kaggle grandmaster attending a competition." in prompt
+        assert "extract a code block from the current" in prompt
+        assert "# Python solution" in prompt
+        assert SOLUTION in prompt
+        assert "# Ablation study results" in prompt
+        assert "Imputation mattered most." in prompt
+        assert "## Code block {0}\nblock 0" in prompt
+        assert "## Code block {1}\nblock 1" in prompt
+        assert "# Your task" in prompt
+        assert "suggest an effective next plan to improve the above" in prompt
+        assert "# Response format" in prompt
+        assert "Refine_Plan = {'code_block': str, 'plan': str}" in prompt
+        assert "Return: list[Refine_Plan]" in prompt

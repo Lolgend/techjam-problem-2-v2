@@ -10,6 +10,7 @@ from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.refinement import AblationReport
 from problem_2_v2.refinement.ablation import AblationAgent, AblationSummarizerAgent
+from problem_2_v2.runner.debugger import DebuggerAgent
 from problem_2_v2.runner.sandbox import SubprocessRunner
 
 SOLUTION = (
@@ -169,3 +170,39 @@ class TestAblationSummarizerAgent:
         assert "variant A: 0.85\nvariant B: 0.78" in prompt
         assert "# Your task" in prompt
         assert "Summarize the result of ablation study based on the code" in prompt
+
+    def test_summarizer_invokes_debugger_when_ablation_fails(
+        self, runner: SubprocessRunner
+    ) -> None:
+        debugger = DebuggerAgent(runner=runner, model="test")
+        repaired_code = (
+            "print('Final Validation Performance: 0.80')\n"
+            "print('variant_fixed: 0.85')\n"
+        )
+
+        def mock_debugger_response(messages, info):
+            return ModelResponse(parts=[TextPart(content=f"```python\n{repaired_code}\n```")])
+
+        with debugger.agent.override(model=FunctionModel(function=mock_debugger_response)):
+            summarizer = AblationSummarizerAgent(runner=runner, debugger=debugger, model="test")
+            with summarizer.agent.override(model=TestModel(custom_output_args=self._report_args())):
+                broken_code = "raise RuntimeError('Ablation broken')"
+                report = summarizer.summarize(broken_code, run_id="test_debug_run")
+
+        assert isinstance(report, AblationReport)
+
+    def test_summarizer_debugger_exhausted_falls_back_gracefully(
+        self, runner: SubprocessRunner
+    ) -> None:
+        debugger = DebuggerAgent(runner=runner, model="test", max_debug_rounds=1)
+
+        def mock_debugger_unsuccessful(messages, info):
+            return ModelResponse(parts=[TextPart(content="```python\nraise RuntimeError('Still broken')\n```")])
+
+        with debugger.agent.override(model=FunctionModel(function=mock_debugger_unsuccessful)):
+            summarizer = AblationSummarizerAgent(runner=runner, debugger=debugger, model="test")
+            broken_code = "raise RuntimeError('Initial crash')"
+            report = summarizer.summarize(broken_code, run_id="test_debug_exhaust")
+
+        assert isinstance(report, AblationReport)
+        assert "RuntimeError" in report.raw_log_summary or report.baseline_score == 0.0

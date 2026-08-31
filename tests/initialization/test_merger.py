@@ -196,3 +196,38 @@ class TestModelMergerAgent:
         assert "Final Validation Performance: {final_validation_score}" in prompt
         assert "- Do not use exit() function in the Python code." in prompt
         assert "- Do not use try: and except: or if else to ignore unintended behavior" in prompt
+
+    def test_merger_repairs_syntax_error_via_debugger(self, merger: ModelMergerAgent) -> None:
+        ranked = [
+            _evaluation("A", CODE_A, 0.90),
+            _evaluation("B", CODE_B, 0.85),
+        ]
+        repaired_code = "print('Final Validation Performance: 0.96')\n# repaired merge"
+        with (
+            merger.agent.override(model=TestModel(custom_output_text="```python\ndef broken(:\n    pass\n```")),
+            merger.debugger.agent.override(
+                model=TestModel(custom_output_text=f"```python\n{repaired_code}\n```")
+            ),
+        ):
+            outcome = merger.merge(_spec(), ranked, run_id="r_repair")
+        assert outcome.merged_count == 1
+        assert outcome.final_score == pytest.approx(0.96)
+        assert outcome.steps[0].accepted is True
+
+    def test_merger_handles_llm_exception_gracefully(self, merger: ModelMergerAgent) -> None:
+        ranked = [
+            _evaluation("A", CODE_A, 0.90),
+            _evaluation("B", CODE_B, 0.85),
+        ]
+
+        def crashing_model(messages, info):
+            raise RuntimeError("LLM API connection failed")
+
+        with merger.agent.override(model=FunctionModel(function=crashing_model)):
+            outcome = merger.merge(_spec(), ranked, run_id="r_crash")
+        assert outcome.merged_count == 0
+        assert outcome.final_code == CODE_A
+        assert outcome.final_score == pytest.approx(0.90)
+        assert len(outcome.steps) == 1
+        assert outcome.steps[0].accepted is False
+        assert outcome.steps[0].reason == "rejected_error"

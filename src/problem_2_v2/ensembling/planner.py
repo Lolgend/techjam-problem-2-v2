@@ -10,6 +10,7 @@ from __future__ import annotations
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.enums import EnsembleMethod
 from problem_2_v2.contracts.guardrails import EnsembleStrategy
@@ -66,16 +67,23 @@ class EnsemblePlannerAgent:
         agent: Pydantic AI agent producing structured plan proposals.
     """
 
-    def __init__(self, model: str = "openai:gpt-4o") -> None:
+    def __init__(
+        self,
+        model: str = "openai:gpt-4o",
+        model_settings: ModelSettings | dict | None = None,
+    ) -> None:
         """Create an ensemble planner.
 
         Args:
             model: Pydantic AI model string.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
             name="ensemble_planner_agent",
             output_type=EnsemblePlanProposal,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

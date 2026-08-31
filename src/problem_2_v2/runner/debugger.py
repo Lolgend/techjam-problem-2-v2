@@ -11,6 +11,7 @@ from __future__ import annotations
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.task import ExecutionResult
@@ -66,6 +67,7 @@ class DebuggerAgent:
         runner: SubprocessRunner,
         model: str = "openai:gpt-4o",
         max_debug_rounds: int = 3,
+        model_settings: ModelSettings | dict | None = None,
     ) -> None:
         """Create a debugger agent.
 
@@ -73,14 +75,17 @@ class DebuggerAgent:
             runner: Sandbox runner for script execution.
             model: Pydantic AI model string.
             max_debug_rounds: Maximum repair attempts (default 3).
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
         self.runner = runner
         self.max_debug_rounds = max_debug_rounds
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
             name="debugger_agent",
             output_type=str,
             instructions=_DEBUGGER_INSTRUCTIONS,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

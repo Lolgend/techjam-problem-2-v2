@@ -15,6 +15,7 @@ from pathlib import Path
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.console import announce, format_score
 from problem_2_v2.contracts.code_utils import (
@@ -109,6 +110,7 @@ class FinalArtifactProducer:
         debugger: DebuggerAgent | None = None,
         model: str = "openai:gpt-4o",
         config: ExecutionConfig | None = None,
+        model_settings: ModelSettings | dict | None = None,
     ) -> None:
         """Create the final artifact producer.
 
@@ -117,13 +119,16 @@ class FinalArtifactProducer:
                 with the extended production timeout when omitted.
             model: Pydantic AI model string.
             config: Execution configuration.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
         self.config = config or ExecutionConfig()
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
-            name="finalizer_agent",
+            name="final_artifact_producer",
             output_type=str,
             instructions=_FINALIZER_INSTRUCTIONS,
+            model_settings=model_settings,
             defer_model_check=True,
         )
         self.debugger = debugger or DebuggerAgent(
@@ -133,6 +138,7 @@ class FinalArtifactProducer:
             ),
             model=model,
             max_debug_rounds=self.config.max_debug_rounds,
+            model_settings=model_settings,
         )
 
     def produce(

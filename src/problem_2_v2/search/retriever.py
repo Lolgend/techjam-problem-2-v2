@@ -18,6 +18,8 @@ from typing import Any
 import logfire
 from pydantic_ai import Agent
 
+from pydantic_ai.settings import ModelSettings
+
 from problem_2_v2.contracts.enums import TaskType
 from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
 from problem_2_v2.contracts.task import TaskSpecification
@@ -66,9 +68,10 @@ class RetrieverAgent:
 
     def __init__(
         self,
-        provider: SearchProvider,
+        provider: SearchProvider | None = None,
         model: str = "openai:gpt-4o",
         num_candidates: int = 4,
+        model_settings: ModelSettings | dict[str, Any] | None = None,
     ) -> None:
         """Create a retriever agent.
 
@@ -76,9 +79,11 @@ class RetrieverAgent:
             provider: Search provider used to gather evidence snippets.
             model: Pydantic AI model string.
             num_candidates: Desired number of candidate models (M).
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
         self.provider = provider
         self.num_candidates = num_candidates
+        self.model_settings = model_settings
         search_tool = self._build_search_tool()
 
         self.agent = Agent(
@@ -87,6 +92,7 @@ class RetrieverAgent:
             output_type=list[ModelCard],
             instructions=_RETRIEVER_INSTRUCTIONS,
             tools=[search_tool],
+            model_settings=model_settings,
             defer_model_check=True,
         )
         self.text_agent = Agent(
@@ -95,6 +101,7 @@ class RetrieverAgent:
             output_type=str,
             instructions=_RETRIEVER_INSTRUCTIONS,
             tools=[search_tool],
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

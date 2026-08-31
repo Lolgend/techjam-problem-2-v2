@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logfire
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.guardrails import DataLeakageStatus
@@ -70,16 +71,23 @@ class DataLeakageCheckerAgent:
         repair_agent: Pydantic AI agent producing corrected code blocks.
     """
 
-    def __init__(self, model: str = "openai:gpt-4o") -> None:
+    def __init__(
+        self,
+        model: str = "openai:gpt-4o",
+        model_settings: ModelSettings | dict | None = None,
+    ) -> None:
         """Create a leakage checker.
 
         Args:
             model: Pydantic AI model string.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
+        self.model_settings = model_settings
         self.check_agent = Agent(
             model,
             name="data_leakage_check_agent",
             output_type=DataLeakageStatus,
+            model_settings=model_settings,
             defer_model_check=True,
         )
         self.repair_agent = Agent(
@@ -87,6 +95,7 @@ class DataLeakageCheckerAgent:
             name="data_leakage_repair_agent",
             output_type=str,
             instructions=_REPAIR_INSTRUCTIONS,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

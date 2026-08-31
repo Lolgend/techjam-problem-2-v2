@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logfire
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 
@@ -44,16 +45,23 @@ class RefinementPlannerAgent:
         agent: Pydantic AI agent producing the next plan in prose.
     """
 
-    def __init__(self, model: str = "openai:gpt-4o") -> None:
+    def __init__(
+        self,
+        model: str = "openai:gpt-4o",
+        model_settings: ModelSettings | dict | None = None,
+    ) -> None:
         """Create a refinement planner.
 
         Args:
             model: Pydantic AI model string.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
             name="refinement_planner_agent",
             output_type=str,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

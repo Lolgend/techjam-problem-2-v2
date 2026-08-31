@@ -94,6 +94,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Logfire write token for streaming traces to the web dashboard.",
     )
     run_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Maximum output tokens for LLM responses (default: provider limit).",
+    )
+    run_parser.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="LLM sampling temperature (default: provider default).",
+    )
+    run_parser.add_argument(
         "--dry-run", action="store_true", help="Validate inputs without running the pipeline."
     )
 
@@ -200,6 +212,8 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         inner_loops=args.inner_loops,
         ensemble_rounds=args.ensemble_rounds,
         seeds=seeds,
+        max_tokens=args.max_tokens,
+        temperature=args.temperature,
     )
     pipeline = MLEStarPipeline(config=config)
 

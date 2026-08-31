@@ -14,6 +14,7 @@ from typing import ClassVar
 
 import logfire
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.refinement import (
@@ -77,16 +78,23 @@ class AblationAgent:
         agent: Pydantic AI agent producing the ablation script.
     """
 
-    def __init__(self, model: str = "openai:gpt-4o") -> None:
+    def __init__(
+        self,
+        model: str = "openai:gpt-4o",
+        model_settings: ModelSettings | dict | None = None,
+    ) -> None:
         """Create an ablation generation agent.
 
         Args:
             model: Pydantic AI model string.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
             name="ablation_agent",
             output_type=str,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 
@@ -152,6 +160,7 @@ class AblationSummarizerAgent:
         runner: SubprocessRunner,
         model: str = "openai:gpt-4o",
         debugger: DebuggerAgent | None = None,
+        model_settings: ModelSettings | dict | None = None,
     ) -> None:
         """Create an ablation summarizer.
 
@@ -159,14 +168,19 @@ class AblationSummarizerAgent:
             runner: Sandbox runner for ablation script execution.
             model: Pydantic AI model string.
             debugger: Debugger agent for autonomous error repair.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
         self.runner = runner
-        self.debugger = debugger or DebuggerAgent(runner=runner, model=model)
+        self.debugger = debugger or DebuggerAgent(
+            runner=runner, model=model, model_settings=model_settings
+        )
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
             name="ablation_summarizer_agent",
             output_type=AblationReport,
             instructions=_SUMMARIZE_INSTRUCTIONS,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

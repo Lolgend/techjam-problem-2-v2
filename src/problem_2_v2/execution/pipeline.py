@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.task import ExecutionResult, TaskSpecification
 from problem_2_v2.guardrails.leakage import DataLeakageCheckerAgent, LeakageEnforcementError
@@ -83,6 +84,7 @@ class ExecutionGuardrailPipeline:
         runner: SubprocessRunner | None = None,
         debugger: DebuggerAgent | None = None,
         model: str = "openai:gpt-4o",
+        model_settings: ModelSettings | dict | None = None,
     ) -> None:
         """Create the execution guardrail pipeline.
 
@@ -93,10 +95,12 @@ class ExecutionGuardrailPipeline:
             runner: Sandbox subprocess runner.
             debugger: Automatic debugger agent.
             model: Pydantic AI model string used for any default agents.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
         self.config = config or ExecutionConfig()
-        self.leakage = leakage or DataLeakageCheckerAgent(model=model)
-        self.usage = usage or DataUsageCheckerAgent(model=model)
+        self.model_settings = model_settings
+        self.leakage = leakage or DataLeakageCheckerAgent(model=model, model_settings=model_settings)
+        self.usage = usage or DataUsageCheckerAgent(model=model, model_settings=model_settings)
         self.runner = runner or SubprocessRunner(
             runs_dir=self.config.sandbox_base_dir,
             timeout_seconds=self.config.timeout_seconds,
@@ -105,6 +109,7 @@ class ExecutionGuardrailPipeline:
             runner=self.runner,
             model=model,
             max_debug_rounds=self.config.max_debug_rounds,
+            model_settings=model_settings,
         )
         self.last_guarded_code: str | None = None
         self.last_executed_code: str | None = None

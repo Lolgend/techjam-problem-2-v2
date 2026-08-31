@@ -52,6 +52,26 @@ class MLEStarConfig(BaseModel):
     production_timeout_seconds: int = Field(
         default=3600, gt=0, description="Production timeout in seconds."
     )
+    max_tokens: int | None = Field(
+        default=None,
+        gt=0,
+        description="Maximum output tokens for LLM generation (None = provider default).",
+    )
+    temperature: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=2.0,
+        description="LLM sampling temperature (None = provider default).",
+    )
     max_debug_rounds: int = Field(default=3, ge=0, description="Debugger repair budget.")
     runs_dir: str = Field(default="runs", description="Sandbox root directory.")
     final_output_dir: str = Field(default="final", description="Production output directory.")
+
+    def get_model_settings(self) -> dict[str, int | float] | None:
+        """Return a model_settings dictionary if limits or temperature are configured."""
+        settings: dict[str, int | float] = {}
+        if self.max_tokens is not None:
+            settings["max_tokens"] = self.max_tokens
+        if self.temperature is not None:
+            settings["temperature"] = self.temperature
+        return settings if settings else None

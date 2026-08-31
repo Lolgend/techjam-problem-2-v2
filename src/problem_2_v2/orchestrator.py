@@ -123,6 +123,7 @@ class MLEStarPipeline:
         """
         self.config = config or MLEStarConfig()
         self._provider = search_provider or self._build_provider()
+        model_settings = self.config.get_model_settings()
 
         self.runner = SubprocessRunner(
             runs_dir=self.config.runs_dir,
@@ -136,6 +137,7 @@ class MLEStarPipeline:
                 production_timeout_seconds=self.config.production_timeout_seconds,
             ),
             model=self.config.model,
+            model_settings=model_settings,
         )
         self.debugger = self.execution.debugger
         self.finalizer = FinalArtifactProducer(
@@ -147,14 +149,16 @@ class MLEStarPipeline:
                 sandbox_base_dir=self.config.runs_dir,
                 production_timeout_seconds=self.config.production_timeout_seconds,
             ),
+            model_settings=model_settings,
         )
         self.ensembler = EnsemblerAgent(
             debugger=self.debugger,
             model=self.config.model,
             execution=self.execution,
+            model_settings=model_settings,
         )
         self.ensemble_pipeline = EnsemblePipeline(
-            planner=EnsemblePlannerAgent(model=self.config.model),
+            planner=EnsemblePlannerAgent(model=self.config.model, model_settings=model_settings),
             ensembler=self.ensembler,
             runner=self.runner,
             rounds=self.config.ensemble_rounds,
@@ -329,6 +333,7 @@ class MLEStarPipeline:
         Each branch owns its runner and debugger so sandbox namespaces stay
         isolated across the concurrent branches.
         """
+        model_settings = self.config.get_model_settings()
         runner = SubprocessRunner(
             runs_dir=self.config.runs_dir,
             timeout_seconds=self.config.timeout_seconds,
@@ -337,6 +342,7 @@ class MLEStarPipeline:
             runner=runner,
             model=self.config.model,
             max_debug_rounds=self.config.max_debug_rounds,
+            model_settings=model_settings,
         )
         init = InitializationPipeline(
             extractor=TaskExtractor(model=self.config.model),
@@ -344,21 +350,45 @@ class MLEStarPipeline:
                 provider=self._provider,
                 model=self.config.model,
                 num_candidates=self.config.num_candidates,
+                model_settings=model_settings,
             ),
-            evaluator=CandidateEvaluatorAgent(debugger=debugger, model=self.config.model),
-            merger=ModelMergerAgent(debugger=debugger, model=self.config.model),
+            evaluator=CandidateEvaluatorAgent(
+                debugger=debugger,
+                model=self.config.model,
+                model_settings=model_settings,
+            ),
+            merger=ModelMergerAgent(
+                debugger=debugger,
+                model=self.config.model,
+                model_settings=model_settings,
+            ),
             use_baseline=True,
         )
         refine = RefinementPipeline(
-            ablation=AblationAgent(model=self.config.model),
+            ablation=AblationAgent(model=self.config.model, model_settings=model_settings),
             summarizer=AblationSummarizerAgent(
-                runner=runner, model=self.config.model, debugger=debugger
+                runner=runner,
+                model=self.config.model,
+                debugger=debugger,
+                model_settings=model_settings,
             ),
-            extractor=CodeBlockExtractorAgent(model=self.config.model),
-            planner=RefinementPlannerAgent(model=self.config.model),
-            coder=CoderAgent(model=self.config.model),
-            leakage=DataLeakageCheckerAgent(model=self.config.model),
-            usage=DataUsageCheckerAgent(model=self.config.model),
+            extractor=CodeBlockExtractorAgent(
+                model=self.config.model,
+                model_settings=model_settings,
+            ),
+            planner=RefinementPlannerAgent(
+                model=self.config.model,
+                model_settings=model_settings,
+            ),
+            coder=CoderAgent(model=self.config.model, model_settings=model_settings),
+            leakage=DataLeakageCheckerAgent(
+                model=self.config.model,
+                model_settings=model_settings,
+            ),
+            usage=DataUsageCheckerAgent(
+                model=self.config.model,
+                model_settings=model_settings,
+            ),
             debugger=debugger,
             runner=runner,
             outer_loops=self.config.outer_loops,

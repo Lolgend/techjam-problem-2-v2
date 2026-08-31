@@ -12,6 +12,7 @@ from __future__ import annotations
 import logfire
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings
 
 from problem_2_v2.contracts.code_utils import (
     compute_code_diff,
@@ -134,18 +135,22 @@ class ModelMergerAgent:
         self,
         debugger: DebuggerAgent,
         model: str = "openai:gpt-4o",
+        model_settings: ModelSettings | dict | None = None,
     ) -> None:
         """Create a model merger agent.
 
         Args:
             debugger: Debugger agent for merged-script repair.
             model: Pydantic AI model string.
+            model_settings: Optional LLM generation settings (e.g. max_tokens).
         """
         self.debugger = debugger
+        self.model_settings = model_settings
         self.agent = Agent(
             model,
             name="model_merger_agent",
             output_type=str,
+            model_settings=model_settings,
             defer_model_check=True,
         )
 

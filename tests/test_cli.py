@@ -66,6 +66,28 @@ class TestCLI:
         assert code == 0
         assert "Demo" in out
 
+    def test_run_dry_run_with_token_limits(self, tmp_path: Path, capsys) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "mock",
+                "--max-tokens",
+                "4096",
+                "--temperature",
+                "0.7",
+                "--dry-run",
+            ]
+        )
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "Demo" in out
+
     def test_run_requires_task(self, tmp_path: Path, capsys) -> None:
         data_dir = tmp_path / "data"
         data_dir.mkdir()

@@ -21,8 +21,8 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [25db1e7]
 
 ## Phase 3: End-to-End Verification & Quality Gates
-- [ ] Task: Quality Gates & Full Verification
-  - [ ] Run `uv run ruff check src` and `uv run ruff format --check src`.
-  - [ ] Run `uv run mypy src`.
-  - [ ] Run `uv run pytest --cov=src --cov-report=term-missing` and verify >80% coverage on modified modules.
+- [x] Task: Quality Gates & Full Verification [99210ba]
+  - [x] Run `uv run ruff check src` and `uv run ruff format --check src`.
+  - [x] Run `uv run mypy src`.
+  - [x] Run `uv run pytest --cov=src --cov-report=term-missing` and verify >80% coverage on modified modules.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

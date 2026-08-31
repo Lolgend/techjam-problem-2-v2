@@ -351,7 +351,7 @@ class MLEStarPipeline:
         )
         refine = RefinementPipeline(
             ablation=AblationAgent(model=self.config.model),
-            summarizer=AblationSummarizerAgent(runner=runner, model=self.config.model),
+            summarizer=AblationSummarizerAgent(runner=runner, model=self.config.model, debugger=debugger),
             extractor=CodeBlockExtractorAgent(model=self.config.model),
             planner=RefinementPlannerAgent(model=self.config.model),
             coder=CoderAgent(model=self.config.model),

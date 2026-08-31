@@ -139,6 +139,8 @@ class RefinementPipeline:
         self.leakage = self.execution.leakage
         self.usage = self.execution.usage
         self.debugger = self.execution.debugger
+        if self.summarizer.debugger is None:
+            self.summarizer.debugger = self.debugger
 
     def refine(
         self,

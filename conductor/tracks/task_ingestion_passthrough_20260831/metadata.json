@@ -1,0 +1,8 @@
+{
+  "track_id": "task_ingestion_passthrough_20260831",
+  "type": "refactor",
+  "status": "new",
+  "description": "Retire the task ingestion agent and pass the task description straight into retriever, evaluator, usage checker, and finalizer prompts.",
+  "created_at": "2026-08-31T19:19:35+08:00",
+  "updated_at": "2026-08-31T19:19:35+08:00"
+}

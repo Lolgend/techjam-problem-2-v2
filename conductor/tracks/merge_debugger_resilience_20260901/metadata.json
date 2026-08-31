@@ -1,0 +1,8 @@
+{
+  "track_id": "merge_debugger_resilience_20260901",
+  "type": "feature",
+  "status": "in_progress",
+  "created_at": "2026-09-01T02:26:00Z",
+  "updated_at": "2026-09-01T02:26:00Z",
+  "description": "Integrate DebuggerAgent into ModelMergerAgent syntax repair and ensure resilient fallback to s0 and seamless transition to Stage 2 Ablation."
+}

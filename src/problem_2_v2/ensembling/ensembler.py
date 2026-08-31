@@ -20,30 +20,34 @@ from problem_2_v2.contracts.task import ExecutionResult, PipelineArtifact, TaskS
 from problem_2_v2.execution.pipeline import ExecutionGuardrailPipeline
 from problem_2_v2.runner.debugger import DebuggerAgent
 
-_ENSEMBLER_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition. In order to win "
-    "this competition, you need to ensemble the provided Python Solutions "
-    "for better performance based on the ensemble plan.\n"
+_ENSEMBLER_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- In order to win this competition, you need to ensemble {L} Python Solutions for better\n"
+    "performance based on the ensemble plan.\n"
+    "- We will now provide the Python Solutions and the ensemble plan.\n"
+    "{solutions_block}\n"
+    "# Ensemble Plan\n"
+    "{plan}\n"
     "# Your task\n"
     "- Implement the ensemble plan with the provided solutions.\n"
-    "- Unless mentioned in the ensemble plan, do not modify the original "
-    "Python Solutions too much.\n"
-    "- All the provided data (except previous submissions; do not load "
-    "submissions) is already prepared and available in the ./input "
-    "directory. There is no need to unzip any files.\n"
-    "- The code should implement the proposed solution and print the value "
-    "of the evaluation metric computed on a hold-out validation set.\n"
-    "# Response format\n"
-    "- Your response should be a single markdown code block (wrapped in "
-    "```) which is the ensemble of the provided Python Solutions.\n"
+    "- Unless mentioned in the ensemble plan, do not modify the original Python Solutions too\n"
+    "much.\n"
+    "- All the provided data (except previous submissions; do not load submissions) is already\n"
+    "prepared and available in the `.\\input` directory. There is no need to unzip any files.\n"
+    "- The code should implement the proposed solution and print the value of the evaluation\n"
+    "metric computed on a hold-out validation set.\n"
+    "# Response format required\n"
+    "- Your response should be a single markdown code block (wrapped in ```) which is the\n"
+    "ensemble of {L} Python Solutions.\n"
     "- There should be no additional headings or text in your response.\n"
-    "- Do not subsample or introduce dummy variables. Provide a full new "
-    "Python Solution using the provided solutions.\n"
-    "- Do not forget the ./final/submission.csv file.\n"
-    "- Print out or return a final performance metric with the exact words: "
-    "'Final Validation Performance: {final_validation_score}'.\n"
-    "- The code should be a single-file Python program that is "
-    "self-contained and can be executed as-is."
+    "- Do not subsample or introduce dummy variables. You have to provide full new Python\n"
+    "Solution using the {L} provided solutions.\n"
+    "- Do not forget the `./final/submission.csv` file.\n"
+    "- Print out or return a final performance metric in your answer in a clear format with the\n"
+    "exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
+    "- The code should be a single-file Python program that is self-contained and can be\n"
+    "executed as-is."
 )
 
 
@@ -101,7 +105,6 @@ class EnsemblerAgent:
             model,
             name="ensembler_agent",
             output_type=str,
-            instructions=_ENSEMBLER_INSTRUCTIONS,
             defer_model_check=True,
         )
 
@@ -191,7 +194,7 @@ class EnsemblerAgent:
         solutions: list[PipelineArtifact],
         strategy: EnsembleStrategy,
     ) -> str:
-        """Build the Figure 18 ensemble implementation prompt.
+        """Build the Figure 20 ensemble implementation prompt.
 
         Args:
             solutions: The candidate solution artifacts.
@@ -200,15 +203,24 @@ class EnsemblerAgent:
         Returns:
             The full ensembling prompt.
         """
-        solution_blocks = "\n".join(
-            f"# {index + 1}th Python Solution\n{artifact.full_code}"
-            for index, artifact in enumerate(solutions)
+        def _ordinal(n: int) -> str:
+            suffix = (
+                "th"
+                if 11 <= (n % 100) <= 13
+                else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+            )
+            return f"{n}{suffix}"
+
+        solution_parts = [
+            f"# {_ordinal(i + 1)} Python Solution\n{artifact.full_code}"
+            for i, artifact in enumerate(solutions)
+        ]
+        solutions_block = "\n".join(solution_parts)
+
+        return _ENSEMBLER_PROMPT_TEMPLATE.format(
+            L=len(solutions),
+            solutions_block=solutions_block,
+            plan=strategy.natural_language_plan,
         )
-        return (
-            f"# Introduction\nYou are a Kaggle grandmaster attending a "
-            f"competition.\n{solution_blocks}\n"
-            f"# Ensemble Plan\n{strategy.natural_language_plan}\n"
-            f"# Your task\nImplement the ensemble plan with the provided "
-            f"solutions. Write the submission to ./final/submission.csv and "
-            f"print the validation performance."
-        )
+
+    _build_prompt = build_prompt

@@ -136,6 +136,26 @@ class TestEnsemblerAgent:
         solutions = [_artifact(SOLUTION_1, 0.80, "branch_0")]
         with ensembler.agent.override(model=FunctionModel(function=capturing_model)):
             ensembler.ensemble(_spec(), solutions, _strategy(), run_id="r5", round_index=0)
-        assert "model_a.predict_proba" in captured["prompt"]
+        assert "Final Validation Performance: {final_validation_score}" in captured["prompt"]
         assert "average the predicted probabilities" in captured["prompt"]
         assert "submission.csv" in captured["prompt"]
+
+    def test_build_prompt_format(self) -> None:
+        solutions = [
+            _artifact(SOLUTION_1, 0.80, "branch_0"),
+            _artifact(SOLUTION_2, 0.82, "branch_1"),
+        ]
+        prompt = EnsemblerAgent.build_prompt(solutions, _strategy())
+        assert "# Introduction" in prompt
+        assert "ensemble 2 Python Solutions" in prompt
+        assert "# 1st Python Solution\n" in prompt
+        assert SOLUTION_1 in prompt
+        assert "# 2nd Python Solution\n" in prompt
+        assert SOLUTION_2 in prompt
+        assert "# Ensemble Plan\n" in prompt
+        assert "average the predicted probabilities" in prompt
+        assert "# Your task" in prompt
+        assert "Implement the ensemble plan with the provided solutions." in prompt
+        assert "# Response format required" in prompt
+        assert "Final Validation Performance: {final_validation_score}" in prompt
+        assert "Do not forget the `./final/submission.csv` file." in prompt

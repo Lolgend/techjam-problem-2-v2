@@ -1,8 +1,6 @@
 """Unit tests for the retriever agent."""
 
 from pydantic_ai.capabilities import WebSearch
-from pydantic_ai.messages import ModelResponse, ToolCallPart
-from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.enums import TaskType
@@ -72,11 +70,7 @@ class TestRetrieverAgent:
     def test_retrieve_with_dynamic_websearch_capability(self) -> None:
         agent = RetrieverAgent(model="test", num_candidates=2)
         args = [_card_args("LightGBM"), _card_args("DeepFM")]
-
-        def _handler(msgs: object, info: object) -> ModelResponse:
-            return ModelResponse(parts=[ToolCallPart(tool_name="final_result", args={"response": args})])
-
-        with agent.agent.override(model=FunctionModel(_handler)):
+        with agent.agent.override(model=TestModel(custom_output_args=args)):
             candidates = agent.retrieve(_spec())
         assert candidates.total_found == 2
         assert [c.model_name for c in candidates.candidates] == ["LightGBM", "DeepFM"]

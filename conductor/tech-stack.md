@@ -98,4 +98,12 @@
 > retriever prompt template and system instructions in `retriever.py`, allowing the
 > LLM to formulate search queries and retrieve evidence dynamically across all model
 > providers (OpenAI, DeepSeek, Gemini, Anthropic) without static prompt injection.
+>
+> **2026-08-31:** Retired the LLM-based task ingestion agent in favor of fast,
+> deterministic markdown parsing preserving `raw_description`
+> (`task_ingestion_passthrough_20260831`). Injected the full raw task description
+> string directly into the prompts for `RetrieverAgent`, `CandidateEvaluatorAgent`,
+> `DataUsageCheckerAgent`, and `FinalArtifactProducer`, and explicitly mandated the
+> official `evaluate.py` harness (`evaluate(user_ids, labels, scores, k=5)`) in
+> candidate generation prompts.
 

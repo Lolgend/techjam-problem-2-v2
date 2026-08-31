@@ -1,9 +1,10 @@
 # Implementation Plan: Tool-Based Autonomous Search in RetrieverAgent
 
 ## Phase 1: Red Phase - Unit Tests for Search Tool
-- [ ] Task: Write tests in `tests/search/test_retriever.py` validating that `RetrieverAgent` registers a `search_web` tool and invokes it during multi-turn LLM agent execution
-- [ ] Task: Run tests to confirm failure against current static implementation
-- [ ] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Write tests in `tests/search/test_retriever.py` validating that `RetrieverAgent` registers a `search_web` tool and invokes it during multi-turn LLM agent execution (cfa07c1)
+- [x] Task: Run tests to confirm failure against current static implementation (cfa07c1)
+- [x] Task: Phase 1 Verification & Checkpoint (Refer to workflow.md) (cfa07c1)
+
 
 ## Phase 2: Green Phase - Implement Tool-Based RetrieverAgent
 - [ ] Task: Centralize the retriever prompt template in `src/problem_2_v2/search/retriever.py`

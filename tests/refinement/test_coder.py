@@ -100,10 +100,20 @@ class TestCoderAgent:
         assert PLAN_TEXT in captured["prompt"]
         assert "subsampling" in captured["prompt"]
 
-    def test_instructions_mandate_official_evaluate_harness(self) -> None:
-        from problem_2_v2.refinement.coder import _CODER_INSTRUCTIONS
-
-        assert "from evaluate import evaluate" in _CODER_INSTRUCTIONS
+    def test_build_prompt_format(self) -> None:
+        prompt = CoderAgent.build_prompt(TARGET_BLOCK, PLAN_TEXT)
+        assert "# Introduction" in prompt
+        assert "- You are a Kaggle grandmaster attending a competition." in prompt
+        assert "refine the code block for better performance" in prompt
+        assert "# Code block\n" in prompt
+        assert TARGET_BLOCK in prompt
+        assert "# Improvement plan\n" in prompt
+        assert PLAN_TEXT in prompt
+        assert "# Your task" in prompt
+        assert "do not remove subsampling if\nexists." in prompt
+        assert "do not introduce dummy variables." in prompt
+        assert "# Response format" in prompt
+        assert "Your response should be a single markdown code block (wrapped in ```)" in prompt
 
 
 class TestPatchScript:

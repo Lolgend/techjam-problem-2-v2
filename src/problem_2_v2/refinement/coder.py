@@ -15,23 +15,25 @@ from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.enums import ComponentCategory
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 
-_CODER_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition. In order to win "
-    "this competition, you need to refine the code block for better "
-    "performance based on the improvement plan.\n"
+_CODER_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- In order to win this competition, you need refine the code block for better performance\n"
+    "based on the improvement plan.\n"
+    "- We will now provide the code block and the improvement plan.\n"
+    "# Code block\n"
+    "{code_block}\n"
+    "# Improvement plan\n"
+    "{plan}\n"
     "# Your task\n"
-    "- Implement the improvement plan on the provided code block. But do "
-    "not remove subsampling if exists.\n"
+    "- Implement the improvement plan on the above code block. But do not remove subsampling if\n"
+    "exists.\n"
     "- The code block should be improved according to the proposed plan.\n"
-    "- When the refined block computes validation performance, use the "
-    "official evaluation harness 'from evaluate import evaluate' and "
-    "report the validation metric.\n"
-    "- Note that all the variables including actual data are defined "
-    "earlier (since you are just seeing a code block), therefore do not "
-    "introduce dummy variables.\n"
+    "- Note that all the variable including actual data is defined earlier (since you are just\n"
+    "seeing a code block), therefore do not introduce dummy variables.\n"
     "# Response format\n"
-    "- Your response should be a single markdown code block (wrapped in "
-    "```) which is the improved code block.\n"
+    "- Your response should be a single markdown code block (wrapped in ```) which is the\n"
+    "improved code block.\n"
     "- There should be no additional headings or text in your response."
 )
 
@@ -112,9 +114,26 @@ class CoderAgent:
             model,
             name="coder_agent",
             output_type=str,
-            instructions=_CODER_INSTRUCTIONS,
             defer_model_check=True,
         )
+
+    @staticmethod
+    def build_prompt(code_block: str, plan: str) -> str:
+        """Build the Figure 15 code refinement prompt.
+
+        Args:
+            code_block: The extracted code block to refine.
+            plan: The natural-language improvement plan.
+
+        Returns:
+            The full formatted refinement prompt.
+        """
+        return _CODER_PROMPT_TEMPLATE.format(
+            code_block=code_block,
+            plan=plan,
+        )
+
+    _build_prompt = build_prompt
 
     def refine(self, target_block: TargetCodeBlock, plan: RefinementPlan) -> str:
         """Produce the refined version of the target code block.
@@ -126,11 +145,9 @@ class CoderAgent:
         Returns:
             The cleaned refined code block (markdown fences stripped).
         """
-        prompt = (
-            f"# Code block\n{target_block.raw_code}\n"
-            f"# Improvement plan\n{plan.natural_language_plan}\n"
-            f"# Your task\nImplement the improvement plan on the above code "
-            f"block. Do not remove subsampling if exists."
+        prompt = self.build_prompt(
+            code_block=target_block.raw_code,
+            plan=plan.natural_language_plan,
         )
         with logfire.span("coder.refine", plan_id=plan.plan_id):
             response = self.agent.run_sync(prompt)

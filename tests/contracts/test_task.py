@@ -45,6 +45,7 @@ class TestTaskSpecification:
         assert "multi-task ranking benchmark." in spec.description
         assert "Must not use test labels." in spec.constraints
         assert spec.subsample_size == 30000
+        assert spec.raw_description == md_text.strip()
 
     def test_from_markdown_uses_default_subsample_size(self) -> None:
         md_text = "**Task Type:** TABULAR_CLASSIFICATION\n"

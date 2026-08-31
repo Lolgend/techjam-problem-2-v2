@@ -55,6 +55,10 @@ class TaskSpecification(BaseModel):
         default=30000,
         description="Maximum training samples used for fast experimentation.",
     )
+    raw_description: str = Field(
+        default="",
+        description="Raw unparsed markdown problem description.",
+    )
 
     @classmethod
     def from_markdown(cls, md_text: str, dataset_dir: str) -> TaskSpecification:
@@ -106,6 +110,7 @@ class TaskSpecification(BaseModel):
 
         flush_multi_line()
 
+        fields["raw_description"] = md_text.strip()
         fields["dataset_dir"] = dataset_dir
         return cls(**fields)
 

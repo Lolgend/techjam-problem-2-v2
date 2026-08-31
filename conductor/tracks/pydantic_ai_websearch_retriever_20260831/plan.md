@@ -9,18 +9,18 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Retriever Implementation with Pydantic AI WebSearch (TDD Green Phase)
-- [x] Task: Refactor `RetrieverAgent` to support Pydantic AI `WebSearch` capability (ff72669)
-  - [x] Import and configure `WebSearch` from `pydantic_ai.capabilities`
-  - [x] Update `RetrieverAgent.__init__` to accept optional capabilities and optional search provider, defaulting to `capabilities=[WebSearch()]`
-  - [x] Update `retrieve()` to use dynamic agent execution with autonomous search when `WebSearch` is active, while retaining `SearchProvider` snippet formatting when an explicit search provider is passed
-  - [x] Ensure text fallback (`_text_fallback`) and domain starter cards (`_DOMAIN_FALLBACKS`) continue to guarantee non-empty candidate lists
-  - [x] Run tests to confirm all tests pass (Green Phase)
-- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [ ] Task: Refactor `RetrieverAgent` to support Pydantic AI `WebSearch` capability
+  - [ ] Import and configure `WebSearch` from `pydantic_ai.capabilities`
+  - [ ] Update `RetrieverAgent.__init__` to accept optional capabilities and optional search provider, defaulting to `capabilities=[WebSearch()]`
+  - [ ] Update `retrieve()` to use dynamic agent execution with autonomous search when `WebSearch` is active, while retaining `SearchProvider` snippet formatting when an explicit search provider is passed
+  - [ ] Ensure text fallback (`_text_fallback`) and domain starter cards (`_DOMAIN_FALLBACKS`) continue to guarantee non-empty candidate lists
+  - [ ] Run tests to confirm all tests pass (Green Phase)
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Integration, Pipeline Verification & Documentation
-- [x] Task: Verify downstream pipelines and end-to-end integration (2a1a8ec)
-  - [x] Test `InitializationPipeline` integration with the updated `RetrieverAgent`
-  - [x] Verify CLI dry-run and pipeline orchestrator functionality
-  - [x] Run full test suite (`uv run pytest`) and check code coverage (>80%)
-  - [x] Update `conductor/tech-stack.md` to document the Pydantic AI WebSearch capability adoption
-- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [ ] Task: Verify downstream pipelines and end-to-end integration
+  - [ ] Test `InitializationPipeline` integration with the updated `RetrieverAgent`
+  - [ ] Verify CLI dry-run and pipeline orchestrator functionality
+  - [ ] Run full test suite (`uv run pytest`) and check code coverage (>80%)
+  - [ ] Update `conductor/tech-stack.md` to document the Pydantic AI WebSearch capability adoption
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

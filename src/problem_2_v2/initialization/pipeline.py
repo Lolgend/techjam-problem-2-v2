@@ -120,12 +120,9 @@ class InitializationPipeline:
                 spec = self.extractor.extract(md_text, dataset_dir=dataset_dir)
             baseline = declared_baseline(spec.baseline_score)
             direction = spec.metric_direction
-            provider_name = (
-                self.retriever.provider.provider_name
-                if self.retriever.provider is not None
-                else "Pydantic AI WebSearch"
+            announce(
+                f"[Search] Retrieving candidates via {self.retriever.provider.provider_name}..."
             )
-            announce(f"[Search] Retrieving candidates via {provider_name}...")
             with logfire.span("initialization.retrieve"):
                 candidates = self.retriever.retrieve(spec)
             if self.use_baseline:

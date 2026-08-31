@@ -1,0 +1,28 @@
+# Implementation Plan: Ablation Debugger Self-Repair Integration
+
+## Phase 1: Test Suite & Failure Reproduction (TDD Red Phase)
+- [ ] Task: Write failing unit tests for ablation debugger integration
+  - [ ] Add unit test in `tests/refinement/test_ablation.py` verifying `AblationSummarizerAgent` calls the debugger on syntax/runtime execution failure.
+  - [ ] Add unit test verifying that a repaired ablation script produces a valid `AblationReport`.
+  - [ ] Add unit test verifying graceful fallback when all debugger rounds fail.
+  - [ ] Run `uv run pytest tests/refinement/test_ablation.py` and confirm tests fail as expected (Red Phase).
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 2: Implementation of Ablation Debugger Integration (TDD Green Phase)
+- [ ] Task: Update `AblationSummarizerAgent` with Debugger Integration
+  - [ ] Update `AblationSummarizerAgent.__init__` to accept `debugger: DebuggerAgent | None = None` (with runner/model default fallback).
+  - [ ] Update `AblationSummarizerAgent.summarize()` to detect execution failure and trigger debugger self-repair across `max_debug_rounds`.
+  - [ ] Instrument with Logfire spans (`ablation.debug_repair`) and error logging.
+- [ ] Task: Update Refinement Pipeline and Orchestrator Wiring
+  - [ ] Update `RefinementPipeline` to inject the branch debugger into `AblationSummarizerAgent`.
+  - [ ] Update `MLEStarPipeline._build_branch` in `src/problem_2_v2/orchestrator.py` to pass the branch debugger instance.
+- [ ] Task: Verify unit tests pass (Green Phase)
+  - [ ] Run `uv run pytest tests/refinement/` to confirm all ablation tests pass.
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+
+## Phase 3: End-to-End Verification & Quality Gates
+- [ ] Task: Quality Gates & Full Verification
+  - [ ] Run `uv run ruff check src` and `uv run ruff format --check src`.
+  - [ ] Run `uv run mypy src`.
+  - [ ] Run `uv run pytest --cov=src --cov-report=term-missing` and verify >80% coverage on modified modules.
+- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)

@@ -8,6 +8,6 @@
 - [x] **Track: Integrate DebuggerAgent into Ablation Study Workflow**
   *Link: [./tracks/ablation_debugger_20260831/index.md](./tracks/ablation_debugger_20260831/index.md)*
 
-- [~] **Track: Model Merger Debugger Integration & Ablation Continuity**
+- [x] **Track: Model Merger Debugger Integration & Ablation Continuity**
   *Link: [./tracks/merge_debugger_resilience_20260901/index.md](./tracks/merge_debugger_resilience_20260901/index.md)*
 

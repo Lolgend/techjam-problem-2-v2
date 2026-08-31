@@ -1,8 +1,0 @@
-{
-  "track_id": "pydantic_ai_websearch_retriever_20260831",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-08-31T13:01:45+08:00",
-  "updated_at": "2026-08-31T13:01:45+08:00",
-  "description": "Implement RetrieverAgent using Pydantic AI built-in WebSearch capability"
-}

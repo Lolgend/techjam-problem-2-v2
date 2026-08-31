@@ -146,3 +146,6 @@ if __name__ == "__main__":
         print(
             f"  {sp:5s}  GAUC {r['GAUC']:.4f} | nDCG@5 {r['nDCG@5']:.4f} | primary {r['primary']:.4f}"
         )
+
+    final_validation_score = res["valid"]["primary"]
+    print(f"Final Validation Performance: {final_validation_score:.4f}")

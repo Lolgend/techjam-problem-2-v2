@@ -7,11 +7,13 @@
 
 
 ## Phase 2: Green Phase - Implement Tool-Based RetrieverAgent
-- [ ] Task: Centralize the retriever prompt template in `src/problem_2_v2/search/retriever.py`
-- [ ] Task: Implement `search_web` function tool on `RetrieverAgent.agent` and `text_agent` calling `self.provider.search(query)` with graceful error catching
-- [ ] Task: Refactor `retrieve()` to pass clean prompt to agent and let agent autonomously call `search_web`
-- [ ] Task: Run unit tests to confirm all retriever tests pass
-- [ ] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Centralize the retriever prompt template in `src/problem_2_v2/search/retriever.py` (8625678)
+- [x] Task: Implement `search_web` function tool on `RetrieverAgent.agent` and `text_agent` calling `self.provider.search(query)` with graceful error catching (8625678)
+- [x] Task: Refactor `retrieve()` to pass clean prompt to agent and let agent autonomously call `search_web` (8625678)
+- [x] Task: Run unit tests to confirm all retriever tests pass (8625678)
+- [x] Task: Phase 2 Verification & Checkpoint (Refer to workflow.md) (8625678)
+
+
 
 ## Phase 3: Integration & System Verification
 - [ ] Task: Verify integration with `InitializationPipeline` and master pipeline across mock and live providers

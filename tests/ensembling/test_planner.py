@@ -122,3 +122,35 @@ class TestEnsemblePlannerAgent:
             strategy = planner.initial_plan(solutions)
         assert strategy.method is EnsembleMethod.SIMPLE_AVERAGE
         assert strategy.candidate_solution_ids == ["branch_0"]
+
+    def test_build_prompt_format(self) -> None:
+        solutions = [
+            _artifact(SOLUTION_1, 0.80, "branch_0"),
+            _artifact(SOLUTION_2, 0.82, "branch_1"),
+        ]
+        attempts = [
+            (
+                EnsembleStrategy(
+                    method=EnsembleMethod.SIMPLE_AVERAGE,
+                    natural_language_plan="average predictions",
+                    meta_learner_type=None,
+                    candidate_solution_ids=["branch_0", "branch_1"],
+                    code_template=None,
+                ),
+                0.81,
+            )
+        ]
+        prompt = EnsemblePlannerAgent.build_prompt(solutions, attempts)
+        assert "# Introduction" in prompt
+        assert "ensemble 2 Python Solutions" in prompt
+        assert "# 1st Python Solution\n" in prompt
+        assert SOLUTION_1 in prompt
+        assert "# 2nd Python Solution\n" in prompt
+        assert SOLUTION_2 in prompt
+        assert "# Ensemble plans you have tried\n" in prompt
+        assert "## Plan: average predictions\n## Score: 0.81" in prompt
+        assert "# Your task" in prompt
+        assert "Suggest a better plan to ensemble the 2 solutions." in prompt
+        assert "You should concentrate how to merge" in prompt
+        assert "# Response format" in prompt
+        assert "Plan should not modify the original solutions too much" in prompt

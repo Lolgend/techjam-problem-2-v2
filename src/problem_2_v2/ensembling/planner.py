@@ -15,22 +15,25 @@ from problem_2_v2.contracts.enums import EnsembleMethod
 from problem_2_v2.contracts.guardrails import EnsembleStrategy
 from problem_2_v2.contracts.task import PipelineArtifact
 
-_PLANNER_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition. In order to win "
-    "this competition, you have to ensemble the provided Python Solutions "
-    "for better performance.\n"
+_PLANNER_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- In order to win this competition, you have to ensemble {L} Python Solutions for better\n"
+    "performance.\n"
+    "- We will provide the Python Solutions and the ensemble plans you have tried.\n"
+    "{solutions_block}\n"
+    "# Ensemble plans you have tried\n"
+    "{history}"
     "# Your task\n"
-    "- Suggest a better plan to ensemble the solutions. Concentrate on how "
-    "to merge, not on other parts like hyperparameters.\n"
+    "- Suggest a better plan to ensemble the {L} solutions. You should concentrate how to merge,\n"
+    "not the other parts like hyperparameters.\n"
     "- The suggested plan must be easy to implement, novel, and effective.\n"
-    "- The suggested plan should differ from the previous plans you have "
-    "tried and should receive a higher (or lower) score.\n"
-    "- Plan should not modify the original solutions too much since "
-    "execution error can occur.\n"
+    "- The suggested plan should be differ from the previous plans you have tried and should\n"
+    "receive a higher (or lower) score.\n"
     "# Response format\n"
-    "- Your response should be an outline/sketch of your proposed solution "
-    "in natural language.\n"
-    "- There should be no additional headings or text in your response."
+    "- Your response should be an outline/sketch of your proposed solution in natural language.\n"
+    "- There should be no additional headings or text in your response.\n"
+    "- Plan should not modify the original solutions too much since execution error can occur."
 )
 
 
@@ -38,15 +41,18 @@ class EnsemblePlanProposal(BaseModel):
     """Structured planner output describing the next ensemble strategy.
 
     Attributes:
-        method: The ensembling technique to apply.
         natural_language_plan: Prose sketch of the ensembling plan.
+        method: The ensembling technique to apply.
         meta_learner_type: Meta-learner model class for stacking, if any.
     """
 
-    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+    model_config = ConfigDict(extra="ignore", validate_assignment=True)
 
-    method: EnsembleMethod = Field(description="Ensembling technique.")
     natural_language_plan: str = Field(description="Plan sketch in prose.")
+    method: EnsembleMethod = Field(
+        default=EnsembleMethod.SIMPLE_AVERAGE,
+        description="Ensembling technique.",
+    )
     meta_learner_type: str | None = Field(
         default=None,
         description="Meta-learner class for stacking.",
@@ -70,7 +76,6 @@ class EnsemblePlannerAgent:
             model,
             name="ensemble_planner_agent",
             output_type=EnsemblePlanProposal,
-            instructions=_PLANNER_INSTRUCTIONS,
             defer_model_check=True,
         )
 
@@ -86,7 +91,8 @@ class EnsemblePlannerAgent:
         """
         try:
             with logfire.span("ens_planner.initial"):
-                response = self.agent.run_sync(self._build_prompt(solutions, attempts=[]))
+                prompt = self.build_prompt(solutions, attempts=[])
+                response = self.agent.run_sync(prompt)
             return self._to_strategy(response.output, solutions)
         except Exception:
             logfire.warn("ens_planner.initial.failed; using simple-average fallback")
@@ -110,7 +116,8 @@ class EnsemblePlannerAgent:
             The next ``EnsembleStrategy``.
         """
         with logfire.span("ens_planner.next", round=iteration_index):
-            response = self.agent.run_sync(self._build_prompt(solutions, attempts))
+            prompt = self.build_prompt(solutions, attempts)
+            response = self.agent.run_sync(prompt)
         return self._to_strategy(response.output, solutions)
 
     @staticmethod
@@ -142,24 +149,45 @@ class EnsemblePlannerAgent:
         )
 
     @staticmethod
-    def _build_prompt(
+    def build_prompt(
         solutions: list[PipelineArtifact],
         attempts: list[tuple[EnsembleStrategy, float | None]],
     ) -> str:
-        """Build the Figure 17 planning prompt."""
-        solution_blocks = "\n".join(
-            f"# {index + 1}th Python Solution\n{artifact.full_code}"
-            for index, artifact in enumerate(solutions)
-        )
-        history = "\n".join(
+        """Build the Figure 19 ensemble strategy planning prompt.
+
+        Args:
+            solutions: The candidate solution artifacts.
+            attempts: Previously attempted strategies paired with their validation scores.
+
+        Returns:
+            The formatted ensemble planning prompt string.
+        """
+        def _ordinal(n: int) -> str:
+            suffix = (
+                "th"
+                if 11 <= (n % 100) <= 13
+                else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+            )
+            return f"{n}{suffix}"
+
+        solution_parts = [
+            f"# {_ordinal(i + 1)} Python Solution\n{artifact.full_code}"
+            for i, artifact in enumerate(solutions)
+        ]
+        solutions_block = "\n".join(solution_parts)
+
+        history_parts = [
             f"## Plan: {strategy.natural_language_plan}\n## Score: "
             f"{score if score is not None else 'N/A'}"
             for strategy, score in attempts
+        ]
+        history_joined = "\n".join(history_parts)
+        history_str = f"{history_joined}\n" if history_parts else ""
+
+        return _PLANNER_PROMPT_TEMPLATE.format(
+            L=len(solutions),
+            solutions_block=solutions_block,
+            history=history_str,
         )
-        return (
-            f"# Introduction\nYou are a Kaggle grandmaster attending a "
-            f"competition.\n{solution_blocks}\n"
-            f"# Ensemble plans you have tried\n{history or '(none yet)'}\n"
-            f"# Your task\nSuggest a better plan to ensemble the provided "
-            f"solutions."
-        )
+
+    _build_prompt = build_prompt

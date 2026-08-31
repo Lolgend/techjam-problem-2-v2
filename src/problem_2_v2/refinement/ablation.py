@@ -20,6 +20,7 @@ from problem_2_v2.contracts.refinement import (
     AblationReport,
     AblationResultItem,
 )
+from problem_2_v2.runner.debugger import DebuggerAgent
 from problem_2_v2.runner.sandbox import SubprocessRunner
 
 _ABLATION_PROMPT_TEMPLATE = (
@@ -138,6 +139,7 @@ class AblationSummarizerAgent:
 
     Attributes:
         runner: Sandbox runner used to execute ablation scripts.
+        debugger: Debugger agent used to repair failing ablation scripts.
         agent: Pydantic AI agent producing the structured ``AblationReport``.
     """
 
@@ -145,14 +147,21 @@ class AblationSummarizerAgent:
         r"^.*?(?P<name>[A-Za-z0-9_ \t-]+?)\s*[:=]\s*(?P<score>[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)\s*$"
     )
 
-    def __init__(self, runner: SubprocessRunner, model: str = "openai:gpt-4o") -> None:
+    def __init__(
+        self,
+        runner: SubprocessRunner,
+        model: str = "openai:gpt-4o",
+        debugger: DebuggerAgent | None = None,
+    ) -> None:
         """Create an ablation summarizer.
 
         Args:
             runner: Sandbox runner for ablation script execution.
             model: Pydantic AI model string.
+            debugger: Debugger agent for autonomous error repair.
         """
         self.runner = runner
+        self.debugger = debugger or DebuggerAgent(runner=runner, model=model)
         self.agent = Agent(
             model,
             name="ablation_summarizer_agent",
@@ -209,18 +218,47 @@ class AblationSummarizerAgent:
             dataset_dir=dataset_dir,
             dataset_files=dataset_files,
         )
+        current_code = ablation_code
         with logfire.span("ablation.execute"):
-            result = self.runner.run_code(ablation_code, sandbox_dir=str(sandbox))
+            result = self.runner.run_code(current_code, sandbox_dir=str(sandbox))
+            rounds = 0
+            if not result.success and self.debugger is not None:
+                while not result.success and rounds < self.debugger.max_debug_rounds:
+                    rounds += 1
+                    with logfire.span("ablation.debug_repair", round=rounds):
+                        error_text = result.stderr or result.stdout or f"exit code {result.returncode}"
+                        prompt = (
+                            f"# Code with an error\n{current_code}\n"
+                            f"# Error\n{error_text}\n"
+                            f"# Your task\nPlease revise the code to fix the error."
+                        )
+                        try:
+                            response = self.debugger.agent.run_sync(prompt)
+                            repaired_code = extract_python_code(response.output)
+                            if repaired_code:
+                                current_code = repaired_code
+                            else:
+                                logfire.warn("ablation.debug_repair.no_code", round=rounds)
+                                break
+                        except Exception as debug_exc:
+                            logfire.warn(
+                                "ablation.debug_repair.llm_failed",
+                                round=rounds,
+                                error=str(debug_exc),
+                            )
+                            break
+                        result = self.runner.run_code(current_code, sandbox_dir=str(sandbox))
+
         raw_output = result.stdout or result.stderr
 
         try:
             with logfire.span("ablation.summarize_llm"):
-                prompt = self.build_prompt(ablation_code=ablation_code, raw_output=raw_output)
+                prompt = self.build_prompt(ablation_code=current_code, raw_output=raw_output)
                 response = self.agent.run_sync(prompt)
             return response.output
         except Exception:
             logfire.warn("ablation.summarize_llm.failed; using heuristic parser")
-            return self._heuristic_report(ablation_code, raw_output)
+            return self._heuristic_report(current_code, raw_output)
 
     def _heuristic_report(self, ablation_code: str, raw_output: str) -> AblationReport:
         """Build a report from raw output without LLM involvement."""

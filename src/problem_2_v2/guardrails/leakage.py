@@ -14,24 +14,27 @@ from problem_2_v2.contracts.code_utils import extract_python_code
 from problem_2_v2.contracts.guardrails import DataLeakageStatus
 from problem_2_v2.contracts.refinement import align_replacement_indent, find_matching_block
 
-_CHECK_INSTRUCTIONS = (
-    "You audit Python machine learning code for data leakage.\n"
+_CHECK_PROMPT_TEMPLATE = (
+    "# Python code\n"
+    "{code}\n"
     "# Your task\n"
-    "- Extract the code block where the validation and test samples are "
-    "preprocessed using training samples.\n"
+    "- Extract the code block where the validation and test samples are preprocessed using\n"
+    "training samples.\n"
     "- Check that the model is trained with only training samples.\n"
-    "- Check that before printing the final validation score, the model is "
-    "not trained on the validation samples.\n"
-    "- Check whether the validation and test samples are preprocessed "
-    "correctly, preventing information from the validation or test samples "
-    "from influencing the training process (i.e., preventing data "
-    "leakage).\n"
+    "- Check that before printing the final validation score, the model is not trained the\n"
+    "validation samples.\n"
+    "- Also check whether the validation and test samples are preprocessed correctly, preventing\n"
+    "information from the validation or test samples from influencing the training process\n"
+    "(i.e., preventing data leakage).\n"
     "# Requirement\n"
     "- Extract a code block and also check the data leakage.\n"
-    "- The code block should be an exact subset of the provided Python "
-    "code.\n"
-    "- If data leakage is present on validation and test samples, set the "
-    "status to 'Yes Data Leakage'; otherwise 'No Data Leakage'."
+    "- The code block should be an exact subset of the above Python code.\n"
+    "- Your response for a code block should be a single markdown code block.\n"
+    "- If data leakage is present on validation and test samples, answer 'Yes Data Leakage'.\n"
+    "- If data leakage is not present on validation and test samples, answer 'No Data Leakage'.\n"
+    "Use this JSON schema:\n"
+    "Answer = {{'leakage_status': str, 'code_block': str}}\n"
+    "Return: list[Answer]"
 )
 
 _REPAIR_INSTRUCTIONS = (
@@ -77,7 +80,6 @@ class DataLeakageCheckerAgent:
             model,
             name="data_leakage_check_agent",
             output_type=DataLeakageStatus,
-            instructions=_CHECK_INSTRUCTIONS,
             defer_model_check=True,
         )
         self.repair_agent = Agent(
@@ -87,6 +89,20 @@ class DataLeakageCheckerAgent:
             instructions=_REPAIR_INSTRUCTIONS,
             defer_model_check=True,
         )
+
+    @staticmethod
+    def build_check_prompt(code: str) -> str:
+        """Build the Figure 21 data leakage check prompt.
+
+        Args:
+            code: The full solution script.
+
+        Returns:
+            The formatted prompt string.
+        """
+        return _CHECK_PROMPT_TEMPLATE.format(code=code)
+
+    _build_check_prompt = build_check_prompt
 
     def check(self, code: str) -> DataLeakageStatus:
         """Inspect a solution script for data leakage.
@@ -99,7 +115,7 @@ class DataLeakageCheckerAgent:
             suspicious preprocessing block.
         """
         with logfire.span("guardrails.leakage_check"):
-            prompt = f"# Python code\n{code}\n# Your task\nCheck for data leakage."
+            prompt = self.build_check_prompt(code)
             response = self.check_agent.run_sync(prompt)
         return response.output
 

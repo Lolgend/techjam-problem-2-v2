@@ -156,3 +156,17 @@ class TestDataLeakageCheckerAgent:
         with checker.check_agent.override(model=FunctionModel(function=capturing_model)):
             checker.check(CLEAN_CODE)
         assert "LogisticRegression" in captured["prompt"]
+
+    def test_build_prompt_format(self) -> None:
+        prompt = DataLeakageCheckerAgent.build_check_prompt(CLEAN_CODE)
+        assert "# Python code\n" in prompt
+        assert CLEAN_CODE in prompt
+        assert "# Your task" in prompt
+        assert "validation and test samples are preprocessed" in prompt
+        assert "preventing data leakage" in prompt
+        assert "# Requirement" in prompt
+        assert "The code block should be an exact subset of the above Python code." in prompt
+        assert "answer 'Yes Data Leakage'." in prompt
+        assert "answer 'No Data Leakage'." in prompt
+        assert "Answer = {'leakage_status': str, 'code_block': str}" in prompt
+        assert "Return: list[Answer]" in prompt

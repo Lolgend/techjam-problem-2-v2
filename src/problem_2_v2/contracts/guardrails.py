@@ -58,6 +58,7 @@ class DataLeakageStatus(BaseModel):
             strings ``"Yes Data Leakage"`` and ``"No Data Leakage"``.
         is_leaking: Normalized boolean leakage flag.
         suspicious_code_block: The code block suspected of leaking.
+        code_block: Optional alias for suspicious_code_block matching Figure 21 schema.
         corrected_code_block: Auto-corrected block, if one was produced.
         explanation: Audit explanation in prose.
     """
@@ -65,16 +66,20 @@ class DataLeakageStatus(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     leakage_status: str = Field(description="Raw leakage detector output.")
-    is_leaking: bool = Field(description="Normalized leakage flag.")
+    is_leaking: bool = Field(default=False, description="Normalized leakage flag.")
     suspicious_code_block: str | None = Field(
         default=None,
         description="Code block suspected of leaking.",
+    )
+    code_block: str | None = Field(
+        default=None,
+        description="Alias for suspicious_code_block matching Figure 21 schema.",
     )
     corrected_code_block: str | None = Field(
         default=None,
         description="Auto-corrected block, if any.",
     )
-    explanation: str = Field(description="Audit explanation.")
+    explanation: str = Field(default="", description="Audit explanation.")
 
     @model_validator(mode="before")
     @classmethod
@@ -90,6 +95,14 @@ class DataLeakageStatus(BaseModel):
         if not isinstance(data, dict):
             return data
         data = dict(data)
+        if "code_block" in data and (
+            "suspicious_code_block" not in data or data["suspicious_code_block"] is None
+        ):
+            data["suspicious_code_block"] = data["code_block"]
+        elif "suspicious_code_block" in data and (
+            "code_block" not in data or data["code_block"] is None
+        ):
+            data["code_block"] = data["suspicious_code_block"]
         status = data.get("leakage_status")
         if not isinstance(status, str):
             return data

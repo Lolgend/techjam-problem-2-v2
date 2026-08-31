@@ -45,9 +45,7 @@ _ENSEMBLER_PROMPT_TEMPLATE = (
     "Solution using the {L} provided solutions.\n"
     "- Do not forget the `./final/submission.csv` file.\n"
     "- Print out or return a final performance metric in your answer in a clear format with the\n"
-    "exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
-    "- The code should be a single-file Python program that is self-contained and can be\n"
-    "executed as-is."
+    "- The code should be a single-file Python program that can be executed as-is."
 )
 
 

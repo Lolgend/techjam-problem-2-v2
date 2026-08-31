@@ -12,17 +12,17 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) (e61949f)
 
 ## Phase 2: Prompt Injections across Target Agents & Evaluate Harness Mandate
-- [ ] Task: Write failing unit tests for prompt generation with raw task description
-  - [ ] Update `tests/search/test_retriever.py` to verify `RetrieverAgent.build_prompt` embeds `raw_description`.
-  - [ ] Update `tests/initialization/test_evaluator.py` to verify `CandidateEvaluatorAgent.build_prompt` embeds `raw_description` and mandatory `evaluate.py` harness instructions.
-  - [ ] Update `tests/guardrails/test_usage.py` to verify `DataUsageCheckerAgent` prompt embeds `raw_description`.
-  - [ ] Update `tests/execution/test_finalizer.py` to verify `FinalArtifactProducer.build_prompt` embeds `raw_description`.
-- [ ] Task: Update Agent Implementations & Prompts
-  - [ ] Update `RetrieverAgent.build_prompt` in `src/problem_2_v2/search/retriever.py`.
-  - [ ] Update `CandidateEvaluatorAgent.build_prompt` in `src/problem_2_v2/initialization/evaluator.py` with `raw_description` and mandatory `evaluate.py` instructions.
-  - [ ] Update `DataUsageCheckerAgent.audit` in `src/problem_2_v2/guardrails/usage.py`.
-  - [ ] Update `FinalArtifactProducer.build_prompt` in `src/problem_2_v2/execution/finalizer.py`.
-  - [ ] Run `pytest` on the updated agent test files to confirm green phase.
+- [x] Task: Write failing unit tests for prompt generation with raw task description (0b5c0e7)
+  - [x] Update `tests/search/test_retriever.py` to verify `RetrieverAgent.build_prompt` embeds `raw_description`.
+  - [x] Update `tests/initialization/test_evaluator.py` to verify `CandidateEvaluatorAgent.build_prompt` embeds `raw_description` and mandatory `evaluate.py` harness instructions.
+  - [x] Update `tests/guardrails/test_usage.py` to verify `DataUsageCheckerAgent` prompt embeds `raw_description`.
+  - [x] Update `tests/execution/test_finalizer.py` to verify `FinalArtifactProducer.build_prompt` embeds `raw_description`.
+- [x] Task: Update Agent Implementations & Prompts (0b5c0e7)
+  - [x] Update `RetrieverAgent.build_prompt` in `src/problem_2_v2/search/retriever.py`.
+  - [x] Update `CandidateEvaluatorAgent.build_prompt` in `src/problem_2_v2/initialization/evaluator.py` with `raw_description` and mandatory `evaluate.py` instructions.
+  - [x] Update `DataUsageCheckerAgent.audit` in `src/problem_2_v2/guardrails/usage.py`.
+  - [x] Update `FinalArtifactProducer.build_prompt` in `src/problem_2_v2/execution/finalizer.py`.
+  - [x] Run `pytest` on the updated agent test files to confirm green phase.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: Pipeline & Orchestrator Integration & Full Verification

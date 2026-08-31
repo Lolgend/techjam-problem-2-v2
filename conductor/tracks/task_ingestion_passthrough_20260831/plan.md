@@ -1,14 +1,14 @@
 # Plan: Retire Task Ingestion Agent & Inject Raw Task Description into Prompts
 
 ## Phase 1: Ingestion Architecture & `TaskSpecification` Contract Update
-- [ ] Task: Write failing unit tests for `TaskSpecification.raw_description` and non-LLM `TaskExtractor`
-  - [ ] Add tests in `tests/contracts/test_task.py` asserting `TaskSpecification.from_markdown` preserves `raw_description`.
-  - [ ] Add tests in `tests/ingestion/test_extractor.py` verifying `TaskExtractor` operates deterministically without LLM calls.
-- [ ] Task: Update `TaskSpecification` and `TaskExtractor` implementation
-  - [ ] Add `raw_description: str = Field(default="", ...)` to `TaskSpecification` in `src/problem_2_v2/contracts/task.py`.
-  - [ ] Update `from_markdown` to store `md_text.strip()` as `raw_description`.
-  - [ ] Refactor `TaskExtractor` in `src/problem_2_v2/ingestion/extractor.py` to remove the LLM `Agent` and directly return `TaskSpecification.from_markdown`.
-  - [ ] Run `pytest tests/contracts/test_task.py tests/ingestion/test_extractor.py` to confirm green phase.
+- [x] Task: Write failing unit tests for `TaskSpecification.raw_description` and non-LLM `TaskExtractor` (e61949f)
+  - [x] Add tests in `tests/contracts/test_task.py` asserting `TaskSpecification.from_markdown` preserves `raw_description`.
+  - [x] Add tests in `tests/ingestion/test_extractor.py` verifying `TaskExtractor` operates deterministically without LLM calls.
+- [x] Task: Update `TaskSpecification` and `TaskExtractor` implementation (e61949f)
+  - [x] Add `raw_description: str = Field(default="", ...)` to `TaskSpecification` in `src/problem_2_v2/contracts/task.py`.
+  - [x] Update `from_markdown` to store `md_text.strip()` as `raw_description`.
+  - [x] Refactor `TaskExtractor` in `src/problem_2_v2/ingestion/extractor.py` to remove the LLM `Agent` and directly return `TaskSpecification.from_markdown`.
+  - [x] Run `pytest tests/contracts/test_task.py tests/ingestion/test_extractor.py` to confirm green phase.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Prompt Injections across Target Agents & Evaluate Harness Mandate

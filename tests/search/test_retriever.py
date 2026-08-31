@@ -1,6 +1,5 @@
 """Unit tests for the retriever agent."""
 
-from pydantic_ai.capabilities import WebSearch
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.enums import TaskType
@@ -61,22 +60,7 @@ class TestRetrieverAgent:
         assert "RECOMMENDER_RANKING" in query
         assert "NDCG@10" in query
 
-    def test_init_defaults_to_websearch_capability(self) -> None:
-        agent = RetrieverAgent(model="test")
-        assert agent.provider is None
-        assert agent.capabilities is not None
-        assert any(isinstance(c, WebSearch) for c in agent.capabilities)
-
-    def test_retrieve_with_dynamic_websearch_capability(self) -> None:
-        agent = RetrieverAgent(model="test", num_candidates=2)
-        args = [_card_args("LightGBM"), _card_args("DeepFM")]
-        with agent.agent.override(model=TestModel(custom_output_args=args)):
-            candidates = agent.retrieve(_spec())
-        assert candidates.total_found == 2
-        assert [c.model_name for c in candidates.candidates] == ["LightGBM", "DeepFM"]
-        assert candidates.query_used == agent.build_query(_spec())
-
-    def test_retrieve_queries_provider_when_explicitly_provided(self) -> None:
+    def test_retrieve_queries_provider_with_built_query(self) -> None:
         provider = MockSearchProvider(
             results={
                 "ctr": [

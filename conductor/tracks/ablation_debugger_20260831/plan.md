@@ -20,9 +20,9 @@
   - [x] Run `uv run pytest tests/refinement/` to confirm all ablation tests pass.
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [25db1e7]
 
-## Phase 3: End-to-End Verification & Quality Gates
+## Phase 3: End-to-End Verification & Quality Gates [checkpoint: 99210ba]
 - [x] Task: Quality Gates & Full Verification [99210ba]
   - [x] Run `uv run ruff check src` and `uv run ruff format --check src`.
   - [x] Run `uv run mypy src`.
   - [x] Run `uv run pytest --cov=src --cov-report=term-missing` and verify >80% coverage on modified modules.
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [99210ba]

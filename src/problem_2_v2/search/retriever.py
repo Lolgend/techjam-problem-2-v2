@@ -37,8 +37,12 @@ _RETRIEVER_PROMPT_TEMPLATE = (
     "- List {num_candidates} recent effective models and their example codes to win the above competition.\n\n"
     "# Requirement\n"
     "- The example code should be concise and simple.\n"
-    "- You must provide an example code, i.e., do not just mention GitHubs or papers.\n"
+    "- You must provide an example code, i.e., do not just mention GitHubs or papers.\n\n"
+    "Use this JSON schema:\n"
+    "Model = {{'model_name': str, 'example_code': str}}\n"
+    "Return: list[Model]\n"
 )
+
 
 _FENCE_RE = re.compile(r"```(?:json|python)?\s*\n?(.*?)```", re.DOTALL)
 _BULLET_RE = re.compile(
@@ -139,25 +143,6 @@ class RetrieverAgent:
             num_candidates=self.num_candidates,
         )
 
-    def build_query(self, spec: TaskSpecification) -> str:
-        """Build a targeted search query from the task specification.
-
-        Args:
-            spec: The validated task specification.
-
-        Returns:
-            A search query string combining task type, metric, and context.
-        """
-        parts = [
-            spec.task_type.value,
-            spec.metric_name,
-            "state-of-the-art model",
-            "python example",
-        ]
-        if spec.task_name:
-            parts.insert(0, spec.task_name)
-        return " ".join(parts)
-
     def retrieve(self, spec: TaskSpecification) -> RetrievedCandidates:
         """Retrieve structured candidate model cards for a task.
 
@@ -171,10 +156,9 @@ class RetrieverAgent:
 
         Returns:
             A ``RetrievedCandidates`` container holding the candidate model
-            cards, the query used, and the candidate count.
+            cards and the candidate count.
         """
         prompt = self.build_prompt(spec)
-        query = self.build_query(spec)
 
         cards: list[ModelCard] = []
         with logfire.span("retriever.llm", num_candidates=self.num_candidates):
@@ -198,9 +182,9 @@ class RetrieverAgent:
 
         return RetrievedCandidates(
             candidates=cards,
-            query_used=query,
             total_found=len(cards),
         )
+
 
     def _text_fallback(self, prompt: str) -> list[ModelCard]:
         """Parse model cards from the raw text response."""

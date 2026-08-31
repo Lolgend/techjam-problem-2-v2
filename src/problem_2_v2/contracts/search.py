@@ -52,12 +52,11 @@ class RetrievedCandidates(BaseModel):
 
     Attributes:
         candidates: The list of candidate model cards.
-        query_used: The search query that produced these candidates.
         total_found: Total number of candidates found.
     """
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     candidates: list[ModelCard] = Field(default_factory=list, description="Candidate model cards.")
-    query_used: str = Field(description="The search query used.")
     total_found: int = Field(description="Total candidates found.")
+

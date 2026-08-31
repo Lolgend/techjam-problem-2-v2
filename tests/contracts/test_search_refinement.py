@@ -206,7 +206,6 @@ class TestRetrievedCandidates:
         ]
         container = RetrievedCandidates(
             candidates=candidates,
-            query_used="CTR prediction SOTA",
             total_found=1,
         )
         assert container.total_found == 1
@@ -221,7 +220,6 @@ class TestRetrievedCandidates:
         )
         container = RetrievedCandidates(
             candidates=[card],
-            query_used="q",
             total_found=1,
         )
         restored = RetrievedCandidates.model_validate_json(container.model_dump_json())
@@ -232,10 +230,10 @@ class TestRetrievedCandidates:
         with pytest.raises(ValidationError):
             RetrievedCandidates(
                 candidates=[],
-                query_used="q",
                 total_found=0,
                 extra=True,
             )
+
 
 
 class TestAblationVariant:

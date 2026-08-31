@@ -131,9 +131,9 @@ class InitializationPipeline:
                     cards = [self._baseline_card(baseline_code)] + list(candidates.candidates)
                     candidates = RetrievedCandidates(
                         candidates=cards,
-                        query_used=candidates.query_used,
                         total_found=len(cards),
                     )
+
                     announce("[Baseline] Official baseline starter script seeded as Candidate 1.")
             with logfire.span(
                 "initialization.evaluate",

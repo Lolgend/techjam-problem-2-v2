@@ -110,9 +110,9 @@ class TestRoundTripSerialization:
                         library_dependencies=["xgboost"],
                     )
                 ],
-                query_used="ranking SOTA",
                 total_found=1,
             ),
+
             AblationVariant(
                 variant_id="v1",
                 component_name="imputer",

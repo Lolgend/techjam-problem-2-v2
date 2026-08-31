@@ -54,29 +54,17 @@ def _card_args(model_name: str) -> dict[str, object]:
 
 
 class TestRetrieverAgent:
-    """Test query formulation, retrieval, and model card parsing."""
+    """Test prompt formatting, retrieval, and model card parsing."""
 
-    def test_build_query_contains_task_and_metric(self) -> None:
-        agent = RetrieverAgent(provider=MockSearchProvider(results={}))
-        query = agent.build_query(_spec())
-        assert "RECOMMENDER_RANKING" in query
-        assert "NDCG@10" in query
-
-    def test_retrieve_queries_provider_with_built_query(self) -> None:
-        provider = MockSearchProvider(
-            results={
-                "ctr": [
-                    SearchResult(title="t", url="https://e.com", snippet="s"),
-                ]
-            }
-        )
+    def test_retrieve_returns_candidates(self) -> None:
+        provider = MockSearchProvider(results={})
         agent = RetrieverAgent(provider=provider, model="test", num_candidates=2)
         args = [_card_args("LightGBM"), _card_args("DeepFM")]
         with agent.agent.override(model=TestModel(custom_output_args=args)):
             candidates = agent.retrieve(_spec())
-        assert candidates.query_used == agent.build_query(_spec())
         assert candidates.total_found == 2
         assert [c.model_name for c in candidates.candidates] == ["LightGBM", "DeepFM"]
+
 
     def test_retrieve_returns_requested_candidate_count(self) -> None:
         provider = MockSearchProvider(results={})

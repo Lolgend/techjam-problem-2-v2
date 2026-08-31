@@ -103,7 +103,9 @@ class TestInitializationPipeline:
             pipeline.merger.agent.override(model=FunctionModel(function=_merger_model)),
         ):
             result = pipeline.run(_MD, dataset_dir="/data", run_id="e2e2")
-        assert "NDCG@10" in result.candidates.query_used
+        assert result.candidates.total_found == 2
+
+
 
 
 def _pipeline_with(

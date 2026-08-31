@@ -12,20 +12,27 @@ from pydantic_ai import Agent
 
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 
-_PLANNER_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition. In order to win "
-    "this competition, you have to improve the code block for better "
+_PLANNER_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- In order to win this competition, you have to improve the code block for better\n"
     "performance.\n"
+    "- We will provide the code block you are improving and the improvement plans you have\n"
+    "tried.\n"
+    "# Code block\n"
+    "{code_block}\n"
+    "# Improvement plans you have tried\n"
+    "{history}"
     "# Your task\n"
-    "- Suggest a better plan to improve the provided code block.\n"
+    "- Suggest a better plan to improve the above code block.\n"
     "- The suggested plan must be novel and effective.\n"
-    "- Avoid plans which can make the solution's running time too long "
-    "(e.g., searching hyperparameters in a very large search space).\n"
-    "- The suggested plan should differ from the previous plans you have "
-    "tried and should receive a higher score.\n"
+    "- Please avoid plans which can make the solution's running time too long (e.g., searching\n"
+    "hyperparameters in a very large search space).\n"
+    "- The suggested plan should be differ from the previous plans you have tried and should\n"
+    "receive a higher score.\n"
     "# Response format\n"
-    "- Your response should be a brief outline/sketch of your proposed "
-    "solution in natural language (3-5 sentences).\n"
+    "- Your response should be a brief outline/sketch of your proposed solution in natural\n"
+    "language (3-5 sentences).\n"
     "- There should be no additional headings or text in your response."
 )
 
@@ -47,9 +54,32 @@ class RefinementPlannerAgent:
             model,
             name="refinement_planner_agent",
             output_type=str,
-            instructions=_PLANNER_INSTRUCTIONS,
             defer_model_check=True,
         )
+
+    @staticmethod
+    def build_prompt(code_block: str, attempts: list[tuple[str, float | None]]) -> str:
+        """Build the Figure 16 refinement planning prompt.
+
+        Args:
+            code_block: The code block being refined.
+            attempts: Previously attempted plans paired with their validation scores.
+
+        Returns:
+            The formatted planning prompt string.
+        """
+        history_parts = [
+            f"## Plan: {plan}\n## Score: {score if score is not None else 'N/A'}"
+            for plan, score in attempts
+        ]
+        history_joined = "\n".join(history_parts)
+        history_str = f"{history_joined}\n" if history_parts else ""
+        return _PLANNER_PROMPT_TEMPLATE.format(
+            code_block=code_block,
+            history=history_str,
+        )
+
+    _build_prompt = build_prompt
 
     def next_plan(
         self,
@@ -69,16 +99,7 @@ class RefinementPlannerAgent:
             A ``RefinementPlan`` with a fresh plan id and the proposed
             strategy.
         """
-        history = "\n".join(
-            f"## Plan: {plan}\n## Score: {score if score is not None else 'N/A'}"
-            for plan, score in attempts
-        )
-        prompt = (
-            f"# Code block\n{target_block.raw_code}\n"
-            f"# Improvement plans you have tried\n{history or '(none yet)'}\n"
-            f"# Your task\nSuggest a better, novel plan to improve the "
-            f"above code block."
-        )
+        prompt = self.build_prompt(target_block.raw_code, attempts)
         with logfire.span("planner.next_plan", iteration=iteration_index):
             response = self.agent.run_sync(prompt)
         return RefinementPlan(

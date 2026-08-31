@@ -71,3 +71,19 @@ class TestRefinementPlannerAgent:
         with agent.agent.override(model=FunctionModel(function=capturing_model)):
             agent.next_plan(_block(), attempts, iteration_index=1)
         assert "N/A" in captured["prompt"] or "None" in captured["prompt"]
+
+    def test_build_prompt_format(self) -> None:
+        attempts = [("plan one: scale features", 0.81), ("plan two: one-hot", None)]
+        prompt = RefinementPlannerAgent.build_prompt(TARGET_BLOCK, attempts)
+        assert "# Introduction" in prompt
+        assert "- You are a Kaggle grandmaster attending a competition." in prompt
+        assert "# Code block\n" in prompt
+        assert TARGET_BLOCK in prompt
+        assert "# Improvement plans you have tried\n" in prompt
+        assert "## Plan: plan one: scale features\n## Score: 0.81" in prompt
+        assert "## Plan: plan two: one-hot\n## Score: N/A" in prompt
+        assert "# Your task" in prompt
+        assert "Suggest a better plan to improve the above code block." in prompt
+        assert "Please avoid plans which can make the solution's running time too long" in prompt
+        assert "# Response format" in prompt
+        assert "Your response should be a brief outline/sketch of your proposed solution" in prompt

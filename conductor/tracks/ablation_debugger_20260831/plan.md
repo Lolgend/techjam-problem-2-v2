@@ -1,11 +1,11 @@
 # Implementation Plan: Ablation Debugger Self-Repair Integration
 
 ## Phase 1: Test Suite & Failure Reproduction (TDD Red Phase)
-- [ ] Task: Write failing unit tests for ablation debugger integration
-  - [ ] Add unit test in `tests/refinement/test_ablation.py` verifying `AblationSummarizerAgent` calls the debugger on syntax/runtime execution failure.
-  - [ ] Add unit test verifying that a repaired ablation script produces a valid `AblationReport`.
-  - [ ] Add unit test verifying graceful fallback when all debugger rounds fail.
-  - [ ] Run `uv run pytest tests/refinement/test_ablation.py` and confirm tests fail as expected (Red Phase).
+- [x] Task: Write failing unit tests for ablation debugger integration [7d2974b]
+  - [x] Add unit test in `tests/refinement/test_ablation.py` verifying `AblationSummarizerAgent` calls the debugger on syntax/runtime execution failure.
+  - [x] Add unit test verifying that a repaired ablation script produces a valid `AblationReport`.
+  - [x] Add unit test verifying graceful fallback when all debugger rounds fail.
+  - [x] Run `uv run pytest tests/refinement/test_ablation.py` and confirm tests fail as expected (Red Phase).
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 2: Implementation of Ablation Debugger Integration (TDD Green Phase)

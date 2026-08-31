@@ -13,11 +13,11 @@
   - [x] Update `AblationSummarizerAgent.__init__` to accept `debugger: DebuggerAgent | None = None` (with runner/model default fallback).
   - [x] Update `AblationSummarizerAgent.summarize()` to detect execution failure and trigger debugger self-repair across `max_debug_rounds`.
   - [x] Instrument with Logfire spans (`ablation.debug_repair`) and error logging.
-- [~] Task: Update Refinement Pipeline and Orchestrator Wiring
-  - [ ] Update `RefinementPipeline` to inject the branch debugger into `AblationSummarizerAgent`.
-  - [ ] Update `MLEStarPipeline._build_branch` in `src/problem_2_v2/orchestrator.py` to pass the branch debugger instance.
-- [ ] Task: Verify unit tests pass (Green Phase)
-  - [ ] Run `uv run pytest tests/refinement/` to confirm all ablation tests pass.
+- [x] Task: Update Refinement Pipeline and Orchestrator Wiring [25db1e7]
+  - [x] Update `RefinementPipeline` to inject the branch debugger into `AblationSummarizerAgent`.
+  - [x] Update `MLEStarPipeline._build_branch` in `src/problem_2_v2/orchestrator.py` to pass the branch debugger instance.
+- [x] Task: Verify unit tests pass (Green Phase) [25db1e7]
+  - [x] Run `uv run pytest tests/refinement/` to confirm all ablation tests pass.
 - [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ## Phase 3: End-to-End Verification & Quality Gates

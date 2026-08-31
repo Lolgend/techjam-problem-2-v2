@@ -93,3 +93,4 @@ class TestDataUsageCheckerAgent:
             checker.audit(spec, CODE)
         assert "train.csv" in captured["prompt"]
         assert "LogisticRegression" in captured["prompt"]
+        assert spec.raw_description in captured["prompt"]

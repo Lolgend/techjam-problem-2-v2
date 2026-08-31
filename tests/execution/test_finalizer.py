@@ -106,6 +106,7 @@ class TestFinalArtifactProducer:
         assert "metrics.json" in captured["prompt"]
         assert "submission.csv" in captured["prompt"]
         assert "head(30000)" in captured["prompt"]
+        assert _spec().raw_description in captured["prompt"]
 
     def test_debugger_recovers_broken_rewrite(self, finalizer: FinalArtifactProducer) -> None:
         with (

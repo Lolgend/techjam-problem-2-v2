@@ -77,9 +77,11 @@ class TestRetrieverAgent:
 
     def test_build_prompt_format(self) -> None:
         agent = RetrieverAgent(provider=MockSearchProvider(results={}), num_candidates=3)
-        prompt = agent.build_prompt(_spec())
+        spec = _spec()
+        prompt = agent.build_prompt(spec)
         assert "# Competition" in prompt
-        assert "KuaiRand-Pure" in prompt
+        assert spec.raw_description in prompt or "KuaiRand-Pure" in prompt
+        assert spec.raw_description in prompt
         assert "# Your task" in prompt
         assert "List 3 recent effective models and their example codes" in prompt
         assert "# Requirement" in prompt

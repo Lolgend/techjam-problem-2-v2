@@ -74,12 +74,16 @@ class DataUsageCheckerAgent:
         """
         missing = self._missing_sources(spec, code)
 
+        task_description = spec.raw_description if spec.raw_description else (
+            f"{spec.task_name}\n{spec.description}\n"
+            f"Dataset files: {', '.join(spec.dataset_files)}\n"
+            f"Target variable: {spec.target_variable}"
+        ).strip()
+
         with logfire.span("guardrails.usage_check"):
             prompt = (
                 f"# Solution Code\n{code}\n"
-                f"# Task description\n{spec.task_name}\n{spec.description}\n"
-                f"Dataset files: {', '.join(spec.dataset_files)}\n"
-                f"Target variable: {spec.target_variable}\n"
+                f"# Task description\n{task_description}\n"
                 f"# Your task\nCheck whether all provided information is "
                 f"used, and improve the code if not."
             )

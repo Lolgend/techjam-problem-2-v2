@@ -34,29 +34,30 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "# Your task\n"
     "- Implement the solution in Python.\n"
     "- You must use the model as described in the model description.\n"
-    "- If you are seeding the baseline, do not edit it at all and retain it's original form."
-    "- This first solution design should be relatively simple, without ensembling or\n"
-    "hyper-parameter optimization.\n"
-    "- Propose an evaluation metric that is reasonable for this task.\n"
-    "- All the provided data is already prepared and available in the `./input` directory. There\n"
-    "is no need to unzip any files.\n"
+    "- If it is the official baseline, ignore everything and just copy the code as is. Retain the original form, it is tested and runs.\n"
+    "- This first solution design should be relatively simple, without ensembling or hyper-parameter optimization.\n"
+    "- All the provided data is already prepared and available in the `./input` directory. There is no need to unzip any files.\n"
     "- Do not include other models that are not directly related to the model described.\n"
-    "- Use PyTorch rather than TensorFlow. Use CUDA if you need. All the necessary libraries are\n"
-    "installed.\n"
-    "- The code should implement the proposed solution and print the value of the evaluation\n"
-    "metric computed on a hold-out validation set.\n"
-    "- Only use the provided train data in the `./input` directory. Do not load test data.\n"
-    "- If there are more than 30,000 training samples, you must subsample to 30,000 for a faster\n"
-    "run.\n"
+    "- Use PyTorch rather than TensorFlow. Use CUDA if you need. All the necessary libraries are installed.\n"
+    "- Only use the provided train data in the `./input` directory. Do not load test data during validation.\n"
+    "- If there are more than 30,000 training samples, you must subsample to 30,000 for a faster run.\n"
+    "# Mandatory Evaluation Protocol\n"
+    "- You MUST evaluate validation performance using the official evaluation harness: 'from evaluate import evaluate'.\n"
+    "- The evaluation function signature is: evaluate(user_ids, labels, scores, k=5)\n"
+    "  where:\n"
+    "    * user_ids: 1D list/array of validation user IDs (e.g. valid_df['user_id'].tolist())\n"
+    "    * labels: 1D list/array of validation binary labels 0/1 (e.g. valid_df['long_view'].tolist())\n"
+    "    * scores: 1D list/array of continuous real-valued prediction scores/logits/probabilities from the model\n"
+    "  It returns a dict with keys 'GAUC', 'nDCG@5', and 'primary' (the mean of GAUC and nDCG@5).\n"
+    "- Extract val_res['primary'] and print: print(f'Final Validation Performance: {{val_res[\"primary\"]:.6f}}')\n"
+    "- Do NOT write custom metric calculations (like standard roc_auc_score, accuracy, or loss); you MUST call evaluate().\n"
     "# Required\n"
     "- There should be no additional headings or text in your response.\n"
-    "- Print out or return a final performance metric in your answer in a clear format with the\n"
-    "exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
-    "- The code should be a single-file Python program that is self-contained and can be\n"
-    "executed as-is.\n"
+    "- Print out or return a final performance metric in your answer in a clear format with the exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
+    "- The code should be a single-file Python program that is self-contained and can be executed as-is.\n"
     "- Your response should only contain a single code block.\n"
     "- Do not use exit() function in the Python code.\n"
-    "- Do not use try: and except: or if else to ignore unintended behavior."
+    "- Do not use try: and except: or if else to ignore unintended behavior.\n"
 )
 
 
@@ -214,21 +215,26 @@ class CandidateEvaluatorAgent:
     @staticmethod
     def build_prompt(spec: TaskSpecification, card: ModelCard) -> str:
         """Build the candidate generation prompt."""
-        task_desc_parts: list[str] = []
-        if spec.task_name:
-            task_desc_parts.append(spec.task_name)
-        if spec.task_type:
-            task_desc_parts.append(spec.task_type.value)
-        if spec.description:
-            task_desc_parts.append(spec.description)
-        if spec.metric_name:
-            task_desc_parts.append(f"Evaluation metric: {spec.metric_name} ({spec.metric_direction.value})")
-        if spec.target_variable:
-            task_desc_parts.append(f"Target variable: {spec.target_variable}")
-        if spec.dataset_files:
-            task_desc_parts.append(f"Dataset files: {', '.join(spec.dataset_files)}")
+        if spec.raw_description:
+            task_description = spec.raw_description
+        else:
+            task_desc_parts: list[str] = []
+            if spec.task_name:
+                task_desc_parts.append(spec.task_name)
+            if spec.task_type:
+                task_desc_parts.append(spec.task_type.value)
+            if spec.description:
+                task_desc_parts.append(spec.description)
+            if spec.metric_name:
+                task_desc_parts.append(f"Evaluation metric: {spec.metric_name}")
+            if spec.target_variable:
+                task_desc_parts.append(f"Target variable: {spec.target_variable}")
+            if spec.dataset_files:
+                task_desc_parts.append(f"Dataset files: {', '.join(spec.dataset_files)}")
+            if spec.constraints:
+                task_desc_parts.append(f"Constraints: {spec.constraints}")
+            task_description = "\n".join(task_desc_parts).strip()
 
-        task_description = "\n".join(task_desc_parts).strip()
         model_description = card.model_name
         if card.rationale:
             model_description = f"{card.model_name}\n{card.rationale}"

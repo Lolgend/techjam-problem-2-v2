@@ -239,12 +239,16 @@ class FinalArtifactProducer:
         Returns:
             The finalization prompt.
         """
+        task_desc = spec.raw_description if spec.raw_description else (
+            f"{spec.task_name}\n{spec.description}\n"
+            f"Evaluation metric: {spec.metric_name}"
+        ).strip()
+
         return (
             f"# Introduction\nYou are a Kaggle grandmaster producing the "
             f"final production artifact for a completed competition.\n"
             f"# Winning Solution\n{code}\n"
-            f"# Task Description\n{spec.task_name}\n{spec.description}\n"
-            f"Evaluation metric: {spec.metric_name}\n"
+            f"# Task Description\n{task_desc}\n"
             f"# Your task\n"
             f"- Remove all subsampling or row-capping constraints (e.g. "
             f".head(30000), .sample(n=30000), or [:30000] slicing of the "

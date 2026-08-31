@@ -130,16 +130,18 @@ class TestEvaluatorPromptTemplate:
     def test_prompt_template_structure(
         self, evaluator: CandidateEvaluatorAgent
     ) -> None:
-        prompt = evaluator.build_prompt(_spec(), _card("LightGBM"))
+        spec = _spec()
+        prompt = evaluator.build_prompt(spec, _card("LightGBM"))
         assert "# Introduction" in prompt
         assert "- You are a Kaggle grandmaster attending a competition." in prompt
         assert "# Task description" in prompt
+        assert spec.raw_description in prompt
         assert "# Model description" in prompt
         assert "## Model name\nLightGBM" in prompt
         assert "## Example Python code" in prompt
         assert "import catboost" in prompt
         assert "# Your task" in prompt
-        assert "Propose an evaluation metric that is reasonable for this task." in prompt
+        assert "from evaluate import evaluate" in prompt
         assert "# Required" in prompt
         assert "Final Validation Performance: {final_validation_score}" in prompt
 

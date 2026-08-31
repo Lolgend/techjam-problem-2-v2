@@ -17,6 +17,7 @@ from typing import Any
 
 import logfire
 from pydantic_ai import Agent
+from pydantic_ai.capabilities import WebSearch
 
 from problem_2_v2.contracts.enums import TaskType
 from problem_2_v2.contracts.search import ModelCard, RetrievedCandidates
@@ -33,7 +34,7 @@ _RETRIEVER_INSTRUCTIONS = (
     "- The example code should be concise and simple.\n"
     "- You must provide an example code, i.e., do not just mention "
     "GitHubs or papers.\n"
-    "- Ground your suggestions in the web search results provided.\n"
+    "- Ground your suggestions in web search results for the competition domain.\n"
 )
 
 _FENCE_RE = re.compile(r"```(?:json|python)?\s*\n?(.*?)```", re.DOTALL)
@@ -48,7 +49,8 @@ class RetrieverAgent:
     """Retrieves candidate models for a task using web search + LLM.
 
     Attributes:
-        provider: The pluggable search provider to query.
+        provider: Optional pluggable search provider to query.
+        capabilities: Configured Pydantic AI agent capabilities.
         agent: Pydantic AI agent producing ``list[ModelCard]`` output.
         text_agent: Pydantic AI agent returning raw text for fallback
             parsing when structured tool-calling is unavailable.
@@ -57,24 +59,35 @@ class RetrieverAgent:
 
     def __init__(
         self,
-        provider: SearchProvider,
+        provider: SearchProvider | None = None,
         model: str = "openai:gpt-4o",
         num_candidates: int = 4,
+        capabilities: list[Any] | None = None,
     ) -> None:
         """Create a retriever agent.
 
         Args:
-            provider: Search provider used to gather evidence snippets.
+            provider: Optional search provider used to gather evidence snippets.
             model: Pydantic AI model string.
             num_candidates: Desired number of candidate models (M).
+            capabilities: Optional agent capabilities. When both ``provider`` and
+                ``capabilities`` are omitted, defaults to ``[WebSearch()]``.
         """
         self.provider = provider
         self.num_candidates = num_candidates
+        if capabilities is not None:
+            self.capabilities = capabilities
+        elif provider is None:
+            self.capabilities = [WebSearch()]
+        else:
+            self.capabilities = []
+
         self.agent = Agent(
             model,
             name="retriever_agent",
             output_type=list[ModelCard],
             instructions=_RETRIEVER_INSTRUCTIONS,
+            capabilities=self.capabilities,
             defer_model_check=True,
         )
         self.text_agent = Agent(
@@ -82,6 +95,7 @@ class RetrieverAgent:
             name="retriever_text_agent",
             output_type=str,
             instructions=_RETRIEVER_INSTRUCTIONS,
+            capabilities=self.capabilities,
             defer_model_check=True,
         )
 
@@ -120,16 +134,19 @@ class RetrieverAgent:
             cards, the query used, and the candidate count.
         """
         query = self.build_query(spec)
-        with logfire.span("retriever.search", provider=self.provider.provider_name, query=query):
-            results = self.provider.search(query, num_results=max(self.num_candidates, 5))
+        search_section = ""
+        if self.provider is not None:
+            with logfire.span("retriever.search", provider=self.provider.provider_name, query=query):
+                results = self.provider.search(query, num_results=max(self.num_candidates, 5))
+            search_context = "\n".join(f"- {r.title}: {r.url}\n  {r.snippet}" for r in results)
+            search_section = f"# Web search results\n{search_context or '(no results)'}\n"
 
-        search_context = "\n".join(f"- {r.title}: {r.url}\n  {r.snippet}" for r in results)
         prompt = (
             f"# Competition\n{spec.task_name or spec.task_type.value}\n"
             f"{spec.description or ''}\n"
             f"Evaluation metric: {spec.metric_name} "
             f"({spec.metric_direction.value})\n"
-            f"# Web search results\n{search_context or '(no results)'}\n"
+            f"{search_section}"
             f"# Your task\n"
             f"List {self.num_candidates} recent effective models and their "
             f"example codes to win the above competition."

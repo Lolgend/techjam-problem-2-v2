@@ -64,7 +64,7 @@ _FINALIZER_INSTRUCTIONS = (
     "the score can be parsed.\n"
     "# Response format\n"
     "- Respond with a single markdown code block (wrapped in ```) which is "
-    "the full self-contained production script.\n"
+    "the full production script.\n"
     "- There should be no additional headings or text in your response."
 )
 
@@ -277,7 +277,7 @@ class FinalArtifactProducer:
             f"- Print 'Final Validation Performance: "
             f"{{final_validation_score}}' for parsing.\n"
             f"- Respond with a single markdown code block containing the "
-            f"full self-contained production script."
+            f"full production script."
         )
 
     @staticmethod

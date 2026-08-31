@@ -21,14 +21,13 @@ _DEBUGGER_INSTRUCTIONS = (
     "# Your task\n"
     "- Revise the code to fix the error.\n"
     "- Do not remove subsampling if exists.\n"
-    "- Provide the improved, self-contained Python script again.\n"
+    "- Provide the improved Python script again.\n"
     "- There should be no additional headings or text in your response.\n"
     '- All the provided input data is stored in "./input" directory.\n'
     "- Remember to print a line in the code with "
     "'Final Validation Performance: {final_validation_score}' so we can "
     "parse performance.\n"
-    "- The code should be a single-file python program that is "
-    "self-contained and can be executed as-is.\n"
+    "- The code should be a single-file python program that can be executed as-is.\n"
     "- Your response should only contain a single code block.\n"
     "- Do not use exit() function in the refined Python code."
 )

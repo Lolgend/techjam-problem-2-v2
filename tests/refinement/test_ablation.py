@@ -58,6 +58,27 @@ class TestAblationAgent:
         assert "Feature scaling had the biggest impact." in captured["prompt"]
         assert "2-3" in captured["prompt"] or "2 or 3" in captured["prompt"]
 
+    def test_build_prompt_format(self) -> None:
+        prompt = AblationAgent.build_prompt(
+            SOLUTION,
+            previous_ablations=["Feature scaling: +0.02", "Tree depth: -0.01"],
+        )
+        assert "# Introduction" in prompt
+        assert "- You are a Kaggle grandmaster attending a competition." in prompt
+        assert "perform an ablation study on the current" in prompt
+        assert "# Python solution" in prompt
+        assert SOLUTION in prompt
+        assert "## Previous ablation study result {0}" in prompt
+        assert "Feature scaling: +0.02" in prompt
+        assert "## Previous ablation study result {1}" in prompt
+        assert "Tree depth: -0.01" in prompt
+        assert "# Instructions" in prompt
+        assert "generate a simple Python code that performs an ablation study" in prompt
+        assert "modifying or disabling parts (2-3 parts)" in prompt
+        assert "# Response format" in prompt
+        assert "The Python code for the ablation study should not load test data." in prompt
+        assert "contributes the most to the" in prompt
+
 
 class TestAblationSummarizerAgent:
     """Test Figure 13 raw-log summarization into `AblationReport`."""

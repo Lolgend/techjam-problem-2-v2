@@ -1,6 +1,6 @@
 """Candidate evaluation agent ($A_init$): code generation and ranking.
 
-Generates a self-contained Python script for each retrieved model card
+Generates a Python script for each retrieved model card
 (Figure 10 prompt), enforces single-file/hold-out/30k-subsample
 constraints, executes it in the sandbox with autonomous debugging, and
 ranks the candidates into the descending performance permutation used by
@@ -47,9 +47,9 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "during validation.\n"
     "- If there are more than 30,000 training samples, you must subsample to 30,000 for a "
     "faster run.\n"
-    "# Mandatory Evaluation Protocol\n"
-    "- You MUST evaluate validation performance using the official evaluation harness: "
-    "'from evaluate import evaluate'.\n"
+    "# [IMPORTANT] Mandatory Evaluation Protocol\n"
+    "- You MUST evaluate validation performance using the official evaluation harness "
+    "and nothing else: 'from evaluate import evaluate'.\n"
     "- The evaluation function signature is: evaluate(user_ids, labels, scores, k=5)\n"
     "  where:\n"
     "    * user_ids: 1D list/array of validation user IDs (e.g. valid_df['user_id'].tolist())\n"
@@ -67,8 +67,7 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "- There should be no additional headings or text in your response.\n"
     "- Print out or return a final performance metric in your answer in a clear format with "
     "the exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
-    "- The code should be a single-file Python program that is self-contained and can be "
-    "executed as-is.\n"
+    "- The code should be a single-file Python program that can be executed as-is.\n"
     "- Your response should only contain a single code block.\n"
     "- Do not use exit() function in the Python code.\n"
     "- Do not use try: and except: or if else to ignore unintended behavior.\n"

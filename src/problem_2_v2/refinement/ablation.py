@@ -22,28 +22,32 @@ from problem_2_v2.contracts.refinement import (
 )
 from problem_2_v2.runner.sandbox import SubprocessRunner
 
-_ABLATION_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition. In order to win "
-    "this competition, you need to perform an ablation study on the current "
-    "Python solution to know which parts of the code contribute the most to "
-    "the overall performance.\n"
-    "# Instructions\n"
-    "- Generate a simple Python code that performs an ablation study on the "
-    "provided solution script.\n"
-    "- The generated code should create variations by modifying or disabling "
-    "parts (2-3 parts) of the training process.\n"
-    "- Concentrate on parts that have not been previously considered in the "
-    "provided previous ablation study results.\n"
-    "- For each ablation, print out how the modification affects the model's "
+_ABLATION_PROMPT_TEMPLATE = (
+    "# Introduction\n"
+    "- You are a Kaggle grandmaster attending a competition.\n"
+    "- In order to win this competition, you need to perform an ablation study on the current\n"
+    "Python solution to know which parts of the code contribute the most to the overall\n"
     "performance.\n"
+    "- We will now provide a current Python solution.\n"
+    "- We will also provide the summaries of previous ablation studies.\n"
+    "# Python solution\n"
+    "{solution_script}\n"
+    "{previous_ablations}"
+    "# Instructions\n"
+    "- You need you to generate a simple Python code that performs an ablation study on the\n"
+    "train.py script.\n"
+    "- The generated code should create variations by modifying or disabling parts (2-3 parts)\n"
+    "of the training process.\n"
+    "- Your ablation study should concentrate on the other parts that have not been previously\n"
+    "considered.\n"
+    "- For each ablation, print out how the modification affects the model's performance.\n"
     "# Response format\n"
     "- There should be no additional headings or text in your response.\n"
-    "- The Python code for the ablation study should not load test data. It "
-    "should only focus on training and evaluating the model on the "
-    "validation set.\n"
-    "- The code should include a printing statement that shows the "
-    "performance of each ablation, and consequently print out what part of "
-    "the code contributes the most to the overall performance."
+    "- The Python code for the ablation study should not load test data. It should only focus on\n"
+    "training and evaluating the model on the validation set.\n"
+    "- The code should include a printing statement that shows the performance of each ablation.\n"
+    "- The code should consequently print out what part of the code contributes the most to the\n"
+    "overall performance."
 )
 
 _SUMMARIZE_INSTRUCTIONS = (
@@ -73,9 +77,32 @@ class AblationAgent:
             model,
             name="ablation_agent",
             output_type=str,
-            instructions=_ABLATION_INSTRUCTIONS,
             defer_model_check=True,
         )
+
+    @staticmethod
+    def build_prompt(solution: str, previous_ablations: list[str]) -> str:
+        """Build the Figure 12 ablation study prompt.
+
+        Args:
+            solution: The current solution script.
+            previous_ablations: Summaries of previous ablation studies.
+
+        Returns:
+            The formatted ablation prompt string.
+        """
+        history_parts = [
+            f"## Previous ablation study result {{{i}}}\n{summary}"
+            for i, summary in enumerate(previous_ablations)
+        ]
+        history_joined = "\n".join(history_parts)
+        previous_str = f"{history_joined}\n" if history_parts else ""
+        return _ABLATION_PROMPT_TEMPLATE.format(
+            solution_script=solution,
+            previous_ablations=previous_str,
+        )
+
+    _build_prompt = build_prompt
 
     def generate_ablation(
         self,
@@ -91,18 +118,7 @@ class AblationAgent:
         Returns:
             The cleaned ablation script source (fences stripped).
         """
-        history = "\n".join(
-            f"## Previous ablation study result {{{i}}}\n{summary}"
-            for i, summary in enumerate(previous_ablations)
-        )
-        prompt = (
-            f"# Introduction\nYou are a Kaggle grandmaster attending a "
-            f"competition.\n# Python solution\n{solution}\n"
-            f"{history}\n"
-            f"# Instructions\nGenerate a simple Python code that performs an "
-            f"ablation study on the solution above, modifying or disabling "
-            f"2-3 parts of the training process."
-        )
+        prompt = self.build_prompt(solution=solution, previous_ablations=previous_ablations)
         with logfire.span("ablation.generate"):
             response = self.agent.run_sync(prompt)
         return extract_python_code(response.output)

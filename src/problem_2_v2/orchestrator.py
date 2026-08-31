@@ -122,7 +122,7 @@ class MLEStarPipeline:
                 is constructed from ``config.search_provider``.
         """
         self.config = config or MLEStarConfig()
-        self._provider = search_provider if search_provider is not None else self._build_provider()
+        self._provider = search_provider or self._build_provider()
 
         self.runner = SubprocessRunner(
             runs_dir=self.config.runs_dir,
@@ -312,21 +312,16 @@ class MLEStarPipeline:
         md_text = task_path.read_text(encoding="utf-8")
         return md_text, TaskSpecification.from_markdown(md_text, dataset_dir=dataset_dir)
 
-    def _build_provider(self) -> SearchProvider | None:
+    def _build_provider(self) -> SearchProvider:
         """Build the configured search provider backend."""
         name = self.config.search_provider
-        if name in ("websearch", "builtin"):
-            return None
         if name == "mock":
             return MockSearchProvider()
         if name == "tavily":
             return TavilySearchProvider()
         if name == "google":
             return GoogleSearchProvider()
-        if name == "duckduckgo":
-            return DuckDuckGoSearchProvider()
-        return None
-
+        return DuckDuckGoSearchProvider()
 
     def _build_branch(self, seed: int) -> tuple[InitializationPipeline, RefinementPipeline]:
         """Build a fresh (initialization, refinement) pair for a seed.

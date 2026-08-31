@@ -31,7 +31,7 @@ _CODER_INSTRUCTIONS = (
     "introduce dummy variables.\n"
     "# Response format\n"
     "- Your response should be a single markdown code block (wrapped in "
-    "```) which is the improved code block only and not the full script.\n"
+    "```) which is the improved code block.\n"
     "- There should be no additional headings or text in your response."
 )
 

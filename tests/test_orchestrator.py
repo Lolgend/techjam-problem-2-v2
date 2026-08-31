@@ -12,7 +12,6 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 from pydantic_ai import ModelResponse, TextPart
-from pydantic_ai.capabilities import WebSearch
 from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
@@ -232,7 +231,7 @@ class TestMLEStarConfig:
     def test_defaults(self) -> None:
         config = MLEStarConfig()
         assert config.model == "openai:gpt-4o"
-        assert config.search_provider == "websearch"
+        assert config.search_provider == "duckduckgo"
         assert config.num_candidates == 4
         assert config.num_branches == 2
         assert config.outer_loops == 3
@@ -278,23 +277,10 @@ class TestMLEStarConfig:
 class TestMLEStarPipeline:
     """Test the 5-stage master coordination."""
 
-    def test_build_provider_websearch_returns_none(self, tmp_path: Path) -> None:
-        pipeline = MLEStarPipeline(
-            config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="websearch")
-        )
-        assert pipeline._provider is None
-
-    def test_build_provider_builtin_returns_none(self, tmp_path: Path) -> None:
-        pipeline = MLEStarPipeline(
-            config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="builtin")
-        )
-        assert pipeline._provider is None
-
     def test_build_provider_mock(self, tmp_path: Path) -> None:
         pipeline = MLEStarPipeline(
             config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="mock")
         )
-        assert pipeline._provider is not None
         assert pipeline._provider.provider_name == "mock"
 
     def test_build_provider_tavily_requires_key(self, tmp_path: Path, monkeypatch) -> None:
@@ -316,19 +302,17 @@ class TestMLEStarPipeline:
         pipeline = MLEStarPipeline(
             config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), search_provider="duckduckgo")
         )
-        assert pipeline._provider is not None
         assert pipeline._provider.provider_name == "duckduckgo"
 
     def test_default_branch_builder(self, tmp_path: Path) -> None:
         pipeline = MLEStarPipeline(
             config=MLEStarConfig(runs_dir=str(tmp_path / "runs"), timeout_seconds=5),
+            search_provider=MockSearchProvider(),
         )
         init, refine = pipeline._build_branch(0)
         assert isinstance(init, InitializationPipeline)
         assert isinstance(refine, RefinementPipeline)
         assert init.retriever.num_candidates == 4
-        assert init.retriever.provider is None
-        assert any(isinstance(c, WebSearch) for c in init.retriever.capabilities)
 
     def test_dry_run_validation(self, tmp_path: Path) -> None:
         task_file, data_dir = _write_task(tmp_path)

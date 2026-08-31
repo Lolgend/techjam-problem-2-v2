@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SearchProviderName = Literal["websearch", "builtin", "duckduckgo", "tavily", "google", "mock"]
+SearchProviderName = Literal["tavily", "google", "duckduckgo", "mock"]
 
 
 class MLEStarConfig(BaseModel):
@@ -37,7 +37,7 @@ class MLEStarConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
     model: str = Field(default="openai:gpt-4o", description="LLM model identifier.")
-    search_provider: SearchProviderName = Field(default="websearch", description="Search backend.")
+    search_provider: SearchProviderName = Field(default="duckduckgo", description="Search backend.")
     num_candidates: int = Field(default=4, gt=0, description="Candidate models (M).")
     num_branches: int = Field(default=2, gt=0, description="Parallel branches (L).")
     outer_loops: int = Field(default=3, gt=0, description="Outer iterations (T).")

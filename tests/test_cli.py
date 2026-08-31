@@ -66,22 +66,6 @@ class TestCLI:
         assert code == 0
         assert "Demo" in out
 
-    def test_run_dry_run_default_websearch(self, tmp_path: Path, capsys) -> None:
-        task_file, data_dir = _write_task(tmp_path)
-        code = main(
-            [
-                "run",
-                "--task",
-                str(task_file),
-                "--data",
-                str(data_dir),
-                "--dry-run",
-            ]
-        )
-        out = capsys.readouterr().out
-        assert code == 0
-        assert "Demo" in out
-
     def test_run_requires_task(self, tmp_path: Path, capsys) -> None:
         data_dir = tmp_path / "data"
         data_dir.mkdir()

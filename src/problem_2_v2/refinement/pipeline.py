@@ -321,6 +321,7 @@ class RefinementPipeline:
         report = self.summarizer.summarize(
             ablation_code,
             run_id=run_id,
+            solution_code=current_code,
             dataset_dir=spec.dataset_dir,
             dataset_files=spec.dataset_files,
             iteration_index=iteration_index,
@@ -394,15 +395,18 @@ class RefinementPipeline:
                 run_id=run_id,
                 candidate_id=f"refine_t{t}_k{k}",
             )
-            guarded = self.execution.last_guarded_code or patched
-            candidate_code = guarded
+            candidate_code = (
+                self.execution.last_executed_code
+                or self.execution.last_guarded_code
+                or patched
+            )
             score = result.validation_score
             success = score is not None
             duration_seconds = result.duration_seconds
-            code_diff = compute_code_diff(base_code, guarded)
+            code_diff = compute_code_diff(base_code, candidate_code)
             if not success and result.stderr:
                 errors.append(result.stderr[-500:])
-            if guarded != patched:
+            if self.execution.last_guarded_code != patched:
                 errors.append("guardrails modified the candidate")
         except Exception as exc:
             errors.append(f"inner step failed: {exc}")
@@ -434,9 +438,9 @@ class RefinementPipeline:
         best: float | None,
         direction: MetricDirection,
     ) -> bool:
-        """Return whether a candidate score is at least as good as best."""
+        """Return whether a candidate strictly outperforms the best score."""
         if candidate is None:
             return False
         if best is None:
             return True
-        return candidate == best or direction.is_better(candidate, best)
+        return direction.is_better(candidate, best)

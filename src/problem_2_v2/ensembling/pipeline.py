@@ -239,9 +239,9 @@ class EnsemblePipeline:
         best: float | None,
         direction: MetricDirection,
     ) -> bool:
-        """Return whether a candidate score is at least as good as best."""
+        """Return whether a candidate strictly outperforms the best score."""
         if candidate is None:
             return False
         if best is None:
             return True
-        return candidate == best or direction.is_better(candidate, best)
+        return direction.is_better(candidate, best)

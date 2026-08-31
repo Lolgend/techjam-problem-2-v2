@@ -206,3 +206,48 @@ class TestAblationSummarizerAgent:
 
         assert isinstance(report, AblationReport)
         assert "RuntimeError" in report.raw_log_summary or report.baseline_score == 0.0
+
+    def test_heuristic_report_selects_largest_degradation(
+        self, summarizer: AblationSummarizerAgent
+    ) -> None:
+        raw_output = (
+            "Final Validation Performance: 0.80\n"
+            "feature_engineering: 0.79\n"
+            "model_architecture: 0.50\n"
+            "loss_function: 0.75\n"
+        )
+        report = summarizer._heuristic_report(ablation_code="pass", raw_output=raw_output)
+        assert report.baseline_score == pytest.approx(0.80)
+        assert len(report.ablation_results) == 3
+        # model_architecture caused the biggest drop (-0.30), so it should be the highest impact
+        assert report.highest_impact_component == "model_architecture"
+
+    def test_summarizer_places_solution_py_in_ablation_sandbox(
+        self, summarizer: AblationSummarizerAgent
+    ) -> None:
+        merged_solution = (
+            "SOLUTION_FLAG = 'merged_v0'\n"
+            "print('from solution.py: Final Validation Performance: 0.80')\n"
+        )
+        ablation_script = (
+            "import solution\n"
+            "print(f'Imported solution flag: {solution.SOLUTION_FLAG}')\n"
+            "print('Final Validation Performance: 0.80')\n"
+            "print('variant_A: 0.72')\n"
+        )
+        def exploding_model(messages, info):
+            raise RuntimeError("LLM fallback to heuristic")
+
+        with summarizer.agent.override(model=FunctionModel(function=exploding_model)):
+            report = summarizer.summarize(
+                ablation_code=ablation_script,
+                solution_code=merged_solution,
+                run_id="test_solution_import",
+                iteration_index=0,
+            )
+        assert isinstance(report, AblationReport)
+        assert "Imported solution flag: merged_v0" in report.raw_log_summary
+        sandbox = Path(summarizer.runner.runs_dir) / "test_solution_import" / "sandbox_ablation_t0"
+        assert (sandbox / "solution.py").is_file()
+        assert (sandbox / "solution.py").read_text(encoding="utf-8") == merged_solution
+        assert (sandbox / "ablation.py").is_file()

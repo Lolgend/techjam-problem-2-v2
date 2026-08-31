@@ -238,3 +238,14 @@ class TestEnsemblePipeline:
     def test_empty_solutions_raises(self, pipeline: EnsemblePipeline) -> None:
         with pytest.raises(ValueError, match="No candidate solutions"):
             pipeline.run(_spec(), [], run_id="empty")
+
+    def test_accepts_requires_strict_improvement(self) -> None:
+        from problem_2_v2.contracts.enums import MetricDirection
+
+        assert EnsemblePipeline._accepts(0.85, 0.80, MetricDirection.MAXIMIZE) is True
+        assert EnsemblePipeline._accepts(0.80, 0.80, MetricDirection.MAXIMIZE) is False
+        assert EnsemblePipeline._accepts(0.75, 0.80, MetricDirection.MAXIMIZE) is False
+        assert EnsemblePipeline._accepts(0.70, 0.80, MetricDirection.MINIMIZE) is True
+        assert EnsemblePipeline._accepts(0.80, 0.80, MetricDirection.MINIMIZE) is False
+        assert EnsemblePipeline._accepts(None, 0.80, MetricDirection.MAXIMIZE) is False
+        assert EnsemblePipeline._accepts(0.85, None, MetricDirection.MAXIMIZE) is True

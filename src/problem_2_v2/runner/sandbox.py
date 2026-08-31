@@ -54,7 +54,7 @@ class SubprocessRunner:
     def __init__(
         self,
         runs_dir: str = "runs",
-        timeout_seconds: int = 600,
+        timeout_seconds: int = 1200,
         python_executable: str | None = None,
         cuda_devices: str | None = None,
         workspace_root: str | None = None,
@@ -137,19 +137,23 @@ class SubprocessRunner:
                     shutil.copy2(source, target)
         return sandbox
 
-    def run_code(self, code: str, sandbox_dir: str) -> ExecutionResult:
+    def run_code(
+        self, code: str, sandbox_dir: str, script_name: str = "solution.py"
+    ) -> ExecutionResult:
         """Write code into the sandbox and execute it as a subprocess.
 
         Args:
             code: The self-contained Python script to execute.
             sandbox_dir: Prepared sandbox directory for this candidate.
+            script_name: Name of the script file inside the sandbox
+                (default: ``solution.py``).
 
         Returns:
             An ``ExecutionResult`` with stdout, stderr, return code,
             duration, and the parsed validation score.
         """
         sandbox = Path(sandbox_dir).resolve()
-        script_path = (sandbox / "solution.py").resolve()
+        script_path = (sandbox / script_name).resolve()
         script_path.write_text(code, encoding="utf-8")
 
         env = os.environ.copy()

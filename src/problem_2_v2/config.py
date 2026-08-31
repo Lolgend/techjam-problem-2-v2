@@ -48,7 +48,7 @@ class MLEStarConfig(BaseModel):
         description="Per-branch random seeds (e.g. [42, 123]); None means range(num_branches).",
     )
     subsample_size: int = Field(default=30000, gt=0, description="Fast-experiment row cap.")
-    timeout_seconds: int = Field(default=600, gt=0, description="Sandbox timeout in seconds.")
+    timeout_seconds: int = Field(default=1200, gt=0, description="Sandbox timeout in seconds.")
     production_timeout_seconds: int = Field(
         default=3600, gt=0, description="Production timeout in seconds."
     )

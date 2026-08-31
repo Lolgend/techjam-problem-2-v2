@@ -37,7 +37,7 @@ _ABLATION_PROMPT_TEMPLATE = (
     "{previous_ablations}"
     "# Instructions\n"
     "- You need you to generate a simple Python code that performs an ablation study on the\n"
-    "train.py script.\n"
+    "solution.py script.\n"
     "- The generated code should create variations by modifying or disabling parts (2-3 parts)\n"
     "of the training process.\n"
     "- Your ablation study should concentrate on the other parts that have not been previously\n"
@@ -206,6 +206,7 @@ class AblationSummarizerAgent:
         self,
         ablation_code: str,
         run_id: str,
+        solution_code: str | None = None,
         dataset_dir: str | None = None,
         dataset_files: list[str] | None = None,
         iteration_index: int | None = None,
@@ -215,6 +216,10 @@ class AblationSummarizerAgent:
         Args:
             ablation_code: The ablation study script to execute.
             run_id: Identifier of the current run.
+            solution_code: Optional full source of the current solution
+                script (e.g. from the merged operation), written as
+                ``solution.py`` into the ablation sandbox so the ablation
+                script can import or reference it.
             dataset_dir: Dataset directory for the sandbox, if any.
             dataset_files: Dataset files to map, if any.
             iteration_index: Outer-loop iteration index, used to scope the
@@ -232,9 +237,15 @@ class AblationSummarizerAgent:
             dataset_dir=dataset_dir,
             dataset_files=dataset_files,
         )
+        if solution_code is not None:
+            (sandbox / "solution.py").write_text(solution_code, encoding="utf-8")
+
+        script_name = "ablation.py" if solution_code is not None else "solution.py"
         current_code = ablation_code
         with logfire.span("ablation.execute"):
-            result = self.runner.run_code(current_code, sandbox_dir=str(sandbox))
+            result = self.runner.run_code(
+                current_code, sandbox_dir=str(sandbox), script_name=script_name
+            )
             rounds = 0
             if not result.success and self.debugger is not None:
                 while not result.success and rounds < self.debugger.max_debug_rounds:
@@ -263,7 +274,9 @@ class AblationSummarizerAgent:
                                 error=str(debug_exc),
                             )
                             break
-                        result = self.runner.run_code(current_code, sandbox_dir=str(sandbox))
+                        result = self.runner.run_code(
+                            current_code, sandbox_dir=str(sandbox), script_name=script_name
+                        )
 
         raw_output = result.stdout or result.stderr
 
@@ -303,7 +316,7 @@ class AblationSummarizerAgent:
                 )
             )
 
-        top = max(results, key=lambda item: item.delta_from_baseline) if results else None
+        top = max(results, key=lambda item: abs(item.delta_from_baseline)) if results else None
         return AblationReport(
             baseline_score=baseline,
             ablation_results=results,

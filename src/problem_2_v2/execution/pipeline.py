@@ -39,7 +39,7 @@ class ExecutionConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
 
-    timeout_seconds: int = Field(default=600, description="Sandbox timeout in seconds.")
+    timeout_seconds: int = Field(default=1200, description="Sandbox timeout in seconds.")
     max_debug_rounds: int = Field(default=3, description="Debugger repair budget.")
     sandbox_base_dir: str = Field(default="runs", description="Sandbox root directory.")
     enable_leakage_check: bool = Field(default=True, description="Run the leakage guardrail.")

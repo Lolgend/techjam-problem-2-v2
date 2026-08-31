@@ -9,11 +9,11 @@
 - [x] Task: Phase Verification & Checkpoint (Refer to workflow.md) [7d2974b]
 
 ## Phase 2: Implementation of Ablation Debugger Integration (TDD Green Phase)
-- [ ] Task: Update `AblationSummarizerAgent` with Debugger Integration
-  - [ ] Update `AblationSummarizerAgent.__init__` to accept `debugger: DebuggerAgent | None = None` (with runner/model default fallback).
-  - [ ] Update `AblationSummarizerAgent.summarize()` to detect execution failure and trigger debugger self-repair across `max_debug_rounds`.
-  - [ ] Instrument with Logfire spans (`ablation.debug_repair`) and error logging.
-- [ ] Task: Update Refinement Pipeline and Orchestrator Wiring
+- [x] Task: Update `AblationSummarizerAgent` with Debugger Integration [e765b49]
+  - [x] Update `AblationSummarizerAgent.__init__` to accept `debugger: DebuggerAgent | None = None` (with runner/model default fallback).
+  - [x] Update `AblationSummarizerAgent.summarize()` to detect execution failure and trigger debugger self-repair across `max_debug_rounds`.
+  - [x] Instrument with Logfire spans (`ablation.debug_repair`) and error logging.
+- [~] Task: Update Refinement Pipeline and Orchestrator Wiring
   - [ ] Update `RefinementPipeline` to inject the branch debugger into `AblationSummarizerAgent`.
   - [ ] Update `MLEStarPipeline._build_branch` in `src/problem_2_v2/orchestrator.py` to pass the branch debugger instance.
 - [ ] Task: Verify unit tests pass (Green Phase)

@@ -63,7 +63,7 @@ _MERGER_PROMPT_TEMPLATE = (
     "# labels: sequence of validation binary labels (0 or 1)\n"
     "# scores: continuous real-valued prediction scores from model\n"
     "val_res = evaluate(val_user_ids, val_labels, val_predictions)\n"
-    "print(f'Final Validation Performance: {val_res['primary']:.6f}')\n"
+    "print(f'Final Validation Performance: {{val_res[\"primary\"]:.6f}}')\n"
     "```\n"
     "The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized Discounted Cumulative Gain at rank 5 (nDCG@5):\n"
     "`primary = (GAUC + nDCG@5) / 2.0`\n"
@@ -214,22 +214,50 @@ class ModelMergerAgent:
                     base_code=current_code,
                     reference_code=candidate.code,
                 )
-                response = self.agent.run_sync(prompt)
-                merged_code = extract_python_code(response.output)
-
-                valid, error = validate_python_syntax(merged_code)
-                if not valid or not merged_code:
+                try:
+                    response = self.agent.run_sync(prompt)
+                    merged_code = extract_python_code(response.output)
+                except Exception as exc:
+                    logfire.warn(
+                        "merger.llm_failed",
+                        rank=k,
+                        candidate=candidate.model_name,
+                        error=str(exc),
+                    )
                     steps.append(
                         MergeStep(
                             rank=k,
                             candidate_name=candidate.model_name,
-                            merged_code=merged_code,
+                            merged_code="",
                             result=None,
                             accepted=False,
                             reason="rejected_error",
                         )
                     )
                     break
+
+                if not merged_code:
+                    logfire.warn("merger.no_code", rank=k, candidate=candidate.model_name)
+                    steps.append(
+                        MergeStep(
+                            rank=k,
+                            candidate_name=candidate.model_name,
+                            merged_code="",
+                            result=None,
+                            accepted=False,
+                            reason="rejected_error",
+                        )
+                    )
+                    break
+
+                valid, error = validate_python_syntax(merged_code)
+                if not valid:
+                    logfire.warn(
+                        "merger.invalid_syntax; handing to debugger",
+                        rank=k,
+                        candidate=candidate.model_name,
+                        error=error,
+                    )
 
                 outcome = self.debugger.debug(
                     merged_code,

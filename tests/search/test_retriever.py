@@ -1,5 +1,6 @@
-"""Unit tests for the retriever agent."""
-
+from pydantic_ai import ModelResponse
+from pydantic_ai.messages import ToolCallPart, ToolReturnPart
+from pydantic_ai.models.function import FunctionModel
 from pydantic_ai.models.test import TestModel
 
 from problem_2_v2.contracts.enums import TaskType
@@ -7,6 +8,7 @@ from problem_2_v2.contracts.search import ModelCard
 from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.search.providers import MockSearchProvider, SearchResult
 from problem_2_v2.search.retriever import RetrieverAgent
+
 
 _JSON_CARDS = (
     '[{"model_name": "LightGBM", "rationale": "gradient boosting", '
@@ -85,21 +87,66 @@ class TestRetrieverAgent:
         assert len(candidates.candidates) == 4
         assert candidates.total_found == 4
 
-    def test_retrieve_cleans_example_code_from_cards(self) -> None:
-        provider = MockSearchProvider(results={})
-        agent = RetrieverAgent(provider=provider, model="test", num_candidates=1)
-        args = [
-            {
-                "model_name": "CatBoost",
-                "rationale": "r",
-                "example_code": "```python\nmodel = CatBoost()\n```",
-                "library_dependencies": ["catboost"],
+    def test_build_prompt_format(self) -> None:
+        agent = RetrieverAgent(provider=MockSearchProvider(results={}), num_candidates=3)
+        prompt = agent.build_prompt(_spec())
+        assert "# Competition" in prompt
+        assert "KuaiRand-Pure" in prompt
+        assert "# Your task" in prompt
+        assert "List 3 recent effective models and their example codes" in prompt
+        assert "# Requirement" in prompt
+        assert "The example code should be concise and simple." in prompt
+        assert "You must provide an example code" in prompt
+
+    def test_search_web_tool_registered(self) -> None:
+        agent = RetrieverAgent(provider=MockSearchProvider(results={}))
+        assert "search_web" in agent.agent._function_toolset.tools
+        assert "search_web" in agent.text_agent._function_toolset.tools
+
+    def test_retrieve_invokes_search_web_tool_dynamically(self) -> None:
+        provider = MockSearchProvider(
+            results={
+                "ranking": [
+                    SearchResult(title="DeepFM Title", url="https://deepfm.org", snippet="DeepFM is SOTA for ranking"),
+                ]
             }
-        ]
-        with agent.agent.override(model=TestModel(custom_output_args=args)):
+        )
+        agent = RetrieverAgent(provider=provider, model="test", num_candidates=2)
+
+        calls: list[str] = []
+
+        def _model_handler(messages: list[object], info: object) -> ModelResponse:
+            last_msg = messages[-1]
+            if not any(isinstance(p, ToolReturnPart) for p in getattr(last_msg, "parts", [])):
+                calls.append("tool_call")
+                return ModelResponse(
+                    parts=[ToolCallPart(tool_name="search_web", args={"query": "recommender ranking CTR models"})]
+                )
+            calls.append("final_result")
+            args = [_card_args("DeepFM"), _card_args("LightGBM")]
+            return ModelResponse(
+                parts=[ToolCallPart(tool_name="final_result", args={"response": args})]
+            )
+
+        with agent.agent.override(model=FunctionModel(_model_handler)):
             candidates = agent.retrieve(_spec())
-        assert candidates.candidates[0].example_code == "model = CatBoost()"
-        assert "```" not in candidates.candidates[0].example_code
+
+        assert "tool_call" in calls
+        assert "final_result" in calls
+        assert len(candidates.candidates) == 2
+        assert [c.model_name for c in candidates.candidates] == ["DeepFM", "LightGBM"]
+        assert candidates.total_found == 2
+
+    def test_search_web_tool_catches_provider_exceptions(self) -> None:
+        class ErrorProvider:
+            provider_name = "error"
+            def search(self, query: str, num_results: int = 5):
+                raise RuntimeError("Network rate limit reached")
+
+        agent = RetrieverAgent(provider=ErrorProvider())
+        tool_func = agent._build_search_tool()
+        result = tool_func("test query")
+        assert "Search failed: Network rate limit reached" in result
 
 
 class TestDualModeParsing:

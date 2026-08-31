@@ -11,7 +11,7 @@
   - Google Gemini (`gemini-2.5-pro`, `gemini-2.0-flash`)
   - Anthropic Claude (`claude-3-7-sonnet`, `claude-3-5-sonnet`)
   - OpenAI (`gpt-4o`, `o1`, `o3-mini`)
-- **Web Search Tools:** Modular retriever layer supporting Google Search API (CSE), Tavily API, DuckDuckGo, and Mock/Offline file-based search, built on `httpx`.
+- **Web Search Tools:** Pydantic AI built-in `WebSearch` capability (`pydantic_ai.capabilities.WebSearch`) as primary autonomous retriever, with pluggable modular `SearchProvider` backends supporting Google Search API (CSE), Tavily API, DuckDuckGo, and Mock/Offline search built on `httpx`.
 
 ## Machine Learning & Data Processing Ecosystem
 - **Core Scientific:** `numpy`, `pandas`, `scipy`
@@ -91,3 +91,11 @@
 > `strict_leakage: bool = False` raising `LeakageEnforcementError`, and emits
 > unambiguous Logfire events (`execution.leakage_repaired`,
 > `execution.leakage_unrepaired`, `guardrails.leakage_repair.succeeded`).
+>
+> **2026-08-31:** Integrated Pydantic AI's native `WebSearch` capability
+> (`pydantic_ai.capabilities.WebSearch`) into `RetrieverAgent`
+> (`pydantic_ai_websearch_retriever_20260831`). RetrieverAgent now defaults to
+> autonomous search agent invocation via `capabilities=[WebSearch()]`, while
+> retaining optional `SearchProvider` snippets and mock fallbacks for resilient
+> offline execution.
+

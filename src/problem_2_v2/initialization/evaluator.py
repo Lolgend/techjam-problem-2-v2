@@ -41,7 +41,7 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "- All the provided data is already prepared and available in the `./input` directory. "
     "There is no need to unzip any files.\n"
     "- Do not include other models that are not directly related to the model described.\n"
-    "- [Does not apply to official baseline] Use PyTorch rather than TensorFlow. "
+    "- Use PyTorch rather than TensorFlow. "
     "Use CUDA if you need. All the necessary libraries are installed.\n"
     "- Only use the provided train data in the `./input` directory. Do not load test data "
     "during validation.\n"

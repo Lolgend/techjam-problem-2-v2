@@ -24,16 +24,20 @@ from problem_2_v2.contracts.task import TaskSpecification
 from problem_2_v2.search.providers import SearchProvider
 
 _RETRIEVER_INSTRUCTIONS = (
-    "You are retrieving state-of-the-art models for a machine learning "
-    "competition.\n"
+    "You are retrieving state-of-the-art models for a machine learning competition.\n"
+    "You have access to the `search_web` tool to search the internet for competition "
+    "winning solutions, SOTA architectures, GitHub repositories, and Python example codes.\n"
+    "Search the web using `search_web` if you need more information or evidence before answering.\n"
+)
+
+_RETRIEVER_PROMPT_TEMPLATE = (
+    "# Competition\n"
+    "{task_description}\n\n"
     "# Your task\n"
-    "- List recent effective models and their example codes to win the "
-    "competition described below.\n"
+    "- List {num_candidates} recent effective models and their example codes to win the above competition.\n\n"
     "# Requirement\n"
     "- The example code should be concise and simple.\n"
-    "- You must provide an example code, i.e., do not just mention "
-    "GitHubs or papers.\n"
-    "- Ground your suggestions in the web search results provided.\n"
+    "- You must provide an example code, i.e., do not just mention GitHubs or papers.\n"
 )
 
 _FENCE_RE = re.compile(r"```(?:json|python)?\s*\n?(.*?)```", re.DOTALL)
@@ -45,10 +49,10 @@ _MODEL_FIELDS = frozenset(ModelCard.model_fields)
 
 
 class RetrieverAgent:
-    """Retrieves candidate models for a task using web search + LLM.
+    """Retrieves candidate models for a task using autonomous web search tool + LLM.
 
     Attributes:
-        provider: The pluggable search provider to query.
+        provider: The pluggable search provider queried by the search tool.
         agent: Pydantic AI agent producing ``list[ModelCard]`` output.
         text_agent: Pydantic AI agent returning raw text for fallback
             parsing when structured tool-calling is unavailable.
@@ -70,11 +74,14 @@ class RetrieverAgent:
         """
         self.provider = provider
         self.num_candidates = num_candidates
+        search_tool = self._build_search_tool()
+
         self.agent = Agent(
             model,
             name="retriever_agent",
             output_type=list[ModelCard],
             instructions=_RETRIEVER_INSTRUCTIONS,
+            tools=[search_tool],
             defer_model_check=True,
         )
         self.text_agent = Agent(
@@ -82,7 +89,54 @@ class RetrieverAgent:
             name="retriever_text_agent",
             output_type=str,
             instructions=_RETRIEVER_INSTRUCTIONS,
+            tools=[search_tool],
             defer_model_check=True,
+        )
+
+    def _build_search_tool(self):
+        """Create a callable search_web function tool bound to the search provider."""
+        provider = self.provider
+
+        def search_web(query: str, num_results: int = 5) -> str:
+            """Search the web for machine learning models, architectures, or code examples.
+
+            Args:
+                query: The search query terms.
+                num_results: Max number of search results to return (default 5).
+
+            Returns:
+                A formatted string of search results or an informative error message.
+            """
+            with logfire.span("retriever.search_tool", provider=provider.provider_name, query=query):
+                try:
+                    results = provider.search(query, num_results=num_results)
+                except Exception as exc:
+                    return f"Search failed: {exc}"
+
+                if not results:
+                    return "No search results found."
+
+                return "\n".join(f"- {r.title} ({r.url}):\n  {r.snippet}" for r in results)
+
+        return search_web
+
+    def build_prompt(self, spec: TaskSpecification) -> str:
+        """Build the user prompt for the retriever agent.
+
+        Args:
+            spec: The validated task specification.
+
+        Returns:
+            The formatted prompt string.
+        """
+        task_desc = (
+            f"{spec.task_name or spec.task_type.value}\n"
+            f"{spec.description or ''}\n"
+            f"Evaluation metric: {spec.metric_name} ({spec.metric_direction.value})"
+        ).strip()
+        return _RETRIEVER_PROMPT_TEMPLATE.format(
+            task_description=task_desc,
+            num_candidates=self.num_candidates,
         )
 
     def build_query(self, spec: TaskSpecification) -> str:
@@ -119,21 +173,8 @@ class RetrieverAgent:
             A ``RetrievedCandidates`` container holding the candidate model
             cards, the query used, and the candidate count.
         """
+        prompt = self.build_prompt(spec)
         query = self.build_query(spec)
-        with logfire.span("retriever.search", provider=self.provider.provider_name, query=query):
-            results = self.provider.search(query, num_results=max(self.num_candidates, 5))
-
-        search_context = "\n".join(f"- {r.title}: {r.url}\n  {r.snippet}" for r in results)
-        prompt = (
-            f"# Competition\n{spec.task_name or spec.task_type.value}\n"
-            f"{spec.description or ''}\n"
-            f"Evaluation metric: {spec.metric_name} "
-            f"({spec.metric_direction.value})\n"
-            f"# Web search results\n{search_context or '(no results)'}\n"
-            f"# Your task\n"
-            f"List {self.num_candidates} recent effective models and their "
-            f"example codes to win the above competition."
-        )
 
         cards: list[ModelCard] = []
         with logfire.span("retriever.llm", num_candidates=self.num_candidates):
@@ -148,6 +189,7 @@ class RetrieverAgent:
 
         if not cards:
             cards = self.get_domain_fallback_cards(spec.task_type)
+
             logfire.warn(
                 "retriever.using_domain_fallback",
                 task_type=spec.task_type.value,

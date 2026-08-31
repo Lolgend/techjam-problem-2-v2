@@ -136,16 +136,20 @@ class RetrieverAgent:
         Returns:
             The formatted prompt string.
         """
-        task_desc = spec.raw_description if spec.raw_description else (
-            f"Name: {spec.task_name or spec.task_type.value}\n"
-            f"Description: {spec.description or ''}\n"
-            f"Evaluation metric: {spec.metric_name} ({spec.metric_direction.value})\n"
-            f"Target Variable: {spec.target_variable or ''}\n"
-            f"Dataset Directory: {spec.dataset_dir or ''}\n"
-            f"Dataset Files: {spec.dataset_files or ''}\n"
-            f"Official Baseline Score: {spec.baseline_score or ''}\n"
-            f"Constraints: {spec.constraints or ''}\n"
-        ).strip()
+        task_desc = (
+            spec.raw_description
+            if spec.raw_description
+            else (
+                f"Name: {spec.task_name or spec.task_type.value}\n"
+                f"Description: {spec.description or ''}\n"
+                f"Evaluation metric: {spec.metric_name} ({spec.metric_direction.value})\n"
+                f"Target Variable: {spec.target_variable or ''}\n"
+                f"Dataset Directory: {spec.dataset_dir or ''}\n"
+                f"Dataset Files: {spec.dataset_files or ''}\n"
+                f"Official Baseline Score: {spec.baseline_score or ''}\n"
+                f"Constraints: {spec.constraints or ''}\n"
+            ).strip()
+        )
         return _RETRIEVER_PROMPT_TEMPLATE.format(
             task_description=task_desc,
             num_candidates=self.num_candidates,
@@ -192,7 +196,6 @@ class RetrieverAgent:
             candidates=cards,
             total_found=len(cards),
         )
-
 
     def _text_fallback(self, prompt: str) -> list[ModelCard]:
         """Parse model cards from the raw text response."""

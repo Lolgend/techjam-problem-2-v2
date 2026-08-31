@@ -239,10 +239,13 @@ class FinalArtifactProducer:
         Returns:
             The finalization prompt.
         """
-        task_desc = spec.raw_description if spec.raw_description else (
-            f"{spec.task_name}\n{spec.description}\n"
-            f"Evaluation metric: {spec.metric_name}"
-        ).strip()
+        task_desc = (
+            spec.raw_description
+            if spec.raw_description
+            else (
+                f"{spec.task_name}\n{spec.description}\nEvaluation metric: {spec.metric_name}"
+            ).strip()
+        )
 
         return (
             f"# Introduction\nYou are a Kaggle grandmaster producing the "

@@ -162,11 +162,10 @@ class EnsemblePlannerAgent:
         Returns:
             The formatted ensemble planning prompt string.
         """
+
         def _ordinal(n: int) -> str:
             suffix = (
-                "th"
-                if 11 <= (n % 100) <= 13
-                else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+                "th" if 11 <= (n % 100) <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
             )
             return f"{n}{suffix}"
 

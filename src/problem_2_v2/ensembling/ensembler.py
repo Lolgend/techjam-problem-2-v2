@@ -44,7 +44,8 @@ _ENSEMBLER_PROMPT_TEMPLATE = (
     "- Do not subsample or introduce dummy variables. You have to provide full new Python\n"
     "Solution using the {L} provided solutions.\n"
     "- Do not forget the `./final/submission.csv` file.\n"
-    "- Print out or return a final performance metric in your answer in a clear format with the\n"
+    "- Print out or return a final performance metric in your answer in a clear format with the "
+    "exact words: 'Final Validation Performance: {{final_validation_score}}'.\n"
     "- The code should be a single-file Python program that can be executed as-is."
 )
 
@@ -201,11 +202,10 @@ class EnsemblerAgent:
         Returns:
             The full ensembling prompt.
         """
+
         def _ordinal(n: int) -> str:
             suffix = (
-                "th"
-                if 11 <= (n % 100) <= 13
-                else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+                "th" if 11 <= (n % 100) <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
             )
             return f"{n}{suffix}"
 

@@ -226,15 +226,17 @@ class AblationSummarizerAgent:
                 while not result.success and rounds < self.debugger.max_debug_rounds:
                     rounds += 1
                     with logfire.span("ablation.debug_repair", round=rounds):
-                        error_text = result.stderr or result.stdout or f"exit code {result.returncode}"
+                        error_text = (
+                            result.stderr or result.stdout or f"exit code {result.returncode}"
+                        )
                         prompt = (
                             f"# Code with an error\n{current_code}\n"
                             f"# Error\n{error_text}\n"
                             f"# Your task\nPlease revise the code to fix the error."
                         )
                         try:
-                            response = self.debugger.agent.run_sync(prompt)
-                            repaired_code = extract_python_code(response.output)
+                            debug_res = self.debugger.agent.run_sync(prompt)
+                            repaired_code = extract_python_code(debug_res.output)
                             if repaired_code:
                                 current_code = repaired_code
                             else:
@@ -254,8 +256,8 @@ class AblationSummarizerAgent:
         try:
             with logfire.span("ablation.summarize_llm"):
                 prompt = self.build_prompt(ablation_code=current_code, raw_output=raw_output)
-                response = self.agent.run_sync(prompt)
-            return response.output
+                summary_res = self.agent.run_sync(prompt)
+            return summary_res.output
         except Exception:
             logfire.warn("ablation.summarize_llm.failed; using heuristic parser")
             return self._heuristic_report(current_code, raw_output)

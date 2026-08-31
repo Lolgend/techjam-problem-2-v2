@@ -34,15 +34,15 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "# Your task\n"
     "- Implement the solution in Python.\n"
     "- You must use the model as described in the model description.\n"
-    "- If it is the official baseline, ignore everything and just copy the official baseline code as is. "
-    "Retain the original form, it is tested and runs.\n"
+    "- If it is the official baseline, ignore everything and just copy the official baseline "
+    "code as is. Retain the original form, it is tested and runs.\n"
     "- This first solution design should be relatively simple, without ensembling or "
     "hyper-parameter optimization.\n"
     "- All the provided data is already prepared and available in the `./input` directory. "
     "There is no need to unzip any files.\n"
     "- Do not include other models that are not directly related to the model described.\n"
-    "- [Does not apply to official baseline] Use PyTorch rather than TensorFlow. Use CUDA if you need. All the necessary "
-    "libraries are installed.\n"
+    "- [Does not apply to official baseline] Use PyTorch rather than TensorFlow. "
+    "Use CUDA if you need. All the necessary libraries are installed.\n"
     "- Only use the provided train data in the `./input` directory. Do not load test data "
     "during validation.\n"
     "- If there are more than 30,000 training samples, you must subsample to 30,000 for a "
@@ -60,7 +60,7 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "  It returns a dict with keys 'GAUC', 'nDCG@5', and 'primary' (the mean of GAUC and "
     "nDCG@5).\n"
     "- Extract val_res['primary'] and print: print(f'Final Validation Performance: "
-    "{{val_res[\"primary\"]:.6f}}')\n"
+    '{{val_res["primary"]:.6f}}\')\n'
     "- Do NOT write custom metric calculations (like standard roc_auc_score, accuracy, or "
     "loss); you MUST call evaluate().\n"
     "# Required\n"
@@ -75,7 +75,6 @@ _EVALUATOR_PROMPT_TEMPLATE = (
 
 
 class CandidateEvaluation(BaseModel):
-
     """Outcome of evaluating a single candidate model.
 
     Attributes:
@@ -259,4 +258,3 @@ class CandidateEvaluatorAgent:
         )
 
     _build_prompt = build_prompt
-

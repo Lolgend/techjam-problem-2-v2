@@ -59,4 +59,3 @@ class RetrievedCandidates(BaseModel):
 
     candidates: list[ModelCard] = Field(default_factory=list, description="Candidate model cards.")
     total_found: int = Field(description="Total candidates found.")
-

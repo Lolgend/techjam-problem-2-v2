@@ -134,9 +134,14 @@ class RetrieverAgent:
             The formatted prompt string.
         """
         task_desc = (
-            f"{spec.task_name or spec.task_type.value}\n"
-            f"{spec.description or ''}\n"
+            f"Name: {spec.task_name or spec.task_type.value}\n"
+            f"Description: {spec.description or ''}\n"
             f"Evaluation metric: {spec.metric_name} ({spec.metric_direction.value})"
+            f"target Variable: {spec.target_variable or ''}\n"
+            f"Dataset Directory: {spec.dataset_dir or ''}\n"
+            f"Dataset Files: {spec.dataset_files or ''}\n"
+            f"Official Baseline Score{spec.baseline_score or ''}\n"
+            f"Contraints{spec.constraints or ''}\n"
         ).strip()
         return _RETRIEVER_PROMPT_TEMPLATE.format(
             task_description=task_desc,

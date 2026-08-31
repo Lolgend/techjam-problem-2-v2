@@ -19,12 +19,6 @@ from problem_2_v2.contracts.search import ModelCard
 from problem_2_v2.contracts.task import ExecutionResult, TaskSpecification
 from problem_2_v2.runner.debugger import DebuggerAgent
 
-_EVALUATOR_INSTRUCTIONS = (
-    "You are a Kaggle grandmaster attending a competition.\n"
-    "Implement a self-contained single-file Python solution using the provided model description "
-    "and output only executable Python code in a single code block."
-)
-
 _EVALUATOR_PROMPT_TEMPLATE = (
     "# Introduction\n"
     "- You are a Kaggle grandmaster attending a competition.\n"
@@ -40,6 +34,7 @@ _EVALUATOR_PROMPT_TEMPLATE = (
     "# Your task\n"
     "- Implement the solution in Python.\n"
     "- You must use the model as described in the model description.\n"
+    "- If you are seeding the baseline, do not edit it at all and retain it's original form."
     "- This first solution design should be relatively simple, without ensembling or\n"
     "hyper-parameter optimization.\n"
     "- Propose an evaluation metric that is reasonable for this task.\n"
@@ -110,7 +105,6 @@ class CandidateEvaluatorAgent:
             model,
             name="candidate_evaluator_agent",
             output_type=str,
-            instructions=_EVALUATOR_INSTRUCTIONS,
             defer_model_check=True,
         )
 

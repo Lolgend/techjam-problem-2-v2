@@ -18,7 +18,6 @@ The relevance target label is `long_view` (binary 0 or 1).
 All models, candidates, and ensembling stages must strictly evaluate validation performance using the official `evaluate.py` evaluation harness, it is model-agnostic — `evaluate(user_ids: Any, labels: Any, scores: Any) -> dict[str, Any]`, so any model can be scored with it:
 ```python
 from evaluate import evaluate
-
 # user_ids: sequence of validation user IDs
 # labels: sequence of validation binary labels (0 or 1)
 # scores: continuous real-valued prediction scores from model
@@ -88,13 +87,7 @@ Join strictly on 'user_id':
 [GROUP E (ALL ALLOWED): VIDEO SIDE FEATURES (X_video)]
 - Basic Metadata (video_features_basic_pure.csv)
 - Prior Statistical Aggregations (video_features_statistic_pure.csv):
-  Different from the basic features, the statistical features are the average statistics of the video each day over one month. For example, in the following table, video 9288071 has 66 counts over this one month (a video can have multiple counts each day on different scenarios, e.g., on April 8, show_cnt=80 on the main page and show_cnt=65 on the recommendation page of the App)
-
-### Baseline Ladder & Oracle Headroom
-- **Random Baseline (Lower Bound):** Validation primary = 0.4834 | Test primary = 0.4753
-- **Item Popularity Baseline:** Validation primary = 0.5807 | Test primary = 0.5715
-- **Official FM Baseline (Target to Beat):** Validation primary = 0.6016 | Test primary = 0.5946 (std over 5 seeds = 0.0008)
-- **Oracle Theoretical Ceiling:** Validation primary = 0.8484 | Test primary = 0.8645 (nDCG ceiling is 0.7289 due to 27.1% all-negative users)
+  Different from the basic features, the statistical features are the average statistics of the video each day over one month.
 
 ### Validated Empirical Insights
 - **Negative Findings (Do not repeat):**
@@ -106,17 +99,9 @@ Join strictly on 'user_id':
 - **Data Leakage & Subsampling:**
   - Do not use external datasets.
   - Subsample training data to at most 30,000 samples during iterative experimentation. Full training is reserved for final artifact production.
-  - Guard against target leakage in categorical and target encodings (use out-of-fold / leave-one-out with shrinkage).
-- **IMPORTANT Mandatory Evaluation & Submission Standards:**
-  - user_ids: the user ID for each row in the evaluation split
-  - labels: the row's long_view value (0/1)
-  - scores: the score assigned by your model to each row (any real number; only relative ordering matters)
-  - The final production script must write `./final/submission.csv` with exact columns: `row_id,user_id,video_id,score` and must pass verification with `python3 submit.py --check ./final/submission.csv`.
   - If the primary metric is 1.0 or comes close to 1.0, do verify that evaluation() is being used properly.
+
 - **Convergence Rule:**
   - Convergence is defined as validation improvement delta <= epsilon = 0.002 over N = 3 consecutive iterations.
-- **Output Validation Score Standard:**
-  - All executable solution scripts must output the validation score to stdout in the exact format:
-    `Final Validation Performance: {final_validation_score}` derived from evaluate() function in evaluate.py
 
 

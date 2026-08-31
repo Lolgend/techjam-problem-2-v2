@@ -113,4 +113,11 @@
 > automatically invokes `DebuggerAgent` to repair runtime and syntax errors
 > across `max_debug_rounds` (default 3) before summarizing results, with
 > graceful heuristic fallback if debugging is exhausted.
+>
+> **2026-09-01:** Hardened `ModelMergerAgent` with syntax error handover to
+> `DebuggerAgent` and LLM exception resilience
+> (`merge_debugger_resilience_20260901`). Escaped prompt template formatting for
+> official `evaluate.py` harness examples, wrapped LLM calls in safe fallbacks to
+> the top candidate ($s_0$), and ensured parallel branches unconditionally proceed
+> from Stage 1 Initialization to Stage 2 Ablation & Refinement.
 

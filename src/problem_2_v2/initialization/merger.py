@@ -56,19 +56,25 @@ _MERGER_PROMPT_TEMPLATE = (
     "- Do not use exit() function in the Python code.\n"
     "- Do not use try: and except: or if else to ignore unintended behavior\n"
     "### Evaluation Protocol & Metric Tooling (MANDATORY)\n"
-    "The merged model must strictly evaluate validation performance using the official `evaluate.py` evaluation harness (used both in base and reference), it is model-agnostic — `evaluate(user_ids: Any, labels: Any, scores: Any) -> dict[str, Any]`, so any model can be scored with it:\n"
+    "The merged model must strictly evaluate validation performance using the official "
+    "`evaluate.py` evaluation harness (used both in base and reference), it is model-agnostic — "
+    "`evaluate(user_ids: Any, labels: Any, scores: Any) -> dict[str, Any]`, so any model can "
+    "be scored with it:\n"
     "```python\n"
     "from evaluate import evaluate\n"
     "# user_ids: sequence of validation user IDs\n"
     "# labels: sequence of validation binary labels (0 or 1)\n"
     "# scores: continuous real-valued prediction scores from model\n"
     "val_res = evaluate(val_user_ids, val_labels, val_predictions)\n"
-    "print(f'Final Validation Performance: {val_res['primary']:.6f}')\n"
+    "print(f'Final Validation Performance: {{val_res[\"primary\"]:.6f}}')\n"
     "```\n"
-    "The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized Discounted Cumulative Gain at rank 5 (nDCG@5):\n"
+    "The metric `primary` is the arithmetic mean of Group AUC (GAUC) and normalized "
+    "Discounted Cumulative Gain at rank 5 (nDCG@5):\n"
     "`primary = (GAUC + nDCG@5) / 2.0`\n"
-    "- **GAUC:** Evaluated strictly on discriminative users where `0 < positive_count < impression_count`, weighted by positive impressions.\n"
-    "- **nDCG@5:** Evaluated per user with gain `2^rel - 1`. All-negative users (27.1% of dataset) receive 0.0 and are included in the mean.\n"
+    "- **GAUC:** Evaluated strictly on discriminative users where "
+    "`0 < positive_count < impression_count`, weighted by positive impressions.\n"
+    "- **nDCG@5:** Evaluated per user with gain `2^rel - 1`. All-negative users (27.1% of "
+    "dataset) receive 0.0 and are included in the mean.\n"
 )
 
 
@@ -214,22 +220,50 @@ class ModelMergerAgent:
                     base_code=current_code,
                     reference_code=candidate.code,
                 )
-                response = self.agent.run_sync(prompt)
-                merged_code = extract_python_code(response.output)
-
-                valid, error = validate_python_syntax(merged_code)
-                if not valid or not merged_code:
+                try:
+                    response = self.agent.run_sync(prompt)
+                    merged_code = extract_python_code(response.output)
+                except Exception as exc:
+                    logfire.warn(
+                        "merger.llm_failed",
+                        rank=k,
+                        candidate=candidate.model_name,
+                        error=str(exc),
+                    )
                     steps.append(
                         MergeStep(
                             rank=k,
                             candidate_name=candidate.model_name,
-                            merged_code=merged_code,
+                            merged_code="",
                             result=None,
                             accepted=False,
                             reason="rejected_error",
                         )
                     )
                     break
+
+                if not merged_code:
+                    logfire.warn("merger.no_code", rank=k, candidate=candidate.model_name)
+                    steps.append(
+                        MergeStep(
+                            rank=k,
+                            candidate_name=candidate.model_name,
+                            merged_code="",
+                            result=None,
+                            accepted=False,
+                            reason="rejected_error",
+                        )
+                    )
+                    break
+
+                valid, error = validate_python_syntax(merged_code)
+                if not valid:
+                    logfire.warn(
+                        "merger.invalid_syntax; handing to debugger",
+                        rank=k,
+                        candidate=candidate.model_name,
+                        error=error,
+                    )
 
                 outcome = self.debugger.debug(
                     merged_code,

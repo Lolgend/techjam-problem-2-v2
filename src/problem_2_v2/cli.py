@@ -106,7 +106,71 @@ def build_parser() -> argparse.ArgumentParser:
         help="LLM sampling temperature (default: provider default).",
     )
     run_parser.add_argument(
+        "--thinking",
+        choices=["minimal", "low", "medium", "high", "xhigh", "off"],
+        default=None,
+        help="Thinking effort level for reasoning models like Gemini 2.0/3.7 Thinking or o1/o3-mini ('minimal', 'low', 'medium', 'high', 'xhigh', 'off').",
+    )
+    run_parser.add_argument(
         "--dry-run", action="store_true", help="Validate inputs without running the pipeline."
+    )
+
+    finalize_parser = subparsers.add_parser(
+        "finalize", help="Finalize an existing model script into a production artifact."
+    )
+    finalize_parser.add_argument(
+        "--script", "-s", required=True, help="Path to the Python solution script to finalize."
+    )
+    finalize_parser.add_argument(
+        "--task", "-t", required=True, help="Path to the problem markdown file."
+    )
+    finalize_parser.add_argument(
+        "--data", "-d", required=True, help="Path to the dataset directory."
+    )
+    finalize_parser.add_argument(
+        "--output", "-o", default="final", help="Output directory (default: ./final)."
+    )
+    finalize_parser.add_argument(
+        "--model", "-m", default="openai:gpt-4o", help="LLM model identifier for finalizer agent."
+    )
+    finalize_parser.add_argument(
+        "--api-key", default=None, help="LLM provider API key."
+    )
+    finalize_parser.add_argument(
+        "--base-url", default=None, help="Custom base URL for the LLM API."
+    )
+    finalize_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Maximum output tokens for LLM responses (default: provider limit).",
+    )
+    finalize_parser.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="LLM sampling temperature (default: provider default).",
+    )
+    finalize_parser.add_argument(
+        "--thinking",
+        choices=["minimal", "low", "medium", "high", "xhigh", "off"],
+        default=None,
+        help="Thinking effort level for reasoning models ('minimal', 'low', 'medium', 'high', 'xhigh', 'off').",
+    )
+    finalize_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=3600,
+        help="Production execution timeout in seconds (default: 3600).",
+    )
+    finalize_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose telemetry and live subprocess execution logging.",
+    )
+    finalize_parser.add_argument(
+        "--dry-run", action="store_true", help="Validate inputs without running finalization."
     )
 
     subparsers.add_parser("version", help="Show the version and system info.")
@@ -131,6 +195,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "version":
         return _version_command()
+    if args.command == "finalize":
+        return _finalize_command(args, parser)
     return _run_command(args, parser)
 
 
@@ -214,6 +280,7 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         seeds=seeds,
         max_tokens=args.max_tokens,
         temperature=args.temperature,
+        thinking=args.thinking,
     )
     pipeline = MLEStarPipeline(config=config)
 
@@ -246,6 +313,88 @@ def _run_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         submission_message=submission_message,
     )
     return 0 if result.success else 1
+
+
+def _finalize_command(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    """Execute the standalone finalize workflow on an existing script."""
+    import os
+
+    if args.verbose:
+        from problem_2_v2.console import set_verbose
+
+        set_verbose(True)
+
+    if args.api_key:
+        model_str = args.model.lower()
+        if model_str.startswith("deepseek:"):
+            os.environ["DEEPSEEK_API_KEY"] = args.api_key
+        elif model_str.startswith("google:") or model_str.startswith("google-gla:"):
+            os.environ["GEMINI_API_KEY"] = args.api_key
+        elif model_str.startswith("openrouter:"):
+            os.environ["OPENROUTER_API_KEY"] = args.api_key
+        elif model_str.startswith("groq:"):
+            os.environ["GROQ_API_KEY"] = args.api_key
+        elif model_str.startswith("mistral:"):
+            os.environ["MISTRAL_API_KEY"] = args.api_key
+        else:
+            os.environ["OPENAI_API_KEY"] = args.api_key
+
+    if args.base_url:
+        os.environ["OPENAI_BASE_URL"] = args.base_url
+
+    script_path = Path(args.script)
+    if not script_path.is_file():
+        parser.error(f"Script file not found: {args.script}")
+
+    code = script_path.read_text(encoding="utf-8")
+
+    config = MLEStarConfig(
+        model=args.model,
+        production_timeout_seconds=args.timeout,
+        max_tokens=args.max_tokens,
+        temperature=args.temperature,
+        thinking=args.thinking,
+    )
+    pipeline = MLEStarPipeline(config=config)
+
+    try:
+        spec = pipeline.validate(args.task, args.data)
+    except (FileNotFoundError, NotADirectoryError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    if args.dry_run:
+        print(f"Dry-run OK: script '{script_path.name}', task '{spec.task_name}'")
+        return 0
+
+    announce("=" * _BANNER_WIDTH)
+    announce("MLE-STAR: Standalone Finalize & Production Artifact Producer")
+    announce(f"Script: {script_path.name} | Task: {spec.task_name}")
+    announce(f"Dataset: {spec.dataset_dir}")
+    announce("=" * _BANNER_WIDTH)
+
+    try:
+        artifact = pipeline.finalizer.produce(
+            code=code,
+            spec=spec,
+            run_id="standalone_finalize",
+        )
+    except Exception as exc:
+        print(f"Finalization failed: {exc}", file=sys.stderr)
+        return 1
+
+    if artifact.success and artifact.output_dir:
+        _copy_final_output(artifact.output_dir, args.output)
+        submission_verified, submission_message = _verify_submission(args.output, args.data)
+        announce("=" * _BANNER_WIDTH)
+        announce(f"Finalization succeeded! Score: {format_score(artifact.validation_score)}")
+        announce(f"Output directory: {args.output}")
+        announce(f"Submission status: {submission_message}")
+        announce("=" * _BANNER_WIDTH)
+        return 0
+
+    announce("Finalization completed with errors (no validation score produced).", level="ERROR")
+    return 1
 
 
 def _print_banner(spec: TaskSpecification, config: MLEStarConfig) -> None:

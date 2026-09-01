@@ -12,7 +12,7 @@ import logfire
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 
-from problem_2_v2.contracts.code_utils import extract_python_code
+from problem_2_v2.contracts.code_utils import extract_python_code, is_truncated_code
 from problem_2_v2.contracts.enums import ComponentCategory
 from problem_2_v2.contracts.refinement import RefinementPlan, TargetCodeBlock
 
@@ -143,12 +143,18 @@ class CoderAgent:
 
     _build_prompt = build_prompt
 
-    def refine(self, target_block: TargetCodeBlock, plan: RefinementPlan) -> str:
+    def refine(
+        self,
+        target_block: TargetCodeBlock,
+        plan: RefinementPlan,
+        max_retries: int = 2,
+    ) -> str:
         """Produce the refined version of the target code block.
 
         Args:
             target_block: The extracted code block to refine.
             plan: The refinement plan to implement.
+            max_retries: Maximum retry attempts if output is truncated.
 
         Returns:
             The cleaned refined code block (markdown fences stripped).
@@ -157,9 +163,30 @@ class CoderAgent:
             code_block=target_block.raw_code,
             plan=plan.natural_language_plan,
         )
-        with logfire.span("coder.refine", plan_id=plan.plan_id):
-            response = self.agent.run_sync(prompt)
-        return extract_python_code(response.output)
+        current_prompt = prompt
+        extracted = ""
+        for attempt in range(max_retries + 1):
+            with logfire.span("coder.refine", plan_id=plan.plan_id, attempt=attempt):
+                try:
+                    response = self.agent.run_sync(current_prompt)
+                    raw = response.output
+                    extracted = extract_python_code(raw)
+                    if not is_truncated_code(raw, extracted):
+                        return extracted
+                    logfire.warn("coder.refine.truncated", attempt=attempt)
+                except Exception as exc:
+                    logfire.warn("coder.refine.error", attempt=attempt, error=str(exc))
+                    if attempt == max_retries:
+                        raise
+                if attempt < max_retries:
+                    current_prompt = (
+                        f"{prompt}\n\n"
+                        "# CRITICAL INSTRUCTION (TRUNCATION RECOVERY)\n"
+                        "Your previous response was truncated mid-code due to token length limits.\n"
+                        "Please provide a concise, complete implementation wrapped in ```python ... ```\n"
+                        "Do not include verbose comments or extra explanation."
+                    )
+        return extracted
 
     def repair(
         self,
@@ -167,6 +194,7 @@ class CoderAgent:
         plan: RefinementPlan,
         invalid_code: str,
         error_message: str,
+        max_retries: int = 2,
     ) -> str:
         """Re-prompt the LLM to fix a refined block that failed validation.
 
@@ -175,6 +203,7 @@ class CoderAgent:
             plan: The refinement plan being implemented.
             invalid_code: The refined block that failed validation.
             error_message: The exact syntax/indentation error feedback.
+            max_retries: Maximum retry attempts if output is truncated.
 
         Returns:
             The cleaned repaired code block (markdown fences stripped).
@@ -189,6 +218,27 @@ class CoderAgent:
             f"so the block is valid Python, matching the indentation of the "
             f"original code block. Do not remove subsampling if exists."
         )
-        with logfire.span("coder.repair", plan_id=plan.plan_id):
-            response = self.agent.run_sync(prompt)
-        return extract_python_code(response.output)
+        current_prompt = prompt
+        extracted = ""
+        for attempt in range(max_retries + 1):
+            with logfire.span("coder.repair", plan_id=plan.plan_id, attempt=attempt):
+                try:
+                    response = self.agent.run_sync(current_prompt)
+                    raw = response.output
+                    extracted = extract_python_code(raw)
+                    if not is_truncated_code(raw, extracted):
+                        return extracted
+                    logfire.warn("coder.repair.truncated", attempt=attempt)
+                except Exception as exc:
+                    logfire.warn("coder.repair.error", attempt=attempt, error=str(exc))
+                    if attempt == max_retries:
+                        raise
+                if attempt < max_retries:
+                    current_prompt = (
+                        f"{prompt}\n\n"
+                        "# CRITICAL INSTRUCTION (TRUNCATION RECOVERY)\n"
+                        "Your previous response was truncated mid-code due to token length limits.\n"
+                        "Please provide a concise, complete repaired block wrapped in ```python ... ```\n"
+                        "Do not include verbose comments or extra explanation."
+                    )
+        return extracted

@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 
-from problem_2_v2.contracts.code_utils import extract_python_code
+from problem_2_v2.contracts.code_utils import extract_python_code, is_truncated_code
 from problem_2_v2.contracts.task import ExecutionResult
 from problem_2_v2.runner.sandbox import SubprocessRunner
 
@@ -131,10 +131,24 @@ class DebuggerAgent:
                 )
                 try:
                     response = self.agent.run_sync(prompt)
+                    raw = response.output
+                    repaired_code = extract_python_code(raw)
+                    if is_truncated_code(raw, repaired_code):
+                        logfire.warn("debugger.repair_round.truncated", round=rounds)
+                        compaction_prompt = (
+                            f"{prompt}\n\n"
+                            "# CRITICAL INSTRUCTION (TRUNCATION RECOVERY)\n"
+                            "Your previous repair was truncated mid-code due to token length limits.\n"
+                            "Please output a concise, complete replacement script wrapped in ```python ... ``` without verbose comments."
+                        )
+                        retry_response = self.agent.run_sync(compaction_prompt)
+                        retry_raw = retry_response.output
+                        retry_code = extract_python_code(retry_raw)
+                        if retry_code and not is_truncated_code(retry_raw, retry_code):
+                            repaired_code = retry_code
                 except Exception:
                     logfire.warn("debugger.repair_round.llm_failed", round=rounds)
                     continue
-                repaired_code = extract_python_code(response.output)
                 if not repaired_code:
                     logfire.warn("debugger.repair_round.no_code", round=rounds)
                     continue

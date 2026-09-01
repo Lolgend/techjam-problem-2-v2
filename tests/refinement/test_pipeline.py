@@ -328,4 +328,16 @@ class TestRefinementPipeline:
                 _spec(), INITIAL_CODE, initial_score=0.80, run_id="debugfallback"
             )
         assert result.final_score == pytest.approx(0.85)
+        assert result.final_code.strip() == IMPROVED_SCRIPT.strip()
         assert repair_calls["count"] >= 2
+
+    def test_accepts_requires_strict_improvement(self) -> None:
+        from problem_2_v2.contracts.enums import MetricDirection
+
+        assert RefinementPipeline._accepts(0.85, 0.80, MetricDirection.MAXIMIZE) is True
+        assert RefinementPipeline._accepts(0.80, 0.80, MetricDirection.MAXIMIZE) is False
+        assert RefinementPipeline._accepts(0.75, 0.80, MetricDirection.MAXIMIZE) is False
+        assert RefinementPipeline._accepts(0.70, 0.80, MetricDirection.MINIMIZE) is True
+        assert RefinementPipeline._accepts(0.80, 0.80, MetricDirection.MINIMIZE) is False
+        assert RefinementPipeline._accepts(None, 0.80, MetricDirection.MAXIMIZE) is False
+        assert RefinementPipeline._accepts(0.85, None, MetricDirection.MAXIMIZE) is True

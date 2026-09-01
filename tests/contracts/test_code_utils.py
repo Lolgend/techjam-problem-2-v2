@@ -120,3 +120,59 @@ class TestComputeCodeDiff:
         new_code = "a = 1\nb = 20\nc = 3\n"
         diff = compute_code_diff(old_code, new_code)
         assert diff.startswith("@@") or "\n@@" in diff
+
+
+class TestIsTruncatedCode:
+    """Test `is_truncated_code` truncation detection."""
+
+    def test_detects_unclosed_markdown_fence(self) -> None:
+        from problem_2_v2.contracts.code_utils import is_truncated_code
+
+        raw = "```python\ndef train():\n    x = 1\n"
+        code = "def train():\n    x = 1\n"
+        assert is_truncated_code(raw, code) is True
+
+    def test_complete_fenced_block_not_truncated(self) -> None:
+        from problem_2_v2.contracts.code_utils import is_truncated_code
+
+        raw = "```python\ndef train():\n    x = 1\n```"
+        code = "def train():\n    x = 1"
+        assert is_truncated_code(raw, code) is False
+
+    def test_detects_unexpected_eof_syntax_error(self) -> None:
+        from problem_2_v2.contracts.code_utils import is_truncated_code
+
+        raw = "x = [1, 2,"
+        code = "x = [1, 2,"
+        assert is_truncated_code(raw, code) is True
+
+    def test_empty_string_not_truncated(self) -> None:
+        from problem_2_v2.contracts.code_utils import is_truncated_code
+
+        assert is_truncated_code("", "") is False
+
+
+class TestRunAgentSyncSafe:
+    """Test run_agent_sync_safe with token limit error retry."""
+
+    def test_recovers_from_token_limit_unexpected_model_behavior(self) -> None:
+        from pydantic_ai import Agent, ModelResponse, TextPart
+        from pydantic_ai.exceptions import UnexpectedModelBehavior
+        from pydantic_ai.models.function import FunctionModel
+
+        from problem_2_v2.contracts.code_utils import run_agent_sync_safe
+
+        calls = {"count": 0}
+
+        def flaky_fn(messages, info):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise UnexpectedModelBehavior(
+                    "Model token limit (384000) exceeded before any response was generated."
+                )
+            return ModelResponse(parts=[TextPart(content="```python\nx = 1\n```")])
+
+        agent = Agent(FunctionModel(function=flaky_fn))
+        res = run_agent_sync_safe(agent, "Generate code")
+        assert "x = 1" in res.output
+        assert calls["count"] == 2

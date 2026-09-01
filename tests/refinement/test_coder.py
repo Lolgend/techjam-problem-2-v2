@@ -115,6 +115,39 @@ class TestCoderAgent:
         assert "# Response format" in prompt
         assert "Your response should be a single markdown code block (wrapped in ```)" in prompt
 
+    def test_refine_retries_on_truncated_response(self) -> None:
+        agent = CoderAgent(model="test")
+        calls = {"count": 0}
+
+        def flaky_model(messages, info):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                # Cut off / unclosed fence due to max tokens
+                return ModelResponse(parts=[TextPart(content="```python\nmodel = XGBClassifier(")])
+            # Complete response on retry
+            return ModelResponse(parts=[TextPart(content=f"```python\n{REFINED_BLOCK}\n```")])
+
+        with agent.agent.override(model=FunctionModel(function=flaky_model)):
+            refined = agent.refine(_block(), _plan())
+        assert refined == REFINED_BLOCK
+        assert calls["count"] == 2
+
+    def test_repair_retries_on_truncated_response(self) -> None:
+        agent = CoderAgent(model="test")
+        calls = {"count": 0}
+
+        def flaky_model(messages, info):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                # Truncated code
+                return ModelResponse(parts=[TextPart(content="```python\ndef bad():\n   x = [")])
+            return ModelResponse(parts=[TextPart(content=f"```python\n{REFINED_BLOCK}\n```")])
+
+        with agent.agent.override(model=FunctionModel(function=flaky_model)):
+            repaired = agent.repair(_block(), _plan(), "invalid_code", "SyntaxError")
+        assert repaired == REFINED_BLOCK
+        assert calls["count"] == 2
+
 
 class TestPatchScript:
     """Test AST-safe script patching with whitespace fallback."""

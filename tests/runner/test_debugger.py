@@ -100,3 +100,20 @@ class TestDebuggerAgent:
             outcome = debugger.debug(BROKEN_SYNTAX)
         assert outcome.recovered is False
         assert outcome.debug_rounds == 2
+
+    def test_debug_retries_on_truncated_repair(self, debugger: DebuggerAgent) -> None:
+        calls = {"count": 0}
+
+        def flaky_debugger(messages, info):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                # Truncated code with unclosed fence
+                return ModelResponse(parts=[TextPart(content="```python\nprint('Final Validation")])
+            return ModelResponse(parts=[TextPart(content=f"```python\n{FIXED_CODE}\n```")])
+
+        with debugger.agent.override(model=FunctionModel(function=flaky_debugger)):
+            outcome = debugger.debug(BROKEN_SYNTAX)
+        assert outcome.recovered is True
+        assert outcome.debug_rounds == 1
+        assert outcome.result.validation_score == pytest.approx(0.5)
+        assert calls["count"] == 2

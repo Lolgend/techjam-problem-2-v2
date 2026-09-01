@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import difflib
 import re
+from typing import Any
 
 _FENCED_BLOCK_RE = re.compile(r"```(?:python)?\s*\n?(.*?)```", re.DOTALL)
 _FENCE_LINE_RE = re.compile(r"^\s*```[^\n]*$")
@@ -113,3 +114,78 @@ def compute_code_diff(old_code: str, new_code: str) -> str:
         lineterm="\n",
     )
     return "".join(diff)
+
+
+def is_truncated_code(raw_text: str, extracted_code: str) -> bool:
+    """Check whether an LLM response appears truncated by a max_tokens cutoff.
+
+    Signs of truncation:
+    1. An opening code fence exists without a matching closing fence.
+    2. Syntax validation errors indicating unexpected EOF / unclosed brackets.
+
+    Args:
+        raw_text: The full raw output string from the LLM.
+        extracted_code: The parsed python code extracted from the output.
+
+    Returns:
+        True if the output appears prematurely truncated, False otherwise.
+    """
+    cleaned_raw = raw_text.strip()
+    if not cleaned_raw:
+        return False
+    # Check for unclosed markdown code fence (e.g. ```python without closing ```)
+    if "```" in cleaned_raw and cleaned_raw.count("```") % 2 != 0:
+        return True
+
+    # Check for syntax errors caused by premature EOF
+    if extracted_code:
+        valid, error = validate_python_syntax(extracted_code)
+        if not valid and error:
+            lower_err = error.lower()
+            if (
+                "unexpected eof" in lower_err
+                or "eof while parsing" in lower_err
+                or "unclosed" in lower_err
+                or "was never closed" in lower_err
+            ):
+                return True
+    return False
+
+
+def run_agent_sync_safe(
+    agent: Any,
+    prompt: str,
+    max_retries: int = 2,
+) -> Any:
+    """Run a Pydantic AI agent synchronously with automatic recovery from UnexpectedModelBehavior.
+
+    Handles cases where thinking/reasoning models exhaust the token budget before
+    emitting content by re-prompting with a direct code generation instruction.
+
+    Args:
+        agent: The Pydantic AI agent to execute.
+        prompt: The initial prompt string.
+        max_retries: Maximum number of retries upon token limit errors.
+
+    Returns:
+        The agent's RunResult.
+    """
+    import logfire
+
+    current_prompt = prompt
+    for attempt in range(max_retries + 1):
+        try:
+            return agent.run_sync(current_prompt)
+        except Exception as exc:
+            exc_str = str(exc)
+            if "Model token limit" in exc_str or "before any response was generated" in exc_str:
+                if attempt < max_retries:
+                    logfire.warn("agent.token_limit_retry", attempt=attempt, error=exc_str)
+                    current_prompt = (
+                        f"{prompt}\n\n"
+                        "# CRITICAL INSTRUCTION (REASONING BUDGET RECOVERY)\n"
+                        "Your previous response exceeded the token budget during reasoning before generating any output.\n"
+                        "Please output the complete Python code block immediately with minimal reasoning wrapped in ```python ... ```."
+                    )
+                    continue
+            raise

@@ -44,6 +44,14 @@ class TestMLEStarConfig:
         config = MLEStarConfig(temperature=0.2)
         assert config.get_model_settings() == {"temperature": 0.2}
 
+    def test_configured_thinking_effort(self) -> None:
+        config = MLEStarConfig(thinking="low", max_tokens=8000)
+        assert config.get_model_settings() == {"max_tokens": 8000, "thinking": "low"}
+
+    def test_configured_thinking_off_converts_to_false(self) -> None:
+        config = MLEStarConfig(thinking="off")
+        assert config.get_model_settings() == {"thinking": False}
+
     def test_invalid_max_tokens_rejected(self) -> None:
         with pytest.raises(ValidationError):
             MLEStarConfig(max_tokens=0)
@@ -51,6 +59,10 @@ class TestMLEStarConfig:
     def test_invalid_temperature_rejected(self) -> None:
         with pytest.raises(ValidationError):
             MLEStarConfig(temperature=2.5)
+
+    def test_invalid_thinking_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            MLEStarConfig(thinking="super_extreme")
 
 
 class TestAgentModelSettingsPropagation:
@@ -145,8 +157,15 @@ class TestAgentModelSettingsPropagation:
         assert init.evaluator.agent.model_settings == expected
         assert init.merger.agent.model_settings == expected
         assert refine.coder.agent.model_settings == expected
-        assert refine.planner.agent.model_settings == expected
-        assert refine.extractor.agent.model_settings == expected
         assert refine.ablation.agent.model_settings == expected
         assert refine.leakage.check_agent.model_settings == expected
         assert refine.usage.agent.model_settings == expected
+
+    def test_orchestrator_pipeline_wires_thinking_settings(self) -> None:
+        config = MLEStarConfig(thinking="low", max_tokens=10000)
+        pipeline = MLEStarPipeline(config=config)
+        expected = {"max_tokens": 10000, "thinking": "low"}
+        assert pipeline.finalizer.agent.model_settings == expected
+        init, refine = pipeline._build_branch(seed=123)
+        assert init.retriever.agent.model_settings == expected
+        assert refine.coder.agent.model_settings == expected

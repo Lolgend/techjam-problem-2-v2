@@ -6,11 +6,12 @@ CLI and Python API share a single source of truth.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 SearchProviderName = Literal["tavily", "google", "duckduckgo", "mock"]
+ThinkingSetting = Literal["minimal", "low", "medium", "high", "xhigh", "off"]
 
 
 class MLEStarConfig(BaseModel):
@@ -32,6 +33,9 @@ class MLEStarConfig(BaseModel):
         max_debug_rounds: Debugger repair budget.
         runs_dir: Root directory holding per-run sandboxes.
         final_output_dir: Production output directory (default ``final``).
+        max_tokens: Maximum output tokens for LLM generation.
+        temperature: LLM sampling temperature.
+        thinking: Thinking/reasoning effort level ('minimal', 'low', 'medium', 'high', 'xhigh', 'off').
     """
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
@@ -63,15 +67,21 @@ class MLEStarConfig(BaseModel):
         le=2.0,
         description="LLM sampling temperature (None = provider default).",
     )
+    thinking: ThinkingSetting | None = Field(
+        default=None,
+        description="Thinking effort level for reasoning models ('minimal', 'low', 'medium', 'high', 'xhigh', 'off').",
+    )
     max_debug_rounds: int = Field(default=3, ge=0, description="Debugger repair budget.")
     runs_dir: str = Field(default="runs", description="Sandbox root directory.")
     final_output_dir: str = Field(default="final", description="Production output directory.")
 
-    def get_model_settings(self) -> dict[str, int | float] | None:
-        """Return a model_settings dictionary if limits or temperature are configured."""
-        settings: dict[str, int | float] = {}
+    def get_model_settings(self) -> dict[str, Any] | None:
+        """Return a model_settings dictionary if limits, temperature, or thinking are configured."""
+        settings: dict[str, Any] = {}
         if self.max_tokens is not None:
             settings["max_tokens"] = self.max_tokens
         if self.temperature is not None:
             settings["temperature"] = self.temperature
+        if self.thinking is not None:
+            settings["thinking"] = False if self.thinking == "off" else self.thinking
         return settings if settings else None

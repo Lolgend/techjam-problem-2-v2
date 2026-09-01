@@ -88,6 +88,28 @@ class TestCLI:
         assert code == 0
         assert "Demo" in out
 
+    def test_run_dry_run_with_thinking_effort(self, tmp_path: Path, capsys) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        code = main(
+            [
+                "run",
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--search-provider",
+                "mock",
+                "--thinking",
+                "low",
+                "--max-tokens",
+                "8000",
+                "--dry-run",
+            ]
+        )
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "Demo" in out
+
     def test_run_requires_task(self, tmp_path: Path, capsys) -> None:
         data_dir = tmp_path / "data"
         data_dir.mkdir()
@@ -557,3 +579,44 @@ class TestSubmissionCheckIntegration:
         assert verified is False
         assert "ValueError" in message
         assert "(u2,v9)" in message
+
+
+class TestCLIFinalize:
+    """Test the 'finalize' CLI subcommand."""
+
+    def test_finalize_dry_run(self, tmp_path: Path, capsys) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        script_file = tmp_path / "solution.py"
+        script_file.write_text("print('Final Validation Performance: 0.85')", encoding="utf-8")
+
+        code = main(
+            [
+                "finalize",
+                "--script",
+                str(script_file),
+                "--task",
+                str(task_file),
+                "--data",
+                str(data_dir),
+                "--dry-run",
+            ]
+        )
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "Dry-run OK" in out
+        assert "solution.py" in out
+
+    def test_finalize_rejects_missing_script(self, tmp_path: Path) -> None:
+        task_file, data_dir = _write_task(tmp_path)
+        with pytest.raises(SystemExit):
+            main(
+                [
+                    "finalize",
+                    "--script",
+                    str(tmp_path / "non_existent.py"),
+                    "--task",
+                    str(task_file),
+                    "--data",
+                    str(data_dir),
+                ]
+            )
